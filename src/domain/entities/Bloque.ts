@@ -1,3 +1,8 @@
+/** Entidad Bloque (SPEC-05 motor-conversacion Req. 4).
+ *
+ * Unidad visual que manda el backend por WS (eventos token/bloque/fin/error).
+ * Sin React, sin fetch (regla hexagonal domain/).
+ */
 import type { BloqueTipo } from "../types/BloqueTipo";
 
 /** Base de todo bloque visual que manda el backend. */
@@ -60,6 +65,7 @@ export type BloqueConfirmacion = BloqueBase & {
 
 export type BloqueError = BloqueBase & {
   tipo: "ERROR";
+  /** problem+json code: the UI branches by code, never by text. */
   code: string;
   mensaje: string;
   disponible?: number;
