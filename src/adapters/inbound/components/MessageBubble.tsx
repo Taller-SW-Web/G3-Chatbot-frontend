@@ -5,9 +5,9 @@
  * TEXTO/ERROR ya validados. No llama a Axios/fetch/localStorage: recibe todo
  * por props desde ChatPage/useChat. Todo texto pasa por sanitizeText (R7 XSS).
  */
-import type { Bloque, BloqueError, BloqueTexto } from "../../domain/entities/Bloque";
-import type { Mensaje } from "../../domain/entities/Mensaje";
-import { sanitizeText } from "../../domain/utils/sanitize";
+import type { Bloque, BloqueError, BloqueTexto } from "../../../domain/entities/Bloque";
+import type { Mensaje } from "../../../domain/entities/Mensaje";
+import { sanitizeText } from "../../../domain/utils/sanitize";
 
 export interface MessageBubbleProps {
   mensaje: Mensaje;

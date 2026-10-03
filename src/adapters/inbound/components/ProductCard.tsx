@@ -6,8 +6,8 @@
  * Con variantes/agotado → delega a selector/detalle (otros issues).
  * Estilos provisionales con clases utilitarias: H2-08 Diego trae tokens Tailwind.
  */
-import type { ProductoUI } from "../../domain/entities/ProductoUI";
-import { sanitizeText } from "../../domain/utils/sanitize";
+import type { ProductoUI } from "../../../domain/entities/ProductoUI";
+import { sanitizeText } from "../../../domain/utils/sanitize";
 
 export interface AgregarAlCarrito {
   tipo: "AGREGAR_AL_CARRITO";
