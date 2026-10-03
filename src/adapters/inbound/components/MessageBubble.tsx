@@ -1,29 +1,59 @@
-'use client';
-/** MessageBubble (H2-05 David, SPEC-05 motor-conversacion Req. 4).
- *
- * Componente estático con datos mock (H2-05): pinta un mensaje + sus bloques
- * TEXTO/ERROR ya validados. No llama a Axios/fetch/localStorage: recibe todo
- * por props desde ChatPage/useChat. Todo texto pasa por sanitizeText (R7 XSS).
- */
-import type { Bloque, BloqueError, BloqueTexto } from "../../../domain/entities/Bloque";
-import type { Mensaje } from "../../../domain/entities/Mensaje";
-import { sanitizeText } from "../../../domain/utils/sanitize";
+"use client";
+import type { ReactNode } from "react";
+import type { Bloque, BloqueError, BloqueTexto } from "@/domain/entities/Bloque";
+import { sanitize } from "@/domain/utils/sanitize";
 
-export interface MessageBubbleProps {
-  mensaje: Mensaje;
-  bloques: Bloque[];
-  /** Tokens llegando por WS (efecto "escribiendo en vivo"). */
+type Props = {
+  texto: string;
+  rol: "user" | "bot";
+  /** Validated TEXTO/ERROR blocks (SPEC-05 Req. 4). */
+  bloques?: Bloque[];
+  /** Tokens arriving over WS ("typing live" effect). */
   streaming?: boolean;
-  /** Primera respuesta del asistente: prefijo presentación Botleta. */
+  /** First bot reply: Botleta introduction. */
   isFirstAssistant?: boolean;
+};
+
+/* Códigos de pedido / reembolso / reclamo en negrita para no equivocarse al leerlos. */
+const CODE_PATTERN = /(#[A-Z]-0312|#[A-Z]-\d{4}|#?REC-2026-\d{4}|#?DEV-2026-\d{5}|#?R-0312)/g;
+const CODE_TEST = /^(#[A-Z]-0312|#[A-Z]-\d{4}|#?REC-2026-\d{4}|#?DEV-2026-\d{5}|#?R-0312)$/;
+
+/* Promociones vigentes en negrita. Grupos (?:...) para que split no duplique fechas. */
+const PROMO_PATTERN = /(Running\s*-20%(?:\s*hasta\s*30\s*sep)?|Urbano\s*2x1(?:\s*hasta\s*28\s*sep)?|Urbano\s*2×1(?:\s*hasta\s*28\s*sep)?)/gi;
+const PROMO_TEST = /^(Running\s*-20%(?:\s*hasta\s*30\s*sep)?|Urbano\s*2x1(?:\s*hasta\s*28\s*sep)?|Urbano\s*2×1(?:\s*hasta\s*28\s*sep)?)$/i;
+
+function promoBold(texto: string, dark: boolean, pref: string): ReactNode {
+  const partes = texto.split(PROMO_PATTERN);
+  if (partes.length === 1) return texto;
+  return partes.map((p, j) =>
+    PROMO_TEST.test(p) ? (
+      <strong key={`${pref}-${j}`} className={`font-bold ${dark ? "text-text-inverse" : "text-text-primary"}`}>{p}</strong>
+    ) : (
+      <span key={`${pref}-${j}`}>{p}</span>
+    )
+  );
+}
+
+/** Texto del chat con códigos y promociones en negrita. Sin innerHTML (R7). */
+export function renderChatText(texto: string, dark = false): ReactNode {
+  const limpio = sanitize(texto);
+  const partes = limpio.split(CODE_PATTERN);
+  if (partes.length === 1) return promoBold(limpio, dark, "p");
+  return partes.map((p, i) =>
+    CODE_TEST.test(p) ? (
+      <strong key={i} className={`font-bold ${dark ? "text-text-inverse" : "text-text-primary"}`}>{p}</strong>
+    ) : (
+      <span key={i}>{promoBold(p, dark, `p${i}`)}</span>
+    )
+  );
 }
 
 function esBloqueTexto(b: Bloque): b is BloqueTexto {
-  return (b as BloqueTexto).tipo === "TEXTO" && typeof (b as BloqueTexto).texto === "string";
+  return b.tipo === "TEXTO" && typeof (b as BloqueTexto).texto === "string";
 }
 
 function esBloqueError(b: Bloque): b is BloqueError {
-  return (b as BloqueError).tipo === "ERROR" && typeof (b as BloqueError).code === "string";
+  return b.tipo === "ERROR" && typeof (b as BloqueError).code === "string";
 }
 
 /** Mensaje de error ramificado por code (contratos §2.8), nunca por texto. */
@@ -42,33 +72,41 @@ function mensajePorCode(code: string): string {
   }
 }
 
-export function MessageBubble({
-  mensaje,
-  bloques,
-  streaming = false,
-  isFirstAssistant = false,
-}: MessageBubbleProps) {
-  const esCliente = mensaje.rol === "cliente";
+/** Burbuja de mensaje. Todo texto pasa por sanitize (R7). */
+export function MessageBubble({ texto, rol, bloques = [], streaming = false, isFirstAssistant = false }: Props) {
+  if (rol === "user") {
+    return (
+      <div
+        data-testid="message-bubble"
+        data-rol="user"
+        className="msg-in self-end max-w-[80%] rounded-md rounded-br-xs px-3 py-2 text-[14px] leading-5 bg-surface-ink text-text-inverse"
+      >
+        {renderChatText(texto, true)}
+      </div>
+    );
+  }
   return (
     <div
       data-testid="message-bubble"
-      data-rol={mensaje.rol}
+      data-rol="bot"
       aria-live={streaming ? "polite" : undefined}
+      className="msg-in self-start max-w-[85%] rounded-md rounded-bl-xs px-3 py-2 text-[14px] leading-5 bg-white text-text-primary border border-border-default"
     >
-      {isFirstAssistant && !esCliente && (
+      {isFirstAssistant && (
         <p data-testid="presentacion-botleta">
           Soy Botleta, asistente virtual. Conversas con un asistente virtual con IA.
           No compartas contraseñas ni datos de tarjeta.
         </p>
       )}
+      {texto && renderChatText(texto)}
       {bloques.map((bloque, i) => {
         if (esBloqueTexto(bloque)) {
-          return <p key={i} data-testid="bloque-texto">{sanitizeText(bloque.texto)}</p>;
+          return <p key={i} data-testid="bloque-texto">{renderChatText(bloque.texto)}</p>;
         }
         if (esBloqueError(bloque)) {
           return (
             <p key={i} data-testid="bloque-error" data-code={bloque.code}>
-              {sanitizeText(mensajePorCode(bloque.code))}
+              {mensajePorCode(bloque.code)}
             </p>
           );
         }
@@ -78,15 +116,3 @@ export function MessageBubble({
     </div>
   );
 }
-
-/** Mock canónico H2-05 (ChatPage lo reemplaza por datos del WS). */
-export const mockMensajeAsistente: Mensaje = {
-  id: "msg-1",
-  conversacionId: "conv-1",
-  rol: "asistente",
-  timestamp: "2026-10-03T00:00:00Z",
-};
-
-export const mockBloquesBienvenida: Bloque[] = [
-  { tipo: "TEXTO", texto: "Hola, ¿qué zapatillas buscas hoy?" } as BloqueTexto,
-];

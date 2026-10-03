@@ -1,20 +1,17 @@
-/** Entidad ProductoUI (H2-05 David, SPEC-09 tarjetas-detalle-producto Req. 1).
+/** Producto para UI (catálogo / carrusel / detalle).
  *
- * Fuente: openspec/specs/tarjetas-detalle-producto (ProductoResumen).
- * El precio nunca se calcula en el frontend: viene de Productos.
+ * TODO: migrar al modelo ProductoResumen de SPEC-09 tarjetas-detalle-producto Req. 1
+ * (productoId, marca, imagenUrl, precio desde backend, descripcionBreve,
+ * tieneVariantes, disponibilidad, skuUnico). El precio nunca se calcula en el frontend.
  * Sin React, sin fetch (regla hexagonal domain/).
  */
-export type DisponibilidadProducto = "DISPONIBLE" | "POCAS_UNIDADES" | "AGOTADO";
-
-export interface ProductoUI {
-  productoId: string;
+export type ProductoUI = {
+  sku: string;
   nombre: string;
-  marca: string;
-  imagenUrl: string;
-  /** Precio ya calculado por el backend (nunca se opera aquí). */
-  precioTexto: string;
-  descripcionBreve: string;
-  tieneVariantes: boolean;
-  disponibilidad: DisponibilidadProducto;
-  skuUnico?: string;
-}
+  categoria: string;
+  talla: string;
+  color: string;
+  precio: number;
+  stock: number;
+  imagen?: string;
+};

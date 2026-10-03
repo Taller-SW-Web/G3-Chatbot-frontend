@@ -1,0 +1,1 @@
+export { EstadoReclamo } from "./ConstanciaReclamo";
