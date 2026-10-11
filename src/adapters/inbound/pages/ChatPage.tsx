@@ -56,22 +56,23 @@ export function ChatPage({ conversationId = "talla-42" }: { conversationId?: str
   const mensajePendiente = useChatStore((s) => s.mensajePendiente);
   const setMensajePendiente = useChatStore((s) => s.setMensajePendiente);
 
-  const [extra, setExtra] = useState<UIMsg[]>([]);
+  // Mensaje sembrado por otra página (confirm al agregar, preguntar en el chat).
+  const [extra, setExtra] = useState<UIMsg[]>(() => {
+    if (!mensajePendiente) return [];
+    const par: UIMsg[] = [];
+    if (mensajePendiente.user) par.push({ from: "user", text: mensajePendiente.user });
+    par.push({ from: "bot", text: mensajePendiente.bot });
+    return par;
+  });
   const [flow, setFlow] = useState<Flow>(FLOW_POR_SEED[conversationId] ?? null);
   const [composer, setComposer] = useState("");
   const [typing, setTyping] = useState(false);
   const [detalle, setDetalle] = useState<ProductoUI | null>(null);
   const [attach, setAttach] = useState(false);
 
-  // Mensaje sembrado por otra página (confirm al agregar, preguntar en el chat).
+  // El mensaje ya se copió al estado inicial; se consume para no repetirlo.
   useEffect(() => {
-    if (mensajePendiente) {
-      const par: UIMsg[] = [];
-      if (mensajePendiente.user) par.push({ from: "user", text: mensajePendiente.user });
-      par.push({ from: "bot", text: mensajePendiente.bot });
-      setExtra((m) => [...m, ...par]);
-      setMensajePendiente(null);
-    }
+    if (mensajePendiente) setMensajePendiente(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
