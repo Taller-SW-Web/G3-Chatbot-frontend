@@ -14,6 +14,8 @@ import type {
 import type { CatalogCardItem, CatalogDetail } from "@/domain/entities/CatalogoUI";
 import { sanitize } from "@/domain/utils/sanitize";
 import { AccionesRapidas } from "./blocks/AccionesRapidas";
+import { AvisoDegradado } from "./blocks/AvisoDegradado";
+import { BloqueError as BloqueErrorView } from "./blocks/BloqueError";
 import { CarruselProductos } from "./blocks/CarruselProductos";
 import { ConfirmacionPedido } from "./blocks/ConfirmacionPedido";
 import { DetalleProducto } from "./blocks/DetalleProducto";
@@ -21,6 +23,7 @@ import { ResumenCheckout } from "./blocks/ResumenCheckout";
 import { mensajePorCodigo } from "./chatPresentacion";
 import { dividirResaltado } from "./resaltadoChat";
 import { TextoMarkdown } from "./TextoMarkdown";
+import type { AccionRapidaChat } from "./ChatWindow";
 
 type Props = {
   texto: string;
@@ -29,10 +32,11 @@ type Props = {
   bloques?: Bloque[];
   /** Respuesta en construcción: tokens llegando por SSE (efecto de escritura en vivo). */
   streaming?: boolean;
-  /** Las acciones rápidas envían su etiqueta como mensaje de texto normal. */
-  onEnviarAccion?: (etiqueta: string) => void;
   /** First bot reply: Botleta introduction. */
   isFirstAssistant?: boolean;
+  degradado?: boolean;
+  motivoDegradado?: string;
+  onQuickAction?: (accion: AccionRapidaChat) => void;
 };
 
 /** Texto del chat con códigos y promociones en negrita. Sin innerHTML (R7). */
@@ -91,16 +95,18 @@ function aDetalle(p: ProductoResumen & { descripcion: string }): CatalogDetail {
 export function renderBloque(
   bloque: Bloque,
   clave: number,
-  onEnviarAccion?: (etiqueta: string) => void
+  onQuickAction?: (accion: AccionRapidaChat) => void
 ): ReactNode {
   if (esBloqueTexto(bloque)) {
     return <p key={clave} data-testid="bloque-texto">{renderChatText(bloque.texto)}</p>;
   }
   if (esBloqueError(bloque)) {
     return (
-      <p key={clave} data-testid="bloque-error" data-code={bloque.code}>
-        {mensajePorCodigo(bloque.code)}
-      </p>
+      <BloqueErrorView
+        key={bloque.id || clave}
+        code={bloque.code}
+        mensaje={mensajePorCodigo(bloque.code)}
+      />
     );
   }
   switch (bloque.tipo) {
@@ -111,8 +117,8 @@ export function renderBloque(
         <div key={clave} data-testid="bloque-acciones-rapidas" className="mt-2">
           <AccionesRapidas
             pregunta={b.pregunta}
-            acciones={b.acciones.map((a) => a.etiqueta)}
-            onAccion={onEnviarAccion ?? noop}
+            acciones={b.acciones}
+            onAccion={onQuickAction}
           />
         </div>
       );
@@ -163,7 +169,16 @@ export function renderBloque(
 }
 
 /** Burbuja de mensaje. Todo texto pasa por sanitize (R7). */
-export function MessageBubble({ texto, rol, bloques = [], streaming = false, isFirstAssistant = false, onEnviarAccion }: Props) {
+export function MessageBubble({
+  texto,
+  rol,
+  bloques = [],
+  streaming = false,
+  isFirstAssistant = false,
+  degradado = false,
+  motivoDegradado,
+  onQuickAction,
+}: Props) {
   if (rol === "user") {
     return (
       <div
@@ -188,8 +203,9 @@ export function MessageBubble({ texto, rol, bloques = [], streaming = false, isF
           No compartas contraseñas ni datos de tarjeta.
         </p>
       )}
+      {degradado && <AvisoDegradado motivo={motivoDegradado} />}
       {texto && <TextoMarkdown texto={sanitize(texto)} />}
-      {bloques.map((bloque, i) => renderBloque(bloque, i, onEnviarAccion))}
+      {bloques.map((bloque, i) => renderBloque(bloque, i, onQuickAction))}
       {streaming && <span data-testid="typing-indicator" aria-label="escribiendo" />}
     </div>
   );

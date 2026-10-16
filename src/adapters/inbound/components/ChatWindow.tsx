@@ -5,6 +5,12 @@ import { MessageBubble } from "./MessageBubble";
 import { BotFeedback } from "./BotFeedback";
 import type { AvisoChat, ItemChat } from "./chatPresentacion";
 
+export type AccionRapidaChat = {
+  id: string;
+  etiqueta: string;
+  payload?: Record<string, unknown>;
+};
+
 /**
  * Ventana de chat: lista de mensajes, respuesta en construcción, aviso de error e
  * indicador de escritura. El feedback (pulgar arriba/abajo + copiar) solo va bajo el
@@ -15,13 +21,13 @@ export function ChatWindow({
   typing,
   aviso,
   onReintentar,
-  onEnviarAccion,
+  onQuickAction,
 }: {
   items: ItemChat[];
   typing: boolean;
   aviso?: AvisoChat | null;
   onReintentar?: () => void;
-  onEnviarAccion?: (etiqueta: string) => void;
+  onQuickAction?: (accion: AccionRapidaChat) => void;
 }) {
   let lastBot = -1;
   items.forEach((m, i) => {
@@ -50,7 +56,9 @@ export function ChatWindow({
               texto={m.texto}
               bloques={m.bloques}
               streaming={m.streaming}
-              onEnviarAccion={onEnviarAccion}
+              degradado={m.degradado}
+              motivoDegradado={m.motivoDegradado}
+              onQuickAction={onQuickAction}
             />
             {i === lastBot && m.texto && <BotFeedback text={m.texto} />}
           </div>
