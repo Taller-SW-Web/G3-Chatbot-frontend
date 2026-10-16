@@ -1,12 +1,5 @@
 "use client";
 
-import type { Mensaje } from "@/domain/entities/Mensaje";
-
-export const MOCK_MENSAJES: Record<string, Mensaje[]> = {
-  // Sin backend no hay historial: el ChatPage usa MOCK_SEEDS (fiel al wireframe).
-  // Cuando el backend responda, el adapter devolverá los mensajes reales.
-};
-
 /** Botón bajo el mensaje del bot. Requiere sesión (sin historial no hay a dónde ir). */
 export type AccionSeed = { etiqueta: string; href: string };
 

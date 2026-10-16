@@ -1,6 +1,6 @@
 /** Entidad Bloque (SPEC-05 motor-conversacion Req. 4).
  *
- * Unidad visual que manda el backend por WS (eventos token/bloque/fin/error).
+ * Unidad visual que manda el backend por SSE (eventos aceptado/token/bloque/degradado/fin/error).
  * Sin React, sin fetch (regla hexagonal domain/).
  */
 import type { BloqueTipo } from "../types/BloqueTipo";

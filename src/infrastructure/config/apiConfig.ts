@@ -10,5 +10,4 @@ export const apiConfig = {
     pago: 1000,
   },
   pollingMs: 2000,
-  wsReintentos: 2,
 } as const;
