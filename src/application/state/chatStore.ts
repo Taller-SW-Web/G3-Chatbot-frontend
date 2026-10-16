@@ -13,8 +13,6 @@ type ChatState = {
   accionPendiente: string | null;
   /** Abre el modal de login/registro global (AppShell). */
   authOpen: boolean;
-  /** Par user/bot que otra página deja sembrado para el chat (confirm al agregar, preguntar en el chat). */
-  mensajePendiente: { user?: string; bot: string } | null;
   /** Resumen del último pedido confirmado (pantalla /exito). */
   ultimoPedido: UltimoPedido;
   /**
@@ -27,7 +25,6 @@ type ChatState = {
   setCarrito: (c: CarritoUI) => void;
   setAccionPendiente: (a: string | null) => void;
   setAuthOpen: (v: boolean) => void;
-  setMensajePendiente: (m: { user?: string; bot: string } | null) => void;
   setUltimoPedido: (p: UltimoPedido) => void;
   setPrimerMensaje: (m: string | null) => void;
   logout: () => void;
@@ -54,7 +51,6 @@ export const useChatStore = create<ChatState>()(
       carrito: carritoVacio,
       accionPendiente: null,
       authOpen: false,
-      mensajePendiente: null,
       ultimoPedido: null,
       primerMensaje: null,
       setToken: (accessToken) => set({ accessToken }),
@@ -62,7 +58,6 @@ export const useChatStore = create<ChatState>()(
       setCarrito: (carrito) => set({ carrito }),
       setAccionPendiente: (accionPendiente) => set({ accionPendiente }),
       setAuthOpen: (authOpen) => set({ authOpen }),
-      setMensajePendiente: (mensajePendiente) => set({ mensajePendiente }),
       setUltimoPedido: (ultimoPedido) => set({ ultimoPedido }),
       setPrimerMensaje: (primerMensaje) => set({ primerMensaje }),
       logout: () =>
@@ -71,17 +66,17 @@ export const useChatStore = create<ChatState>()(
           cliente: null,
           carrito: carritoVacio,
           accionPendiente: null,
-          mensajePendiente: null,
         }),
     }),
     {
       name: "g3-chat-storage", // LocalStorage, token 15 min (refresh en cookie httpOnly backend)
-      version: 1,
+      version: 2,
       // Los mensajes del chat viven en el backend (historial) y en el estado local del turno.
       migrate: (persistido) => {
         const resto = { ...(persistido as Record<string, unknown>) };
         delete resto.mensajes;
         delete resto.escribiendo;
+        delete resto.mensajePendiente;
         return resto as unknown as ChatState;
       },
       partialize: (s) => ({
@@ -91,7 +86,6 @@ export const useChatStore = create<ChatState>()(
         carrito: s.carrito,
         accionPendiente: s.accionPendiente,
         authOpen: s.authOpen,
-        mensajePendiente: s.mensajePendiente,
         ultimoPedido: s.ultimoPedido,
       }),
     }
