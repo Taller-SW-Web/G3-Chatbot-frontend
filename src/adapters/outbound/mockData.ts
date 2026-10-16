@@ -1,18 +1,6 @@
 "use client";
 
 import type { Mensaje } from "@/domain/entities/Mensaje";
-import type { ConversacionResumen } from "@/ports/outbound/ChatbotApiPort";
-
-/** Mocks fieles al wireframe para trabajar sin backend. */
-export const MOCK_CONVERSACIONES: ConversacionResumen[] = [
-  { id: "talla-42", titulo: "Zapatillas talla 42", preview: "Talla 42, color negro", fecha: "Ayer", ultimoMensajeEn: "2026-09-28" },
-  { id: "ofertas-running", titulo: "Ofertas running", preview: "¿Qué ofertas hay en running?", fecha: "23 sept", ultimoMensajeEn: "2026-09-23" },
-  { id: "estado-pedido", titulo: "Estado pedido #A-1042", preview: "¿Dónde está mi pedido?", fecha: "22 sept", ultimoMensajeEn: "2026-09-22" },
-  { id: "cambio-talla", titulo: "Cambio por talla", preview: "Me quedó chica la talla 41", fecha: "21 sept", ultimoMensajeEn: "2026-09-21" },
-  { id: "seguimiento-reclamo", titulo: "Seguimiento de reclamo", preview: "¿En qué estado está mi reclamo?", fecha: "18 sept", ultimoMensajeEn: "2026-09-18" },
-  { id: "reclamo-defecto", titulo: "Reclamo por defecto", preview: "Me llegó una zapatilla defectuosa", fecha: "20 sept", ultimoMensajeEn: "2026-09-20" },
-  { id: "devolucion-compra", titulo: "Devolución de compra", preview: "Quiero devolver unas zapatillas", fecha: "19 sept", ultimoMensajeEn: "2026-09-19" },
-];
 
 export const MOCK_MENSAJES: Record<string, Mensaje[]> = {
   // Sin backend no hay historial: el ChatPage usa MOCK_SEEDS (fiel al wireframe).

@@ -12,12 +12,23 @@ export type ProblemJson = {
   disponible?: number;
 };
 
+/** Tramo de texto de un resultado de búsqueda; `coincide` marca el término encontrado. */
+export type SegmentoResaltado = {
+  texto: string;
+  coincide: boolean;
+};
+
+/** Fila de la barra lateral (GET /chat/conversaciones y /buscar, SPEC-05 Req. 1). */
 export type ConversacionResumen = {
   id: string;
   titulo: string;
   preview: string;
-  fecha: string;
   ultimoMensajeEn: string;
+  /** Solo en la búsqueda: título y fragmento del mensaje con la coincidencia resaltada. */
+  resaltado?: {
+    titulo: SegmentoResaltado[];
+    fragmento: SegmentoResaltado[] | null;
+  };
 };
 
 export type SessionOpened = {
@@ -31,6 +42,9 @@ export type MfaChallenge = {
   canal: "EMAIL" | "SMS";
 };
 
+/** Tamaño de página del listado y la búsqueda (backend: CONVERSATIONS_PAGE_SIZE). */
+export const CONVERSACIONES_POR_PAGINA = 20;
+
 export interface ChatbotApiPort {
   login(email: string, password: string): Promise<SessionOpened | MfaChallenge>;
   requestMfaCode(canal: "EMAIL" | "SMS"): Promise<{ ok: true }>;
@@ -38,10 +52,11 @@ export interface ChatbotApiPort {
   refreshSession(): Promise<SessionOpened>;
   logout(): Promise<{ ok: true }>;
   fetchProfile(): Promise<{ id: string; nombreCompleto?: string; correo?: string }>;
+  crearConversacion(): Promise<{ conversacionId: string }>;
   enviarMensaje(conversacionId: string, texto: string): Promise<{ mensajeId: string }>;
   cargarHistorial(conversacionId: string, desde?: string): Promise<Mensaje[]>;
-  listarConversaciones(): Promise<ConversacionResumen[]>;
-  buscarConversaciones(q: string): Promise<ConversacionResumen[]>;
+  listarConversaciones(pagina?: number): Promise<ConversacionResumen[]>;
+  buscarConversaciones(q: string, pagina?: number): Promise<ConversacionResumen[]>;
   agregarAlCarrito(input: { sku: string; cantidad: number }): Promise<{ ok: true }>;
   validarContactoCelular(codigo: string): Promise<{ verificado: boolean }>;
   cotizar(): Promise<{ total: number }>;

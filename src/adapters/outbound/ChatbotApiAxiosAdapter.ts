@@ -10,7 +10,7 @@ import type {
   SessionOpened,
 } from "@/ports/outbound/ChatbotApiPort";
 import type { Mensaje } from "@/domain/entities/Mensaje";
-import { MOCK_CONVERSACIONES, MOCK_MENSAJES } from "./mockData";
+import { MOCK_MENSAJES } from "./mockData";
 
 /**
  * Adapter REST con interceptor JWT.
@@ -130,20 +130,20 @@ export const chatbotApi: ChatbotApiPort = {
     }, base);
     return base.filter((m) => m.id > desde);
   },
-  async listarConversaciones(): Promise<ConversacionResumen[]> {
-    return conFallback(async () => {
-      const { data } = await http.get(`/chat/conversaciones`);
-      return data as ConversacionResumen[];
-    }, MOCK_CONVERSACIONES);
+  // Barra lateral (SPEC-05 Req. 1): sin fallback a mocks; el error llega a la UI.
+  async crearConversacion() {
+    const { data } = await http.post(`/chat/conversaciones`);
+    return { conversacionId: data.conversacionId as string };
   },
-  async buscarConversaciones(q) {
-    const all = await this.listarConversaciones();
-    const low = q.toLowerCase();
-    return all.filter(
-      (c) =>
-        c.titulo.toLowerCase().includes(low) ||
-        c.preview.toLowerCase().includes(low)
-    );
+  async listarConversaciones(pagina = 1): Promise<ConversacionResumen[]> {
+    const { data } = await http.get(`/chat/conversaciones`, { params: { pagina } });
+    return data as ConversacionResumen[];
+  },
+  async buscarConversaciones(q, pagina = 1): Promise<ConversacionResumen[]> {
+    const { data } = await http.get(`/chat/conversaciones/buscar`, {
+      params: { q, pagina },
+    });
+    return data as ConversacionResumen[];
   },
   async agregarAlCarrito(input) {
     return conFallback(async () => {
