@@ -70,6 +70,7 @@ describe("turnoChatReducer", () => {
     const bot = estado.mensajes[1];
     expect(bot.texto).toBe("");
     expect(bot.bloques).toEqual([acciones]);
+    expect(bot.motivoDegradado).toBe("timeout");
     expect(estado.borrador).toBeNull();
   });
 

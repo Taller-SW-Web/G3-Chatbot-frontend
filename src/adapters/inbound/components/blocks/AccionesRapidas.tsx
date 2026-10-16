@@ -7,11 +7,24 @@ export function AccionesRapidas({
   onAccion,
 }: {
   pregunta?: string;
-  acciones: { id: string; etiqueta: string }[];
-  onAccion?: (accion: { id: string; etiqueta: string }) => void;
+  acciones: {
+    id: string;
+    etiqueta: string;
+    payload?: Record<string, unknown>;
+  }[];
+  onAccion?: (accion: {
+    id: string;
+    etiqueta: string;
+    payload?: Record<string, unknown>;
+  }) => void;
 }) {
   return (
-    <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
+    <div
+      className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2"
+      role="group"
+      aria-label={pregunta || "Acciones rápidas"}
+      data-testid="acciones-rapidas"
+    >
       {pregunta && <p className="text-[14px] text-text-secondary">{pregunta}</p>}
       <div className="flex flex-wrap gap-2">
         {acciones.map((accion) => (
@@ -26,6 +39,11 @@ export function AccionesRapidas({
           </button>
         ))}
       </div>
+      {!onAccion && (
+        <p className="text-[11px] text-text-secondary" role="status">
+          Las acciones no están disponibles en este momento.
+        </p>
+      )}
     </div>
   );
 }

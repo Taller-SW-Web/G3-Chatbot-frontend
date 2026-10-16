@@ -1,4 +1,5 @@
 import type { Mensaje } from "@/domain/entities/Mensaje";
+import type { Bloque } from "@/domain/entities/Bloque";
 
 /**
  * Contrato REST hacia el backend (contratos §1, §2.8).
@@ -84,6 +85,16 @@ export type DisponibilidadPuntual = {
   veredicto?: string | null;
 };
 
+export type AccionChat = {
+  tipo: string;
+  payload: Record<string, unknown>;
+};
+
+export type ResultadoAccionChat = {
+  texto: string;
+  bloques: Bloque[];
+};
+
 export interface ChatbotApiPort {
   login(email: string, password: string): Promise<SessionOpened | MfaChallenge>;
   requestMfaCode(canal: "EMAIL" | "SMS"): Promise<{ ok: true }>;
@@ -94,6 +105,10 @@ export interface ChatbotApiPort {
   crearConversacion(): Promise<{ conversacionId: string }>;
   /** Últimos mensajes de la conversación. El envío va por `ChatStreamPort`. */
   cargarHistorial(conversacionId: string): Promise<Mensaje[]>;
+  ejecutarAccion(
+    conversacionId: string,
+    accion: AccionChat
+  ): Promise<ResultadoAccionChat>;
   listarConversaciones(pagina?: number): Promise<ConversacionResumen[]>;
   buscarConversaciones(q: string, pagina?: number): Promise<ConversacionResumen[]>;
   agregarAlCarrito(input: { sku: string; cantidad: number }): Promise<{ ok: true }>;

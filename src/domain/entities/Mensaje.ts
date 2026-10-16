@@ -16,5 +16,7 @@ export type Mensaje = {
   rol: MensajeRol;
   texto: string;
   bloques?: Bloque[];
+  /** Motivo disponible durante el turno en vivo; el historial no lo conserva. */
+  motivoDegradado?: string;
   creadoEn: string;
 };

@@ -18,7 +18,7 @@ export function BloqueError({
 
   return (
     <div data-testid="bloque-error" data-code={code} className="rounded-md bg-error-background border border-error-default p-3 flex flex-col gap-2" role="alert">
-      <p className="text-[14px] font-bold text-error-default">{titulo} · {code}</p>
+      <p className="text-[14px] font-bold text-error-default">{titulo}</p>
       <p className="text-[13px] text-text-primary">{sanitize(mensaje)}</p>
       {onRetry && (
         <button onClick={onRetry}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpIcon, PhotoIcon } from "../components/icons";
-import { ChatWindow } from "../components/ChatWindow";
+import { ChatWindow, type AccionRapidaChat } from "../components/ChatWindow";
+import { AccionesRapidas } from "../components/blocks/AccionesRapidas";
 import {
   avisoDeTurno,
   construirItemsChat,
@@ -14,9 +15,12 @@ import {
 } from "../components/chatPresentacion";
 import { useChat } from "../hooks/useChat";
 import { useChatStore } from "@/application/state/chatStore";
+import { ejecutarAccionChatUseCase } from "@/application/use_cases/ejecutarAccionChatUseCase";
+import { container } from "@/infrastructure/di/container";
 import { MENSAJE_MAX_CARACTERES } from "@/application/use_cases/enviarMensajeUseCase";
 
 const SUGERENCIAS = ["Ver ofertas", "Rastrear pedido", "Ayuda con devolución"];
+const CATEGORIAS = ["zapatillas", "polos", "chimpunes"];
 
 /**
  * `/chat/[id]`: historial y turno en vivo de una conversación real (ADR-0021).
@@ -37,10 +41,15 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
     enviar,
     reintentar,
     recargar,
+    recargarSilencioso,
   } = useChat(conversationId);
 
   const [composer, setComposer] = useState("");
   const [errorVisto, setErrorVisto] = useState(error);
+  const [accionOcupada, setAccionOcupada] = useState(false);
+  const [eligeCategoria, setEligeCategoria] = useState(false);
+  const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const accionOcupadaRef = useRef(false);
 
   // Si el mensaje no llegó a aceptarse (error previo al stream) el texto vuelve al campo.
   if (error !== errorVisto) {
@@ -60,10 +69,52 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
   }, [historialCargado, mensajes.length, enviar, setPrimerMensaje]);
 
   function enviarTexto(texto: string) {
-    if (!puedeEnviar(texto, estado)) return;
+    if (!puedeEnviar(texto, estado) || accionOcupadaRef.current) return;
     const limpio = texto.trim();
     setComposer("");
+    if (eligeCategoria) {
+      setEligeCategoria(false);
+      void ejecutarAccionRapida({
+        id: "BUSCAR_POR_CATEGORIA",
+        etiqueta: "Buscar por categoría",
+        payload: { categoria: limpio },
+      });
+      return;
+    }
     void enviar(limpio);
+  }
+
+  async function ejecutarAccionRapida(accion: AccionRapidaChat) {
+    if (estado === "enviando" || estado === "cargando" || accionOcupadaRef.current) return;
+    if (
+      accion.id === "BUSCAR_POR_CATEGORIA" &&
+      !String(accion.payload?.categoria ?? "").trim()
+    ) {
+      setErrorAccion(null);
+      setEligeCategoria(true);
+      return;
+    }
+
+    accionOcupadaRef.current = true;
+    setAccionOcupada(true);
+    setErrorAccion(null);
+    try {
+      await ejecutarAccionChatUseCase(container.api, {
+        conversacionId: conversationId,
+        accion: { tipo: accion.id, payload: accion.payload ?? {} },
+      });
+      setEligeCategoria(false);
+      try {
+        await recargarSilencioso();
+      } catch {
+        setErrorAccion("La acción se completó, pero no se pudo actualizar el historial.");
+      }
+    } catch {
+      setErrorAccion("No se pudo completar la acción. Inténtalo de nuevo.");
+    } finally {
+      accionOcupadaRef.current = false;
+      setAccionOcupada(false);
+    }
   }
 
   if (historialFallido(estado, error)) {
@@ -90,7 +141,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
   }
 
   const cargando = estado === "cargando" || !historialCargado;
-  const bloqueado = !historialCargado || estado === "enviando" || estado === "cargando";
+  const bloqueado = !historialCargado || estado === "enviando" || estado === "cargando" || accionOcupada;
   const aviso = avisoDeTurno(estado, error, incompleto);
 
   return (
@@ -106,8 +157,26 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
             typing={mostrarEscribiendo(estado, borrador)}
             aviso={aviso}
             onReintentar={() => void reintentar()}
-            onEnviarAccion={enviarTexto}
+            onQuickAction={bloqueado ? undefined : ejecutarAccionRapida}
           />
+        )}
+        {eligeCategoria && (
+          <div className="px-3" data-testid="selector-categoria">
+            <AccionesRapidas
+              pregunta="Elige una categoría o escríbela en el campo de mensaje."
+              acciones={CATEGORIAS.map((categoria) => ({
+                id: "BUSCAR_POR_CATEGORIA",
+                etiqueta: categoria,
+                payload: { categoria },
+              }))}
+              onAccion={bloqueado ? undefined : ejecutarAccionRapida}
+            />
+          </div>
+        )}
+        {errorAccion && (
+          <p className="px-3 text-[13px] text-error-default" role="alert" data-testid="error-accion">
+            {errorAccion}
+          </p>
         )}
         <div className="px-3 flex flex-wrap gap-2 pb-24">
           {SUGERENCIAS.map((q) => (
@@ -141,7 +210,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
           onKeyDown={(e) => {
             if (e.key === "Enter") enviarTexto(composer);
           }}
-          placeholder="Pregunta por zapatillas, tallas, pedidos…"
+          placeholder={eligeCategoria ? "Escribe una categoría…" : "Pregunta por zapatillas, tallas, pedidos…"}
           className="flex-1 wf-chip px-4 py-2.5 text-sm outline-none min-w-0 bg-white text-text-primary placeholder:text-text-secondary disabled:opacity-60"
         />
         <button

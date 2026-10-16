@@ -89,6 +89,20 @@ describe("construirItemsChat", () => {
   it("no agrega un borrador vacío", () => {
     expect(construirItemsChat([usuario], borrador(""))).toHaveLength(1);
   });
+
+  it("conserva el motivo degradado en el mensaje final y el borrador SSE", () => {
+    const final = construirItemsChat(
+      [{ ...bot, motivoDegradado: "timeout" }],
+      null
+    )[0];
+    const enCurso = construirItemsChat(
+      [usuario],
+      { texto: "Respuesta de respaldo", bloques: [], degradado: "unavailable" }
+    )[1];
+
+    expect(final).toMatchObject({ degradado: true, motivoDegradado: "timeout" });
+    expect(enCurso).toMatchObject({ degradado: true, motivoDegradado: "unavailable" });
+  });
 });
 
 describe("mostrarEscribiendo", () => {
