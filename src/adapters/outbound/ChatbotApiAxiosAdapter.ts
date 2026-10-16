@@ -6,6 +6,7 @@ import { useChatStore } from "@/application/state/chatStore";
 import { createSingleFlight } from "@/domain/utils/singleFlight";
 import type {
   BuscarProductosInput,
+  CarritoBackend,
   ChatbotApiPort,
   ConversacionResumen,
   DisponibilidadPuntual,
@@ -144,12 +145,52 @@ export const chatbotApi: ChatbotApiPort = {
     });
     return data as ConversacionResumen[];
   },
-  async agregarAlCarrito(input) {
+  async agregarAlCarrito(input, conversacionId?: string) {
     // SPEC-09 Req. 2 "agregar desde la tarjeta": endpoint real del carrito.
+    // conversacionId ubica el carrito anónimo; sin él solo funciona el de cliente.
     await http.post(`/carrito/items`, input, {
+      params: conversacionId ? { conversacionId } : undefined,
       timeout: apiConfig.timeouts.catalogo,
     });
     return { ok: true as const };
+  },
+  // Carrito con datos reales, sin fallback a mocks (SPEC-10, SPEC-11).
+  // Los errores problem+json los ramifica la UI por `code`.
+  async listarCarrito(conversacionId?: string): Promise<CarritoBackend> {
+    const { data } = await http.get(`/carrito`, {
+      params: conversacionId ? { conversacionId } : undefined,
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return data as CarritoBackend;
+  },
+  async actualizarCantidadCarrito(itemId: string, cantidad: number, conversacionId?: string): Promise<CarritoBackend> {
+    const { data } = await http.patch(
+      `/carrito/items/${encodeURIComponent(itemId)}`,
+      { cantidad },
+      {
+        params: conversacionId ? { conversacionId } : undefined,
+        timeout: apiConfig.timeouts.catalogo,
+      }
+    );
+    return (data as { carrito: CarritoBackend }).carrito ?? (data as CarritoBackend);
+  },
+  async eliminarLineaCarrito(itemId: string, conversacionId?: string): Promise<{ mensaje: string }> {
+    const { data } = await http.delete(
+      `/carrito/items/${encodeURIComponent(itemId)}`,
+      {
+        params: conversacionId ? { conversacionId } : undefined,
+        timeout: apiConfig.timeouts.catalogo,
+      }
+    );
+    return data as { mensaje: string };
+  },
+  async vaciarCarrito(conversacionId?: string): Promise<{ mensaje: string }> {
+    const { data } = await http.delete(`/carrito`, {
+      params: conversacionId ? { conversacionId } : undefined,
+      data: { confirmado: true },
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return data as { mensaje: string };
   },
   // Catálogo con datos reales, sin fallback a mocks (SPEC-06, SPEC-09,
   // SPEC-10). Los errores problem+json los ramifica la UI por `code`.

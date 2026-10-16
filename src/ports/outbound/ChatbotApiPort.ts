@@ -84,6 +84,31 @@ export type DisponibilidadPuntual = {
   veredicto?: string | null;
 };
 
+/** Línea del carrito tal como la expone `GET /carrito` (SPEC-11, contratos §2.4). */
+export type LineaCarritoBackend = {
+  item_id: string;
+  sku: string;
+  nombre: string;
+  variante?: string | null;
+  cantidad: number;
+  precio: number;
+  disponible: boolean;
+  imagen?: string | null;
+  nota?: string | null;
+};
+
+/** Carrito con totales recalculados (SPEC-11 Req. 3). Precios desde herramientas. */
+export type CarritoBackend = {
+  lineas: LineaCarritoBackend[];
+  subtotal: number;
+  descuentos: { nombre: string; monto: number }[];
+  costoEnvio: number | null;
+  envio?: string | null;
+  total: number;
+  avisos: string[];
+  promociones_ok?: boolean;
+};
+
 export interface ChatbotApiPort {
   login(email: string, password: string): Promise<SessionOpened | MfaChallenge>;
   requestMfaCode(canal: "EMAIL" | "SMS"): Promise<{ ok: true }>;
@@ -96,7 +121,12 @@ export interface ChatbotApiPort {
   cargarHistorial(conversacionId: string): Promise<Mensaje[]>;
   listarConversaciones(pagina?: number): Promise<ConversacionResumen[]>;
   buscarConversaciones(q: string, pagina?: number): Promise<ConversacionResumen[]>;
-  agregarAlCarrito(input: { sku: string; cantidad: number }): Promise<{ ok: true }>;
+  agregarAlCarrito(input: { sku: string; cantidad: number }, conversacionId?: string): Promise<{ ok: true }>;
+  /** Carrito con datos reales (SPEC-10, SPEC-11). Sin mocks. Errores por `code`. */
+  listarCarrito(conversacionId?: string): Promise<CarritoBackend>;
+  actualizarCantidadCarrito(itemId: string, cantidad: number, conversacionId?: string): Promise<CarritoBackend>;
+  eliminarLineaCarrito(itemId: string, conversacionId?: string): Promise<{ mensaje: string }>;
+  vaciarCarrito(conversacionId?: string): Promise<{ mensaje: string }>;
   /** Catálogo con datos reales (SPEC-06, SPEC-09, SPEC-10). Sin mocks. */
   buscarProductos(input: BuscarProductosInput): Promise<PaginaCatalogo>;
   verDetalleProducto(productId: string): Promise<unknown>;
