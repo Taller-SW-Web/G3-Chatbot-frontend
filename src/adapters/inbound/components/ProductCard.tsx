@@ -1,11 +1,30 @@
 "use client";
 
 import { PlusIcon } from "./icons";
-import type { ProductoUI } from "@/domain/entities/ProductoUI";
+import type { CatalogCardItem } from "@/domain/entities/CatalogoUI";
 import { sanitize } from "@/domain/utils/sanitize";
 
-/** Pocas unidades cuando quedan ≤ 5 (RN-CAT-15, SPEC-09 Req. 1). */
-const UMBRAL_POCAS_UNIDADES = 5;
+function BadgeDisponibilidad({ availability }: { availability: CatalogCardItem["availability"] }) {
+  if (availability === "AGOTADO") {
+    return (
+      <span data-testid="badge-agotado" className="mt-1 inline-block rounded-full bg-surface-ink-soft px-2 py-0.5 text-[11px] font-bold text-text-secondary">
+        AGOTADO
+      </span>
+    );
+  }
+  if (availability === "POCAS_UNIDADES") {
+    return (
+      <span data-testid="badge-pocas-unidades" className="mt-1 inline-block rounded-full bg-accent-signal-soft px-2 py-0.5 text-[11px] font-bold text-text-primary">
+        ¡QUEDAN POCAS UNIDADES!
+      </span>
+    );
+  }
+  return (
+    <span data-testid="badge-disponible" className="mt-1 inline-block rounded-full bg-accent-volt-soft px-2 py-0.5 text-[11px] font-bold text-accent-volt-ink">
+      DISPONIBLE
+    </span>
+  );
+}
 
 function PlaceholderImg({ className = "" }: { className?: string }) {
   return (
@@ -28,38 +47,16 @@ function PlaceholderImg({ className = "" }: { className?: string }) {
   );
 }
 
-function BadgeDisponibilidad({ stock }: { stock: number }) {
-  if (stock <= 0) {
-    return (
-      <span data-testid="badge-agotado" className="mt-1 inline-block rounded-full bg-surface-ink-soft px-2 py-0.5 text-[11px] font-bold text-text-secondary">
-        AGOTADO
-      </span>
-    );
-  }
-  if (stock <= UMBRAL_POCAS_UNIDADES) {
-    return (
-      <span data-testid="badge-pocas-unidades" className="mt-1 inline-block rounded-full bg-accent-signal-soft px-2 py-0.5 text-[11px] font-bold text-text-primary">
-        ¡QUEDAN POCAS UNIDADES!
-      </span>
-    );
-  }
-  return (
-    <span data-testid="badge-disponible" className="mt-1 inline-block rounded-full bg-accent-volt-soft px-2 py-0.5 text-[11px] font-bold text-accent-volt-ink">
-      DISPONIBLE
-    </span>
-  );
-}
-
-/** Tarjeta de catálogo (grid home). Marca, nombre, precio y disponibilidad (SPEC-09 Req. 1). */
+/** Tarjeta de catálogo con datos de las herramientas (SPEC-09 Req. 1). */
 export function ProductCard({
   producto,
   onDetalle,
 }: {
-  producto: ProductoUI;
-  onDetalle: (p: ProductoUI) => void;
+  producto: CatalogCardItem;
+  onDetalle: (p: CatalogCardItem) => void;
 }) {
-  const agotado = producto.stock <= 0;
-  const nombre = sanitize(producto.nombre);
+  const agotado = producto.availability === "AGOTADO";
+  const nombre = sanitize(producto.name);
 
   return (
     <article
@@ -72,15 +69,17 @@ export function ProductCard({
       </button>
       <div className="flex items-end justify-between gap-2">
         <button data-testid="btn-detalle" onClick={() => onDetalle(producto)} className="text-left">
-          <span data-testid="product-marca" className="block text-[11px] font-bold text-text-secondary">INKA ATHLETICS</span>
+          <span data-testid="product-marca" className="block text-[11px] font-bold text-text-secondary">{producto.brand ? sanitize(producto.brand).toUpperCase() : "CATÁLOGO"}</span>
           <span data-testid="product-nombre" className="block font-heading text-[17px] uppercase leading-tight text-text-primary">
             {nombre}
           </span>
-          <span className="block text-[12px] text-text-secondary">Calzado ligero, horma precisa</span>
+          {producto.shortDescription && (
+            <span className="block text-[12px] text-text-secondary">{sanitize(producto.shortDescription)}</span>
+          )}
           <span data-testid="product-precio" className="block text-[14px] font-semibold text-text-primary">
-            S/ {producto.precio.toFixed(2)}
+            S/ {producto.price.toFixed(2)}
           </span>
-          <BadgeDisponibilidad stock={producto.stock} />
+          <BadgeDisponibilidad availability={producto.availability} />
         </button>
         <button
           data-testid="btn-agregar"

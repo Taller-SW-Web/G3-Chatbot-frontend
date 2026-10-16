@@ -13,6 +13,7 @@ import {
   CHAT_INICIAL_SEED,
   type SeedMsg,
 } from "@/adapters/outbound/mockData";
+import type { CatalogCardItem } from "@/domain/entities/CatalogoUI";
 import type { ProductoUI } from "@/domain/entities/ProductoUI";
 import { ProductDetailModal } from "../components/blocks/DetalleProducto";
 
@@ -67,7 +68,7 @@ export function ChatPage({ conversationId = "talla-42" }: { conversationId?: str
   const [flow, setFlow] = useState<Flow>(FLOW_POR_SEED[conversationId] ?? null);
   const [composer, setComposer] = useState("");
   const [typing, setTyping] = useState(false);
-  const [detalle, setDetalle] = useState<ProductoUI | null>(null);
+  const [detalle, setDetalle] = useState<CatalogCardItem | null>(null);
   const [attach, setAttach] = useState(false);
 
   // El mensaje ya se copió al estado inicial; se consume para no repetirlo.
@@ -221,9 +222,19 @@ export function ChatPage({ conversationId = "talla-42" }: { conversationId?: str
           cards={() => (
             <CarruselProductos
               titulo="Estas son mis recomendaciones para ti:"
-              productos={CHAT_CARDS_MOCK}
-              onAdd={(p) => agregarAlCarrito(p)}
-              onDetalle={(p) => setDetalle({ sku: p.sku, nombre: p.nombre, categoria: p.categoria ?? "Calzado deportivo", talla: p.talla, color: p.color, precio: p.precio, stock: 5 })}
+              productos={CHAT_CARDS_MOCK.map((c, i) => ({
+                ref: i + 1,
+                product_id: c.sku,
+                sku: c.sku,
+                name: c.nombre,
+                price: c.precio,
+                hasVariants: false,
+                availability: "DISPONIBLE" as const,
+                talla: c.talla,
+                color: c.color,
+              }))}
+              onAdd={(p) => agregarAlCarrito({ nombre: p.name, precio: p.price, talla: p.talla ?? "", color: p.color ?? "", sku: p.sku ?? p.product_id })}
+              onDetalle={(p) => setDetalle(p)}
             />
           )}
           loginSlot={() => (
@@ -259,9 +270,21 @@ export function ChatPage({ conversationId = "talla-42" }: { conversationId?: str
 
       {detalle && (
         <ProductDetailModal
-          p={{ nombre: detalle.nombre, categoria: detalle.categoria, talla: detalle.talla, color: detalle.color, precio: detalle.precio }}
+          p={{
+            product_id: detalle.product_id,
+            name: detalle.name,
+            brand: detalle.brand,
+            description: `${detalle.name}. Calzado verificado.`,
+            images: [],
+            price: detalle.price,
+            hasVariants: false,
+            availability: "DISPONIBLE",
+            variants: detalle.sku ? [{ sku: detalle.sku, talla: detalle.talla ?? null, color: detalle.color ?? null }] : [],
+            tallas: detalle.talla ? [detalle.talla] : [],
+            colores: detalle.color ? [detalle.color] : [],
+          }}
           onClose={() => setDetalle(null)}
-          onAdd={(d) => { agregarAlCarrito({ ...d, sku: detalle.sku }); setDetalle(null); }}
+          onAdd={(d) => { agregarAlCarrito({ nombre: detalle.name, precio: detalle.price, talla: d.talla ?? "", color: d.color ?? "", sku: d.sku ?? detalle.sku ?? detalle.product_id }); setDetalle(null); }}
         />
       )}
       {attach && <AttachmentPopup onClose={() => setAttach(false)} onSend={(n) => { setAttach(false); sendPhoto(n); }} />}
