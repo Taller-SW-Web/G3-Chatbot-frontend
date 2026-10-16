@@ -9,5 +9,4 @@ export const apiConfig = {
     defecto: 8000,
     pago: 1000,
   },
-  pollingMs: 2000,
 } as const;

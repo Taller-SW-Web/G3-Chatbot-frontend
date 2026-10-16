@@ -2,7 +2,6 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Mensaje } from "@/domain/entities/Mensaje";
 import type { Cliente } from "@/domain/entities/Cliente";
 import type { CarritoUI } from "@/domain/entities/CarritoUI";
 
@@ -10,8 +9,6 @@ type ChatState = {
   accessToken: string | null;
   chatSid: string | null;
   cliente: Cliente | null;
-  mensajes: Mensaje[];
-  escribiendo: boolean;
   carrito: CarritoUI;
   accionPendiente: string | null;
   /** Abre el modal de login/registro global (AppShell). */
@@ -22,9 +19,6 @@ type ChatState = {
   ultimoPedido: UltimoPedido;
   setToken: (t: string | null) => void;
   setCliente: (c: Cliente | null) => void;
-  pushMensaje: (m: Mensaje) => void;
-  setMensajes: (m: Mensaje[]) => void;
-  setEscribiendo: (v: boolean) => void;
   setCarrito: (c: CarritoUI) => void;
   setAccionPendiente: (a: string | null) => void;
   setAuthOpen: (v: boolean) => void;
@@ -51,8 +45,6 @@ export const useChatStore = create<ChatState>()(
       accessToken: null,
       chatSid: null,
       cliente: null,
-      mensajes: [],
-      escribiendo: false,
       carrito: carritoVacio,
       accionPendiente: null,
       authOpen: false,
@@ -60,9 +52,6 @@ export const useChatStore = create<ChatState>()(
       ultimoPedido: null,
       setToken: (accessToken) => set({ accessToken }),
       setCliente: (cliente) => set({ cliente }),
-      pushMensaje: (m) => set((s) => ({ mensajes: [...s.mensajes, m] })),
-      setMensajes: (mensajes) => set({ mensajes }),
-      setEscribiendo: (escribiendo) => set({ escribiendo }),
       setCarrito: (carrito) => set({ carrito }),
       setAccionPendiente: (accionPendiente) => set({ accionPendiente }),
       setAuthOpen: (authOpen) => set({ authOpen }),
@@ -72,12 +61,31 @@ export const useChatStore = create<ChatState>()(
         set({
           accessToken: null,
           cliente: null,
-          mensajes: [],
           carrito: carritoVacio,
           accionPendiente: null,
           mensajePendiente: null,
         }),
     }),
-    { name: "g3-chat-storage" } // LocalStorage, token 15 min (refresh en cookie httpOnly backend)
+    {
+      name: "g3-chat-storage", // LocalStorage, token 15 min (refresh en cookie httpOnly backend)
+      version: 1,
+      // Los mensajes del chat viven en el backend (historial) y en el estado local del turno.
+      migrate: (persistido) => {
+        const resto = { ...(persistido as Record<string, unknown>) };
+        delete resto.mensajes;
+        delete resto.escribiendo;
+        return resto as unknown as ChatState;
+      },
+      partialize: (s) => ({
+        accessToken: s.accessToken,
+        chatSid: s.chatSid,
+        cliente: s.cliente,
+        carrito: s.carrito,
+        accionPendiente: s.accionPendiente,
+        authOpen: s.authOpen,
+        mensajePendiente: s.mensajePendiente,
+        ultimoPedido: s.ultimoPedido,
+      }),
+    }
   )
 );
