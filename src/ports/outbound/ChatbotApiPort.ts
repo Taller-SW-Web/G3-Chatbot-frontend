@@ -34,6 +34,32 @@ export type ConversacionResumen = {
 /** Tamaño de página del listado y la búsqueda (backend: CONVERSATIONS_PAGE_SIZE). */
 export const CONVERSACIONES_POR_PAGINA = 20;
 
+/** Filtros de `GET /catalogo/productos` (SPEC-06, nombres reales del contrato). */
+export type BuscarProductosInput = {
+  q?: string;
+  categoria?: string;
+  marca?: string;
+  precioMin?: number;
+  precioMax?: number;
+  orden?: string;
+  pagina?: number;
+  tamanio?: number;
+};
+
+/** Página de catálogo (`items`, `total`; el mensaje trae aclaraciones). */
+export type PaginaCatalogo = {
+  items: unknown[];
+  total: number;
+  mensaje?: string;
+};
+
+/** Disponibilidad puntual (`GET /catalogo/disponibilidad`, SPEC-10). */
+export type DisponibilidadPuntual = {
+  sku: string;
+  status: string;
+  veredicto?: string | null;
+};
+
 export interface ChatbotApiPort {
   crearConversacion(): Promise<{ conversacionId: string }>;
   enviarMensaje(conversacionId: string, texto: string): Promise<{ mensajeId: string }>;
@@ -41,6 +67,10 @@ export interface ChatbotApiPort {
   listarConversaciones(pagina?: number): Promise<ConversacionResumen[]>;
   buscarConversaciones(q: string, pagina?: number): Promise<ConversacionResumen[]>;
   agregarAlCarrito(input: { sku: string; cantidad: number }): Promise<{ ok: true }>;
+  /** Catálogo con datos reales (SPEC-06, SPEC-09, SPEC-10). Sin mocks. */
+  buscarProductos(input: BuscarProductosInput): Promise<PaginaCatalogo>;
+  verDetalleProducto(productId: string): Promise<unknown>;
+  consultarDisponibilidad(sku: string, cantidad?: number): Promise<DisponibilidadPuntual[]>;
   validarContactoCelular(codigo: string): Promise<{ verificado: boolean }>;
   cotizar(): Promise<{ total: number }>;
   crearCheckout(input: {
