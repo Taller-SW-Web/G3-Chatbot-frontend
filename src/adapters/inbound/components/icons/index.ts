@@ -23,3 +23,6 @@ export { CameraIcon } from "./CameraIcon";
 export { ThumbUpIcon } from "./ThumbUpIcon";
 export { ThumbDownIcon } from "./ThumbDownIcon";
 export { CopyIcon } from "./CopyIcon";
+export { MoodSadIcon } from "./MoodSadIcon";
+export { MoodNeutralIcon } from "./MoodNeutralIcon";
+export { MoodHappyIcon } from "./MoodHappyIcon";
