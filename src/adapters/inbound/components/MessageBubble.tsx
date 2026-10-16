@@ -1,15 +1,32 @@
 "use client";
 import type { ReactNode } from "react";
-import type { Bloque, BloqueError, BloqueTexto } from "@/domain/entities/Bloque";
+import type {
+  Bloque,
+  BloqueAcciones,
+  BloqueCarrusel,
+  BloqueConfirmacion,
+  BloqueDetalle,
+  BloqueError,
+  BloqueResumenCheckout,
+  BloqueTexto,
+} from "@/domain/entities/Bloque";
 import { sanitize } from "@/domain/utils/sanitize";
+import { AccionesRapidas } from "./blocks/AccionesRapidas";
+import { CarruselProductos } from "./blocks/CarruselProductos";
+import { ConfirmacionPedido } from "./blocks/ConfirmacionPedido";
+import { DetalleProducto } from "./blocks/DetalleProducto";
+import { ResumenCheckout } from "./blocks/ResumenCheckout";
+import { mensajePorCodigo } from "./chatPresentacion";
 
 type Props = {
   texto: string;
   rol: "user" | "bot";
-  /** Validated TEXTO/ERROR blocks (SPEC-05 Req. 4). */
+  /** Bloques del turno (SPEC-05 Req. 4); los tipos sin componente no se pintan. */
   bloques?: Bloque[];
-  /** Tokens arriving over WS ("typing live" effect). */
+  /** Respuesta en construcción: tokens llegando por SSE (efecto de escritura en vivo). */
   streaming?: boolean;
+  /** Las acciones rápidas envían su etiqueta como mensaje de texto normal. */
+  onEnviarAccion?: (etiqueta: string) => void;
   /** First bot reply: Botleta introduction. */
   isFirstAssistant?: boolean;
 };
@@ -56,24 +73,89 @@ function esBloqueError(b: Bloque): b is BloqueError {
   return b.tipo === "ERROR" && typeof (b as BloqueError).code === "string";
 }
 
-/** Mensaje de error ramificado por code (contratos §2.8), nunca por texto. */
-function mensajePorCode(code: string): string {
-  switch (code) {
-    case "REQUIERE_SESION":
-      return "Inicia sesión para continuar.";
-    case "STOCK_INSUFICIENTE":
-      return "No hay stock suficiente para esa cantidad.";
-    case "CARRITO_DESACTUALIZADO":
-      return "El carrito cambió: revisa el nuevo total antes de pagar.";
-    case "DEMASIADAS_SOLICITUDES":
-      return "Vas muy rápido: espera un momento e inténtalo de nuevo.";
+const noop = () => {};
+
+/**
+ * Renderiza un bloque por tipo con los componentes existentes. Los que dependen de
+ * funcionalidades pendientes (carrito, detalle, reenvío de correo) se pintan inertes;
+ * los tipos sin forma definida en `Bloque` no se pintan.
+ */
+export function renderBloque(
+  bloque: Bloque,
+  clave: number,
+  onEnviarAccion?: (etiqueta: string) => void
+): ReactNode {
+  if (esBloqueTexto(bloque)) {
+    return <p key={clave} data-testid="bloque-texto">{renderChatText(bloque.texto)}</p>;
+  }
+  if (esBloqueError(bloque)) {
+    return (
+      <p key={clave} data-testid="bloque-error" data-code={bloque.code}>
+        {mensajePorCodigo(bloque.code)}
+      </p>
+    );
+  }
+  switch (bloque.tipo) {
+    case "ACCIONES_RAPIDAS": {
+      const b = bloque as BloqueAcciones;
+      if (!Array.isArray(b.acciones) || b.acciones.length === 0) return null;
+      return (
+        <div key={clave} data-testid="bloque-acciones-rapidas" className="mt-2">
+          <AccionesRapidas
+            pregunta={b.pregunta}
+            acciones={b.acciones.map((a) => a.etiqueta)}
+            onAccion={onEnviarAccion ?? noop}
+          />
+        </div>
+      );
+    }
+    case "DETALLE_PRODUCTO": {
+      const b = bloque as BloqueDetalle;
+      if (!b.producto) return null;
+      return (
+        <div key={clave} data-testid="bloque-detalle-producto" className="mt-2">
+          <DetalleProducto p={b.producto} />
+        </div>
+      );
+    }
+    case "RESUMEN_CHECKOUT": {
+      const b = bloque as BloqueResumenCheckout;
+      return (
+        <div key={clave} data-testid="bloque-resumen-checkout" className="mt-2">
+          <ResumenCheckout
+            total={b.total}
+            direccion={b.direccion}
+            tarjetaLast4={String(b.tarjetaEnmascarada ?? "").slice(-4)}
+          />
+        </div>
+      );
+    }
+    case "CARRUSEL_PRODUCTOS": {
+      const b = bloque as BloqueCarrusel;
+      if (!Array.isArray(b.productos)) return null;
+      return (
+        // Inerte: agregar al carrito y ver detalle dependen de funcionalidades pendientes.
+        <div key={clave} data-testid="bloque-carrusel-productos" className="mt-2" inert>
+          <CarruselProductos titulo={b.titulo} productos={b.productos} onAdd={noop} onDetalle={noop} />
+        </div>
+      );
+    }
+    case "CONFIRMACION_PEDIDO": {
+      const b = bloque as BloqueConfirmacion;
+      return (
+        // Inerte: reenviar la confirmación no está disponible desde el chat todavía.
+        <div key={clave} data-testid="bloque-confirmacion-pedido" className="mt-2" inert>
+          <ConfirmacionPedido pedidoId={b.pedidoId} correoEnmascarado={b.correoEnmascarado} />
+        </div>
+      );
+    }
     default:
-      return "Hubo un problema. Inténtalo de nuevo.";
+      return null;
   }
 }
 
 /** Burbuja de mensaje. Todo texto pasa por sanitize (R7). */
-export function MessageBubble({ texto, rol, bloques = [], streaming = false, isFirstAssistant = false }: Props) {
+export function MessageBubble({ texto, rol, bloques = [], streaming = false, isFirstAssistant = false, onEnviarAccion }: Props) {
   if (rol === "user") {
     return (
       <div
@@ -99,19 +181,7 @@ export function MessageBubble({ texto, rol, bloques = [], streaming = false, isF
         </p>
       )}
       {texto && renderChatText(texto)}
-      {bloques.map((bloque, i) => {
-        if (esBloqueTexto(bloque)) {
-          return <p key={i} data-testid="bloque-texto">{renderChatText(bloque.texto)}</p>;
-        }
-        if (esBloqueError(bloque)) {
-          return (
-            <p key={i} data-testid="bloque-error" data-code={bloque.code}>
-              {mensajePorCode(bloque.code)}
-            </p>
-          );
-        }
-        return null;
-      })}
+      {bloques.map((bloque, i) => renderBloque(bloque, i, onEnviarAccion))}
       {streaming && <span data-testid="typing-indicator" aria-label="escribiendo" />}
     </div>
   );

@@ -17,6 +17,11 @@ type ChatState = {
   mensajePendiente: { user?: string; bot: string } | null;
   /** Resumen del último pedido confirmado (pantalla /exito). */
   ultimoPedido: UltimoPedido;
+  /**
+   * Primer mensaje que Home deja para la conversación recién creada; el chat lo envía una
+   * sola vez y lo limpia. Es transitorio: no se persiste.
+   */
+  primerMensaje: string | null;
   setToken: (t: string | null) => void;
   setCliente: (c: Cliente | null) => void;
   setCarrito: (c: CarritoUI) => void;
@@ -24,6 +29,7 @@ type ChatState = {
   setAuthOpen: (v: boolean) => void;
   setMensajePendiente: (m: { user?: string; bot: string } | null) => void;
   setUltimoPedido: (p: UltimoPedido) => void;
+  setPrimerMensaje: (m: string | null) => void;
   logout: () => void;
 };
 
@@ -50,6 +56,7 @@ export const useChatStore = create<ChatState>()(
       authOpen: false,
       mensajePendiente: null,
       ultimoPedido: null,
+      primerMensaje: null,
       setToken: (accessToken) => set({ accessToken }),
       setCliente: (cliente) => set({ cliente }),
       setCarrito: (carrito) => set({ carrito }),
@@ -57,6 +64,7 @@ export const useChatStore = create<ChatState>()(
       setAuthOpen: (authOpen) => set({ authOpen }),
       setMensajePendiente: (mensajePendiente) => set({ mensajePendiente }),
       setUltimoPedido: (ultimoPedido) => set({ ultimoPedido }),
+      setPrimerMensaje: (primerMensaje) => set({ primerMensaje }),
       logout: () =>
         set({
           accessToken: null,

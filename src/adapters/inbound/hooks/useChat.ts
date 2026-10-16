@@ -13,6 +13,8 @@ import { container } from "@/infrastructure/di/container";
 export function useChat(conversacionId: string) {
   const [turno, dispatch] = useReducer(turnoChatReducer, turnoInicial);
   const [recarga, setRecarga] = useState(0);
+  const [cargadoDe, setCargadoDe] = useState<string | null>(null);
+  const [ultimoTexto, setUltimoTexto] = useState<string | null>(null);
   const controladorRef = useRef<AbortController | null>(null);
   const enviandoRef = useRef(false);
   const ultimoTextoRef = useRef<string | null>(null);
@@ -26,7 +28,9 @@ export function useChat(conversacionId: string) {
     dispatch({ tipo: "historialCargando" });
     cargarHistorialUseCase(container.api, conversacionId)
       .then((mensajes) => {
-        if (!controlador.signal.aborted) dispatch({ tipo: "historialCargado", mensajes });
+        if (controlador.signal.aborted) return;
+        dispatch({ tipo: "historialCargado", mensajes });
+        setCargadoDe(conversacionId);
       })
       .catch(() => {
         if (!controlador.signal.aborted) {
@@ -42,6 +46,7 @@ export function useChat(conversacionId: string) {
       if (!controlador || enviandoRef.current || turno.estado === "cargando") return;
       enviandoRef.current = true;
       ultimoTextoRef.current = texto;
+      setUltimoTexto(texto);
       try {
         await ejecutarTurnoUseCase({
           api: container.api,
@@ -78,6 +83,13 @@ export function useChat(conversacionId: string) {
     estado: turno.estado,
     error: turno.error,
     incompleto: turno.incompleto,
+    /** Último texto enviado: la UI lo devuelve al campo si el mensaje no llegó a aceptarse. */
+    ultimoTexto,
+    /** El historial de esta conversación ya se cargó y no hay una recarga en curso. */
+    historialCargado:
+      cargadoDe === conversacionId &&
+      turno.estado !== "cargando" &&
+      turno.error?.code !== "ERROR_HISTORIAL",
     enviar,
     reintentar,
     recargar,
