@@ -1,11 +1,13 @@
 "use client";
 
-import axios from "axios";
+import axios, { type AxiosError } from "axios";
 import { apiConfig } from "@/infrastructure/config/apiConfig";
 import { useChatStore } from "@/application/state/chatStore";
 import type {
   ChatbotApiPort,
   ConversacionResumen,
+  MfaChallenge,
+  SessionOpened,
 } from "@/ports/outbound/ChatbotApiPort";
 import type { Mensaje } from "@/domain/entities/Mensaje";
 import { MOCK_CONVERSACIONES, MOCK_MENSAJES } from "./mockData";
@@ -19,6 +21,8 @@ import { MOCK_CONVERSACIONES, MOCK_MENSAJES } from "./mockData";
 const http = axios.create({
   baseURL: apiConfig.baseUrl,
   timeout: apiConfig.timeouts.defecto,
+  withCredentials: true,
+  headers: { "X-Requested-With": "XMLHttpRequest" },
 });
 
 http.interceptors.request.use((cfg) => {
@@ -26,6 +30,43 @@ http.interceptors.request.use((cfg) => {
   if (token) cfg.headers.Authorization = `Bearer ${token}`;
   return cfg;
 });
+
+/** Single-flight refresh: concurrent calls share one promise (SPEC-03 Req. 5). */
+let refreshPromise: Promise<SessionOpened> | null = null;
+
+async function doRefresh(): Promise<SessionOpened> {
+  const { data } = await http.post("/sesion/refresh");
+  return data as SessionOpened;
+}
+
+async function refreshOnce(): Promise<SessionOpened> {
+  if (!refreshPromise) {
+    refreshPromise = doRefresh().finally(() => { refreshPromise = null; });
+  }
+  return refreshPromise;
+}
+
+function isInvalidToken(error: unknown): boolean {
+  const status = (error as AxiosError)?.response?.status;
+  const code = (error as AxiosError<{ code?: string }>)?.response?.data?.code;
+  return status === 401 && (!code || code === "TOKEN_INVALIDO");
+}
+
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (!isInvalidToken(error)) throw error;
+    try {
+      const opened = await refreshOnce();
+      useChatStore.getState().applySession(opened.accessToken, opened.expiresIn);
+    } catch {
+      useChatStore.getState().logout();
+      throw error;
+    }
+    return fn();
+  }
+}
 
 async function conFallback<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try {
@@ -36,6 +77,36 @@ async function conFallback<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 }
 
 export const chatbotApi: ChatbotApiPort = {
+  async login(email, password) {
+    const { data } = await http.post("/sesion/login", { email, password });
+    if (data?.mfaRequerido) return data as MfaChallenge;
+    return data as SessionOpened;
+  },
+  async requestMfaCode(canal) {
+    const { data } = await http.post("/sesion/mfa/solicitar", { canal });
+    return data as { ok: true };
+  },
+  async verifyMfaCode(code) {
+    const { data } = await http.post("/sesion/mfa/verificar", { code });
+    return data as SessionOpened;
+  },
+  async refreshSession() {
+    return refreshOnce();
+  },
+  async logout() {
+    try {
+      const { data } = await http.post("/sesion/logout");
+      return data as { ok: true };
+    } finally {
+      useChatStore.getState().logout();
+    }
+  },
+  async fetchProfile() {
+    return withRetry(async () => {
+      const { data } = await http.get("/sesion/perfil");
+      return data as { id: string };
+    });
+  },
   async enviarMensaje(conversacionId, texto) {
     return conFallback(
       async () => {

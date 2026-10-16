@@ -20,7 +20,24 @@ export type ConversacionResumen = {
   ultimoMensajeEn: string;
 };
 
+export type SessionOpened = {
+  accessToken: string;
+  expiresIn: number;
+  usuario: { id?: string; nombreCompleto?: string; correo?: string };
+};
+
+export type MfaChallenge = {
+  mfaRequerido: true;
+  canal: "EMAIL" | "SMS";
+};
+
 export interface ChatbotApiPort {
+  login(email: string, password: string): Promise<SessionOpened | MfaChallenge>;
+  requestMfaCode(canal: "EMAIL" | "SMS"): Promise<{ ok: true }>;
+  verifyMfaCode(code: string): Promise<SessionOpened>;
+  refreshSession(): Promise<SessionOpened>;
+  logout(): Promise<{ ok: true }>;
+  fetchProfile(): Promise<{ id: string; nombreCompleto?: string; correo?: string }>;
   enviarMensaje(conversacionId: string, texto: string): Promise<{ mensajeId: string }>;
   cargarHistorial(conversacionId: string, desde?: string): Promise<Mensaje[]>;
   listarConversaciones(): Promise<ConversacionResumen[]>;

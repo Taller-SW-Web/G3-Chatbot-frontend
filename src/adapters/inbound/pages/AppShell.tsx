@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, Menu2Icon, ShoppingCartIcon, XIcon } from "../components/icons";
 import { BrandLogo } from "../components/BrandLogo";
 import { AuthModal } from "../components/AuthModal";
+import { SesionIndicator } from "../components/SesionIndicator";
 import { useChatStore } from "@/application/state/chatStore";
 import { Sidebar } from "./Sidebar";
 
@@ -65,7 +66,8 @@ export function AppShell({
         ) : (
           <p className="font-heading uppercase tracking-[0.08em] text-[16px]">{titulo}</p>
         )}
-        <div className="relative">
+        <div className="relative flex items-center gap-2">
+          <SesionIndicator />
           <button aria-label="Ver carrito" onClick={() => router.push("/carrito")}
             className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse text-lg leading-none hover:bg-surface-ink">
             <ShoppingCartIcon size={20} />
