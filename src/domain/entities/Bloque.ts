@@ -1,6 +1,6 @@
 /** Entidad Bloque (SPEC-05 motor-conversacion Req. 4).
  *
- * Unidad visual que manda el backend por WS (eventos token/bloque/fin/error).
+ * Unidad visual que manda el backend por SSE (eventos aceptado/token/bloque/degradado/fin/error).
  * Sin React, sin fetch (regla hexagonal domain/).
  */
 import type { BloqueTipo } from "../types/BloqueTipo";
@@ -43,10 +43,28 @@ export type BloqueAcciones = BloqueBase & {
   acciones: { id: string; etiqueta: string }[];
 };
 
+export type LineaCarritoBloque = {
+  item_id: string;
+  sku?: string;
+  nombre: string;
+  variante?: string | null;
+  cantidad: number;
+  precio: number;
+  disponible: boolean;
+  imagen?: string | null;
+  nota?: string | null;
+};
+
 export type BloqueCarritoResumen = BloqueBase & {
   tipo: "CARRITO";
-  lineas: { sku: string; nombre: string; cantidad: number; precio: number }[];
+  lineas: LineaCarritoBloque[];
   subtotal: number;
+  descuentos?: { nombre: string; monto: number }[];
+  costoEnvio?: number | null;
+  envio?: string | null;
+  total?: number;
+  avisos?: string[];
+  promociones_ok?: boolean;
 };
 
 export type BloqueResumenCheckout = BloqueBase & {

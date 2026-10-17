@@ -1,19 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpIcon, PhotoIcon } from "../components/icons";
 import { ProductCard } from "../components/ProductCard";
-import { AttachmentPopup } from "../components/AttachmentPopup";
 import {
-  formatPrice,
   toAvailabilityState,
   type CatalogCardItem,
   type CatalogDetail,
 } from "@/domain/entities/CatalogoUI";
-import { isUnavailable, problemCode } from "@/domain/utils/httpError";
+import {
+  isUnavailable,
+  problemCode,
+  problemFaltantes,
+} from "@/domain/utils/httpError";
 import { useChatStore } from "@/application/state/chatStore";
+import { conversacionParaCarrito } from "@/domain/utils/carrito";
+import { mensajeCarrito } from "@/application/errors/carritoMensajes";
 import {
   ModalShell,
   ProductDetailModal,
@@ -22,7 +26,18 @@ import { buscarProductosUseCase } from "@/application/use_cases/buscarProductosU
 import { verDetalleProductoUseCase } from "@/application/use_cases/verDetalleProductoUseCase";
 import { consultarDisponibilidadUseCase } from "@/application/use_cases/consultarDisponibilidadUseCase";
 import { agregarProductoAlCarritoUseCase } from "@/application/use_cases/agregarProductoAlCarritoUseCase";
+import { crearConversacionUseCase } from "@/application/use_cases/crearConversacionUseCase";
+import { MENSAJE_MAX_CARACTERES } from "@/application/use_cases/enviarMensajeUseCase";
 import { container } from "@/infrastructure/di/container";
+
+/** Mensaje del agregado; en 409 VARIANTE_REQUERIDA indica qué falta (talla/color). */
+function mensajeAgregar(error: unknown): string {
+  if (problemCode(error) === "VARIANTE_REQUERIDA") {
+    const faltan = problemFaltantes(error);
+    if (faltan.length > 0) return `Elige ${faltan.join(" y ")} antes de agregar.`;
+  }
+  return mensajeCarrito(problemCode(error));
+}
 
 /** `/`: banner ofertas, grid en oferta, campo chat inferior. SPEC-05 Req.2, SPEC-06,08,09 */
 export function HomePage() {
@@ -30,10 +45,16 @@ export function HomePage() {
   const [banner, setBanner] = useState(0);
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [composer, setComposer] = useState("");
-  const [attach, setAttach] = useState(false);
-  const carrito = useChatStore((s) => s.carrito);
-  const setCarrito = useChatStore((s) => s.setCarrito);
-  const setMensajePendiente = useChatStore((s) => s.setMensajePendiente);
+  const [creando, setCreando] = useState(false);
+  /** Texto cuyo intento de crear la conversación falló, para reintentarlo. */
+  const [fallido, setFallido] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [agregado, setAgregado] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const cliente = useChatStore((s) => s.cliente);
+  const ultimaConversacionId = useChatStore((s) => s.ultimaConversacionId);
+  const setUltimaConversacionId = useChatStore((s) => s.setUltimaConversacionId);
+  const setPrimerMensaje = useChatStore((s) => s.setPrimerMensaje);
 
   // Grid con datos reales (SPEC-06). Sin fallback a mocks en este flujo.
   const catalogo = useQuery({
@@ -49,44 +70,81 @@ export function HomePage() {
   });
   const detalle: CatalogDetail | null = detalleQuery.data ?? null;
 
-  async function agregarDesdeDetalle(
-    item: CatalogCardItem,
-    sel: { sku: string | null; talla: string | null; color: string | null }
-  ) {
-    if (sel.sku == null) return;
-    await agregarProductoAlCarritoUseCase(container.api, { sku: sel.sku, cantidad: 1 });
-    const found = carrito.lineas.find((l) => l.producto.sku === sel.sku);
-    const lineas = found
-      ? carrito.lineas.map((l) => (l.producto.sku === sel.sku ? { ...l, cantidad: Math.min(10, l.cantidad + 1) } : l))
-      : [...carrito.lineas, { producto: { sku: sel.sku, nombre: item.name, categoria: item.brand ?? "Catálogo", talla: sel.talla ?? "", color: sel.color ?? "", precio: item.price, stock: 5 }, cantidad: 1 }];
-    const subtotal = lineas.reduce((a, l) => a + l.cantidad * l.producto.precio, 0);
-    setCarrito({ lineas, subtotal, count: lineas.reduce((a, l) => a + l.cantidad, 0) });
-    // Botleta confirma en el chat lo agregado (paridad mockup).
-    setMensajePendiente({
-      bot: `Agregué ${item.name} (${formatPrice(item)}). Tu carrito se actualizó.`,
-    });
-    setDetalleId(null);
-    router.push("/chat/talla-42");
-  }
+  // SPEC-09 Req. 2 "agregar desde la tarjeta": la línea la crea el backend con
+  // nombre, imagen e id reales. El front solo invalida el carrito y el badge.
+  // Si hay que abrir una conversación anónima, se reutiliza en reintentos y solo
+  // se persiste cuando el agregado funcionó (no deja una conversación sin uso).
+  const convCreadaRef = useRef<string | null>(null);
+  const agregar = useMutation({
+    mutationFn: async (input: {
+      item: CatalogCardItem;
+      sel: { sku: string | null; talla: string | null; color: string | null };
+    }) => {
+      const { item, sel } = input;
+      if (sel.sku == null) throw new Error("sku requerido");
+      let conversacion =
+        conversacionParaCarrito(ultimaConversacionId) ??
+        convCreadaRef.current ??
+        undefined;
+      if (!cliente && !conversacion) {
+        const { conversacionId } = await crearConversacionUseCase(container.api);
+        convCreadaRef.current = conversacionId;
+        conversacion = conversacionId;
+      }
+      await agregarProductoAlCarritoUseCase(container.api, {
+        sku: sel.sku,
+        cantidad: 1,
+        product_id: item.product_id,
+        talla: sel.talla ?? undefined,
+        color: sel.color ?? undefined,
+        conversacionId: conversacion,
+      });
+      return { item, conversacion };
+    },
+    onSuccess: ({ item, conversacion }) => {
+      if (conversacion) setUltimaConversacionId(conversacion);
+      setAviso(null);
+      setAgregado(`${item.name} se agregó a tu carrito.`);
+      setDetalleId(null);
+      void queryClient.invalidateQueries({ queryKey: ["carrito"] });
+    },
+    onError: (error) => {
+      setAgregado(null);
+      setAviso(mensajeAgregar(error));
+    },
+  });
 
-  function irChat(texto?: string) {
-    if (!texto?.trim()) return;
-    if (texto.toLowerCase().includes("oferta")) router.push("/chat/ofertas-q");
-    else if (texto.toLowerCase().includes("pedido") || texto.toLowerCase().includes("rastrea")) router.push("/chat/estado-pedido");
-    else router.push("/chat/talla-42");
-  }
-
-  function sendPhoto(nombreArchivo = "evidencia.jpg") {
-    setMensajePendiente({
-      user: `📷 Foto enviada: ${nombreArchivo}`,
-      bot: "Foto recibida. ¿En qué te ayudo con ella?",
-    });
-    router.push("/chat/consulta");
+  /** Crea una conversación real, deja el texto como primer mensaje y abre el chat. */
+  async function irChat(texto?: string) {
+    const limpio = texto?.trim();
+    if (!limpio || limpio.length > MENSAJE_MAX_CARACTERES || creando) return;
+    setCreando(true);
+    setFallido(null);
+    try {
+      const { conversacionId } = await crearConversacionUseCase(container.api);
+      setPrimerMensaje(limpio);
+      setComposer("");
+      router.push(`/chat/${encodeURIComponent(conversacionId)}`);
+    } catch {
+      setFallido(limpio);
+    } finally {
+      setCreando(false);
+    }
   }
 
   return (
     <div className="p-4 flex flex-col gap-4 pb-24">
-      <button onClick={() => irChat("Ver ofertas")}
+      {aviso && (
+        <p role="alert" aria-live="assertive" className="rounded-md bg-error-soft border border-error-default px-3 py-2.5 text-[13px]">
+          {aviso}
+        </p>
+      )}
+      {agregado && (
+        <p role="status" aria-live="polite" className="rounded-md bg-white border border-border-default px-3 py-2.5 text-[13px]">
+          {agregado}
+        </p>
+      )}
+      <button onClick={() => irChat("Ver ofertas")} disabled={creando}
         className="relative overflow-hidden rounded-lg w-full text-left bg-surface-ink text-text-inverse px-4 pt-5 pb-6"
         aria-label="Ver ofertas Inka Athletics">
         <span aria-hidden className="absolute inset-0 opacity-60" style={{
@@ -112,7 +170,7 @@ export function HomePage() {
 
       <div className="flex items-end justify-between">
         <h2 className="font-heading text-[24px] leading-[32px]">PRODUCTOS EN OFERTA</h2>
-        <button className="text-[12px] font-semibold underline text-text-secondary" onClick={() => irChat("Ver todo en oferta")}>Ver todo</button>
+        <button className="text-[12px] font-semibold underline text-text-secondary" disabled={creando} onClick={() => irChat("Ver todo en oferta")}>Ver todo</button>
       </div>
 
       {catalogo.isPending && <p className="text-[13px] text-text-secondary">Cargando productos…</p>}
@@ -152,21 +210,38 @@ export function HomePage() {
         <p className="text-[14px] text-text-secondary">Todo listo para seguir avanzando.</p>
         <div className="flex flex-wrap gap-2">
           {["Ver ofertas", "Rastrear pedido", "Ayuda con devolución"].map((q) => (
-            <button key={q} onClick={() => irChat(q)} className="wf-chip px-3 py-1.5 text-[12px] font-semibold text-text-primary hover:border-accent-signal">{q}</button>
+            <button key={q} onClick={() => irChat(q)} disabled={creando} className="wf-chip px-3 py-1.5 text-[12px] font-semibold text-text-primary hover:border-accent-signal disabled:opacity-60">{q}</button>
           ))}
         </div>
       </div>
       <p className="text-[12px] text-text-secondary">Toca + para elegir talla y color antes de agregar.</p>
 
+      {(creando || fallido !== null) && (
+        <div className="fixed bottom-[64px] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-3 pb-2">
+          {creando ? (
+            <p role="status" className="rounded-md bg-white border border-border-default p-3 text-[13px] text-text-secondary">
+              Creando conversación…
+            </p>
+          ) : (
+            <div role="alert" className="rounded-md bg-error-background border border-error-default p-3 flex items-center justify-between gap-2">
+              <p className="text-[13px] text-text-primary">No pudimos crear la conversación. Inténtalo de nuevo.</p>
+              <button onClick={() => irChat(fallido ?? "")}
+                className="wf-btn shrink-0 px-3 py-2 text-[12px] font-bold bg-white border border-border-default">REINTENTAR</button>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] border-t border-border-default bg-surface-cloud px-3 py-3 flex items-center gap-2">
-        <button aria-label="Agregar imagen" onClick={() => setAttach(true)}
-          className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse"><PhotoIcon size={20} /></button>
-        <input value={composer} maxLength={1000} onChange={(e) => setComposer(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { irChat(composer); setComposer(""); } }}
+        <button aria-label="Agregar imagen (próximamente)" title="Próximamente" disabled
+          className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse disabled:opacity-45 disabled:cursor-not-allowed"><PhotoIcon size={20} /></button>
+        <input value={composer} maxLength={MENSAJE_MAX_CARACTERES} disabled={creando} aria-label="Mensaje"
+          onChange={(e) => setComposer(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") irChat(composer); }}
           placeholder="Pregunta por zapatillas, tallas, pedidos…"
-          className="flex-1 wf-chip px-4 py-2.5 text-sm outline-none min-w-0 bg-white text-text-primary placeholder:text-text-secondary" />
-        <button aria-label="Enviar" onClick={() => { irChat(composer); setComposer(""); }}
-          className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse"><ArrowUpIcon size={20} /></button>
+          className="flex-1 wf-chip px-4 py-2.5 text-sm outline-none min-w-0 bg-white text-text-primary placeholder:text-text-secondary disabled:opacity-60" />
+        <button aria-label="Enviar" disabled={creando || !composer.trim()} onClick={() => irChat(composer)}
+          className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse disabled:opacity-45 disabled:cursor-not-allowed"><ArrowUpIcon size={20} /></button>
       </div>
 
       {detalleId != null && detalleQuery.isPending && (
@@ -199,7 +274,7 @@ export function HomePage() {
           onClose={() => setDetalleId(null)}
           onAdd={(sel) => {
             const item = productos.find((c) => c.product_id === detalleId);
-            if (item) void agregarDesdeDetalle(item, sel);
+            if (item) agregar.mutate({ item, sel });
           }}
           consultarDisponibilidad={(sku) =>
             consultarDisponibilidadUseCase(container.api, { sku }).then((r) =>
@@ -208,7 +283,6 @@ export function HomePage() {
           }
         />
       )}
-      {attach && <AttachmentPopup onClose={() => setAttach(false)} onSend={(n) => { setAttach(false); sendPhoto(n); }} />}
     </div>
   );
 }

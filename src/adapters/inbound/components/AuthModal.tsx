@@ -12,7 +12,6 @@ import { ReenviarVerificacionForm } from "./forms/ReenviarVerificacionForm";
 import { useChatStore } from "@/application/state/chatStore";
 import { container } from "@/infrastructure/di/container";
 import {
-  buildLoginGreeting,
   clienteDesdePerfil,
   clienteDesdeUsuario,
   describeLoginFailure,
@@ -64,7 +63,6 @@ export function AuthModal() {
   const setCliente = useChatStore((s) => s.setCliente);
   const accionPendiente = useChatStore((s) => s.accionPendiente);
   const setAccionPendiente = useChatStore((s) => s.setAccionPendiente);
-  const setMensajePendiente = useChatStore((s) => s.setMensajePendiente);
   const [tab, setTab] = useState<"login" | "registro">("login");
   const [paso, setPaso] = useState<Paso>("login");
   const [canal, setCanal] = useState<Canal>("EMAIL");
@@ -106,10 +104,6 @@ export function AuthModal() {
     if (destino) router.push(destino);
   }
 
-  function saludar(nombre?: string | null) {
-    if (!accionPendiente) setMensajePendiente({ bot: buildLoginGreeting(nombre) });
-  }
-
   async function hidratarPerfil(correoFallback: string) {
     try {
       const perfil = await container.api.fetchProfile();
@@ -134,7 +128,6 @@ export function AuthModal() {
       applySession(answer.accessToken, answer.expiresIn);
       setCliente(clienteDesdeUsuario(answer.usuario, d.correo));
       await hidratarPerfil(d.correo);
-      saludar(answer.usuario?.nombreCompleto);
       continuar();
     } catch (error) {
       const { status, code } = problemDe(error);
@@ -186,7 +179,6 @@ export function AuthModal() {
       applySession(opened.accessToken, opened.expiresIn);
       setCliente(clienteDesdeUsuario(opened.usuario, contacto));
       await hidratarPerfil(contacto);
-      saludar(opened.usuario?.nombreCompleto);
       continuar();
     } catch (error) {
       const { status, code, intentosRestantes } = problemDe(error);
