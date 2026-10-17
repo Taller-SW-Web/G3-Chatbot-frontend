@@ -26,7 +26,7 @@ export function OtpMfaForm({
   error?: string | null;
   cargando?: boolean;
 }) {
-  const { register, handleSubmit, reset } = useForm({ resolver: zodResolver(otpMfaSchema) });
+  const { register, handleSubmit, reset, setFocus } = useForm({ resolver: zodResolver(otpMfaSchema) });
   const [restantes, setRestantes] = useState(CODE_TTL_SECONDS);
 
   useEffect(() => {
@@ -34,6 +34,12 @@ export function OtpMfaForm({
     const t = setTimeout(() => setRestantes((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [restantes]);
+
+  useEffect(() => {
+    if (!error) return;
+    reset();
+    setFocus("codigo");
+  }, [error, reset, setFocus]);
 
   const mm = String(Math.floor(restantes / 60));
   const ss = String(restantes % 60).padStart(2, "0");
@@ -45,8 +51,11 @@ export function OtpMfaForm({
       <p className="text-[13px] text-text-secondary">
         Enviamos un código a {destino} · {mm}:{ss}
       </p>
-      <input {...register("codigo")} inputMode="numeric" maxLength={6} placeholder="••••••"
-        aria-label="Código MFA 6 dígitos" autoComplete="one-time-code"
+      <label htmlFor="codigo-mfa" className="text-[12px] font-semibold text-text-primary">
+        Código de verificación
+      </label>
+      <input {...register("codigo")} id="codigo-mfa" inputMode="numeric" maxLength={6} placeholder="••••••"
+        autoComplete="one-time-code"
         className="wf-input px-3 py-2.5 text-sm text-center tracking-[0.3em] outline-none" />
       {error && (
         <p role="alert" className="text-[12px] text-error-default">{error}</p>

@@ -20,8 +20,10 @@ export function LoginForm({
   return (
     <form onSubmit={handleSubmit(onOk)} className="flex flex-col gap-2">
       <input {...register("correo")} placeholder="Correo" aria-label="Correo"
-        autoComplete="email" className="wf-input px-3 py-2.5 text-sm outline-none" />
-      {errors.correo && <span className="text-[12px] text-error-default">{errors.correo.message}</span>}
+        autoComplete="email" aria-invalid={!!errors.correo}
+        aria-describedby={errors.correo ? "correo-login-error" : undefined}
+        className="wf-input px-3 py-2.5 text-sm outline-none" />
+      {errors.correo && <span id="correo-login-error" className="text-[12px] text-error-default">{errors.correo.message}</span>}
       <input {...register("password")} type="password" placeholder="Contraseña"
         aria-label="Contraseña" autoComplete="current-password"
         className="wf-input px-3 py-2.5 text-sm outline-none" />

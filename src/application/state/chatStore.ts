@@ -5,6 +5,7 @@ import { persist } from "zustand/middleware";
 import type { Mensaje } from "@/domain/entities/Mensaje";
 import type { Cliente } from "@/domain/entities/Cliente";
 import type { CarritoUI } from "@/domain/entities/CarritoUI";
+import { isTokenExpiringSoon } from "@/domain/utils/sesion";
 
 type ChatState = {
   accessToken: string | null;
@@ -79,8 +80,8 @@ export const useChatStore = create<ChatState>()(
       })),
       isTokenExpiringSoon: () => {
         const { accessToken, expiraEn } = get();
-        if (!accessToken || !expiraEn) return false;
-        return expiraEn - Date.now() < 60 * 1000;
+        if (!accessToken) return false;
+        return isTokenExpiringSoon(expiraEn);
       },
       pushMensaje: (m) => set((s) => ({ mensajes: [...s.mensajes, m] })),
       setMensajes: (mensajes) => set({ mensajes }),

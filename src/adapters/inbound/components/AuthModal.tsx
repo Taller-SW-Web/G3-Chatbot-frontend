@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { AxiosError } from "axios";
 import { XIcon } from "./icons";
 import { BrandLogo } from "./BrandLogo";
 import { LoginForm } from "./forms/LoginForm";
@@ -9,9 +10,27 @@ import { OtpMfaForm } from "./forms/OtpMfaForm";
 import { RegistroForm } from "./forms/RegistroForm";
 import { useChatStore } from "@/application/state/chatStore";
 import { container } from "@/infrastructure/di/container";
+import {
+  buildLoginGreeting,
+  clienteDesdePerfil,
+  clienteDesdeUsuario,
+  describeLoginFailure,
+  describeMfaResendFailure,
+  describeOtpFailure,
+} from "@/domain/utils/sesion";
 import type { LoginInput } from "@/domain/schemas/login.schema";
 
 type Paso = "login" | "mfa" | "verificar-correo";
+type Canal = "EMAIL" | "SMS";
+
+function problemDe(error: unknown): { status?: number; code?: string; intentosRestantes?: number } {
+  const e = error as AxiosError<{ code?: string; intentosRestantes?: number }>;
+  return {
+    status: e?.response?.status,
+    code: e?.response?.data?.code,
+    intentosRestantes: e?.response?.data?.intentosRestantes,
+  };
+}
 
 /**
  * Global auth modal (AppShell). SPEC-03: login, MFA challenge and resume of
@@ -25,9 +44,10 @@ export function AuthModal() {
   const setCliente = useChatStore((s) => s.setCliente);
   const accionPendiente = useChatStore((s) => s.accionPendiente);
   const setAccionPendiente = useChatStore((s) => s.setAccionPendiente);
+  const setMensajePendiente = useChatStore((s) => s.setMensajePendiente);
   const [tab, setTab] = useState<"login" | "registro">("login");
   const [paso, setPaso] = useState<Paso>("login");
-  const [canal, setCanal] = useState<"EMAIL" | "SMS">("EMAIL");
+  const [canal, setCanal] = useState<Canal>("EMAIL");
   const [contacto, setContacto] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -45,6 +65,19 @@ export function AuthModal() {
     if (destino) router.push(destino);
   }
 
+  function saludar(nombre?: string | null) {
+    if (!accionPendiente) setMensajePendiente({ bot: buildLoginGreeting(nombre) });
+  }
+
+  async function hidratarPerfil(correoFallback: string) {
+    try {
+      const perfil = await container.api.fetchProfile();
+      setCliente(clienteDesdePerfil(perfil, correoFallback));
+    } catch {
+      return;
+    }
+  }
+
   async function ingresar(d: LoginInput) {
     setCargando(true);
     setError(null);
@@ -57,16 +90,13 @@ export function AuthModal() {
         return;
       }
       applySession(answer.accessToken, answer.expiresIn);
-      if (answer.usuario?.id) {
-        setCliente({
-          id: answer.usuario.id,
-          nombreCompleto: answer.usuario.nombreCompleto ?? "",
-          correo: answer.usuario.correo ?? d.correo,
-        } as never);
-      }
+      setCliente(clienteDesdeUsuario(answer.usuario, d.correo));
+      await hidratarPerfil(d.correo);
+      saludar(answer.usuario?.nombreCompleto);
       continuar();
-    } catch {
-      setError("Correo o contraseña incorrectos");
+    } catch (error) {
+      const { status, code } = problemDe(error);
+      setError(describeLoginFailure(status, code).message);
     } finally {
       setCargando(false);
     }
@@ -78,11 +108,29 @@ export function AuthModal() {
     try {
       const opened = await container.api.verifyMfaCode(codigo);
       applySession(opened.accessToken, opened.expiresIn);
+      setCliente(clienteDesdeUsuario(opened.usuario, contacto));
+      await hidratarPerfil(contacto);
+      saludar(opened.usuario?.nombreCompleto);
       continuar();
-    } catch {
-      setError("Código incorrecto. Revisa e intenta de nuevo");
+    } catch (error) {
+      const { status, code, intentosRestantes } = problemDe(error);
+      const fallo = describeOtpFailure(status, code, intentosRestantes);
+      setError(fallo.message);
+      if (fallo.volverALogin) setPaso("login");
     } finally {
       setCargando(false);
+    }
+  }
+
+  async function solicitarCodigo(next: Canal) {
+    setError(null);
+    try {
+      await container.api.requestMfaCode(next);
+    } catch (error) {
+      const { status, code } = problemDe(error);
+      const fallo = describeMfaResendFailure(status, code);
+      setError(fallo.message);
+      if (fallo.volverALogin) setPaso("login");
     }
   }
 
@@ -119,11 +167,11 @@ export function AuthModal() {
                 canal={canal}
                 contacto={contacto}
                 onOk={verificar}
-                onReenviar={() => container.api.requestMfaCode(canal).catch(() => undefined)}
+                onReenviar={() => void solicitarCodigo(canal)}
                 onCambiarCanal={() => {
-                  const next = canal === "EMAIL" ? "SMS" : "EMAIL";
+                  const next: Canal = canal === "EMAIL" ? "SMS" : "EMAIL";
                   setCanal(next);
-                  container.api.requestMfaCode(next).catch(() => undefined);
+                  void solicitarCodigo(next);
                 }}
                 error={error}
                 cargando={cargando}

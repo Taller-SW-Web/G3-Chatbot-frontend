@@ -1,12 +1,14 @@
 "use client";
 
-import axios, { type AxiosError } from "axios";
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { apiConfig } from "@/infrastructure/config/apiConfig";
 import { useChatStore } from "@/application/state/chatStore";
+import { createSingleFlight } from "@/domain/utils/singleFlight";
 import type {
   ChatbotApiPort,
   ConversacionResumen,
   MfaChallenge,
+  PerfilCliente,
   SessionOpened,
 } from "@/ports/outbound/ChatbotApiPort";
 import type { Mensaje } from "@/domain/entities/Mensaje";
@@ -25,26 +27,26 @@ const http = axios.create({
   headers: { "X-Requested-With": "XMLHttpRequest" },
 });
 
+/** Endpoints públicos: nunca llevan `Authorization` ni disparan refresh (SPEC-03 Req. 1/5). */
+const PUBLIC_PATHS = ["/sesion/login", "/sesion/refresh"];
+
+function isPublic(path: string | undefined): boolean {
+  return !!path && PUBLIC_PATHS.some((p) => path.includes(p));
+}
+
 http.interceptors.request.use((cfg) => {
   const token = useChatStore.getState().accessToken;
-  if (token) cfg.headers.Authorization = `Bearer ${token}`;
+  if (token && !isPublic(cfg.url)) cfg.headers.Authorization = `Bearer ${token}`;
   return cfg;
 });
 
 /** Single-flight refresh: concurrent calls share one promise (SPEC-03 Req. 5). */
-let refreshPromise: Promise<SessionOpened> | null = null;
-
 async function doRefresh(): Promise<SessionOpened> {
   const { data } = await http.post("/sesion/refresh");
   return data as SessionOpened;
 }
 
-async function refreshOnce(): Promise<SessionOpened> {
-  if (!refreshPromise) {
-    refreshPromise = doRefresh().finally(() => { refreshPromise = null; });
-  }
-  return refreshPromise;
-}
+const refreshOnce = createSingleFlight(doRefresh);
 
 function isInvalidToken(error: unknown): boolean {
   const status = (error as AxiosError)?.response?.status;
@@ -52,21 +54,28 @@ function isInvalidToken(error: unknown): boolean {
   return status === 401 && (!code || code === "TOKEN_INVALIDO");
 }
 
-async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    if (!isInvalidToken(error)) throw error;
+type ReintentableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
+/** On an expired access token, refresh once and replay the original request (SPEC-03 Req. 5). */
+http.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const config = error.config as ReintentableConfig | undefined;
+    if (!config || config._retry || isPublic(config.url) || !isInvalidToken(error)) {
+      return Promise.reject(error);
+    }
     try {
       const opened = await refreshOnce();
       useChatStore.getState().applySession(opened.accessToken, opened.expiresIn);
     } catch {
       useChatStore.getState().logout();
-      throw error;
+      return Promise.reject(error);
     }
-    return fn();
+    config._retry = true;
+    config.headers.Authorization = `Bearer ${useChatStore.getState().accessToken}`;
+    return http(config);
   }
-}
+);
 
 async function conFallback<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try {
@@ -102,10 +111,8 @@ export const chatbotApi: ChatbotApiPort = {
     }
   },
   async fetchProfile() {
-    return withRetry(async () => {
-      const { data } = await http.get("/sesion/perfil");
-      return data as { id: string };
-    });
+    const { data } = await http.get("/sesion/perfil");
+    return data as PerfilCliente;
   },
   async enviarMensaje(conversacionId, texto) {
     return conFallback(

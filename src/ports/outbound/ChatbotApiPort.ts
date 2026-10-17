@@ -31,10 +31,24 @@ export type ConversacionResumen = {
   };
 };
 
+/** Usuario que viaja en el cuerpo de `/sesion/login`, `/refresh` y `/mfa/verificar`. */
+export type UsuarioSesion = {
+  id?: string;
+  nombreCompleto?: string;
+  correo?: string;
+};
+
 export type SessionOpened = {
   accessToken: string;
   expiresIn: number;
-  usuario: { id?: string; nombreCompleto?: string; correo?: string };
+  usuario: UsuarioSesion;
+};
+
+/** Respuesta de `GET /sesion/perfil`: Seguridad `/auth/me` + `celularVerificado` y documento enmascarado. */
+export type PerfilCliente = UsuarioSesion & {
+  celular?: string;
+  celularVerificado: boolean;
+  ultimoDocumento: { tipo?: string; numeroEnmascarado: string } | null;
 };
 
 export type MfaChallenge = {
@@ -51,7 +65,7 @@ export interface ChatbotApiPort {
   verifyMfaCode(code: string): Promise<SessionOpened>;
   refreshSession(): Promise<SessionOpened>;
   logout(): Promise<{ ok: true }>;
-  fetchProfile(): Promise<{ id: string; nombreCompleto?: string; correo?: string }>;
+  fetchProfile(): Promise<PerfilCliente>;
   crearConversacion(): Promise<{ conversacionId: string }>;
   enviarMensaje(conversacionId: string, texto: string): Promise<{ mensajeId: string }>;
   cargarHistorial(conversacionId: string, desde?: string): Promise<Mensaje[]>;
