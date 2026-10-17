@@ -1,31 +1,31 @@
 "use client";
 
 import { sanitize } from "@/domain/utils/sanitize";
-import type { BloqueCarritoResumen } from "@/domain/entities/Bloque";
+import type { DatosCarritoBloque } from "@/domain/entities/Bloque";
 
 /** CARRITO resumido + Ver carrito/Pagar. SPEC-11.
  * Pinta solo el bloque del servidor: precios y stock vienen del backend,
  * nunca del store local (el store solo guarda count/subtotal para el badge).
  */
 export function BloqueCarrito({
-  bloque,
+  datos,
   onVerCarrito,
   onPagar,
 }: {
-  bloque: BloqueCarritoResumen;
+  datos: DatosCarritoBloque;
   onVerCarrito: () => void;
   onPagar: () => void;
 }) {
-  const total = bloque.total ?? bloque.subtotal;
+  const total = datos.total ?? datos.subtotal;
   return (
     <div
       data-testid="bloque-carrito"
       className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2 wf-card"
     >
       <p className="font-heading text-[15px] uppercase">
-        Carrito ({bloque.lineas.length})
+        Carrito ({datos.lineas.length})
       </p>
-      {bloque.lineas.slice(0, 3).map((l) => (
+      {datos.lineas.slice(0, 3).map((l) => (
         <div key={l.item_id} className="flex justify-between text-[13px] gap-2">
           <span className="truncate">
             {sanitize(l.nombre)} · {l.cantidad}
@@ -38,7 +38,7 @@ export function BloqueCarrito({
           <span className="font-semibold shrink-0">S/ {(l.precio * l.cantidad).toFixed(2)}</span>
         </div>
       ))}
-      {(bloque.avisos ?? []).map((aviso, i) => (
+      {(datos.avisos ?? []).map((aviso, i) => (
         <p key={i} role="status" className="text-[12px] text-text-secondary">
           {sanitize(aviso)}
         </p>

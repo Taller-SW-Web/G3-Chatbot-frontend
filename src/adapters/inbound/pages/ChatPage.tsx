@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpIcon, PhotoIcon } from "../components/icons";
 import { ChatWindow, type AccionRapidaChat } from "../components/ChatWindow";
 import { AccionesRapidas } from "../components/blocks/AccionesRapidas";
@@ -21,6 +22,7 @@ import { MENSAJE_MAX_CARACTERES } from "@/application/use_cases/enviarMensajeUse
 
 const SUGERENCIAS = ["Ver ofertas", "Rastrear pedido", "Ayuda con devolución"];
 const CATEGORIAS = ["zapatillas", "polos", "chimpunes"];
+const CAMBIAN_CARRITO = new Set(["AGREGAR_AL_CARRITO", "CAMBIAR_CANTIDAD", "QUITAR_DEL_CARRITO"]);
 
 /**
  * `/chat/[id]`: historial y turno en vivo de una conversación real (ADR-0021).
@@ -29,6 +31,7 @@ const CATEGORIAS = ["zapatillas", "polos", "chimpunes"];
  */
 export function ChatPage({ conversationId }: { conversationId: string }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const setPrimerMensaje = useChatStore((s) => s.setPrimerMensaje);
   const {
     mensajes,
@@ -104,6 +107,10 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
         accion: { tipo: accion.id, payload: accion.payload ?? {} },
       });
       setEligeCategoria(false);
+      // Cart-changing actions: refresh the cart cache so the header badge matches the server.
+      if (CAMBIAN_CARRITO.has(accion.id)) {
+        void queryClient.invalidateQueries({ queryKey: ["carrito"] });
+      }
       try {
         await recargarSilencioso();
       } catch {

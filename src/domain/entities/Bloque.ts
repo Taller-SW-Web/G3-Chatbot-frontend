@@ -4,6 +4,7 @@
  * Sin React, sin fetch (regla hexagonal domain/).
  */
 import type { BloqueTipo } from "../types/BloqueTipo";
+import type { BackendCarouselItem, BackendProductDetail } from "./CatalogoUI";
 
 /** Base de todo bloque visual que manda el backend. */
 export type BloqueBase = {
@@ -16,25 +17,27 @@ export type BloqueTexto = BloqueBase & {
   texto: string;
 };
 
-export type ProductoResumen = {
-  sku: string;
-  nombre: string;
-  categoria: string;
-  talla: string;
-  color: string;
-  precio: number;
-  stock: number;
-};
-
+/** Backend wraps catalog payloads in `datos`; there is no top-level `titulo`. */
 export type BloqueCarrusel = BloqueBase & {
   tipo: "CARRUSEL_PRODUCTOS";
-  titulo: string;
-  productos: ProductoResumen[];
+  datos: { productos: BackendCarouselItem[] };
 };
 
 export type BloqueDetalle = BloqueBase & {
   tipo: "DETALLE_PRODUCTO";
-  producto: ProductoResumen & { descripcion: string };
+  datos: { producto: BackendProductDetail };
+};
+
+/** Missing attributes the backend asks for before it can add a variant to the cart. */
+export type BloqueSelectorVariante = BloqueBase & {
+  tipo: "SELECTOR_VARIANTE";
+  datos: { product_id: string; faltantes: string[] };
+};
+
+/** Form request; the backend sends only the form kind, no data. */
+export type BloqueFormulario = BloqueBase & {
+  tipo: "FORMULARIO";
+  formulario: string;
 };
 
 export type BloqueAcciones = BloqueBase & {
@@ -59,8 +62,7 @@ export type LineaCarritoBloque = {
   nota?: string | null;
 };
 
-export type BloqueCarritoResumen = BloqueBase & {
-  tipo: "CARRITO";
+export type DatosCarritoBloque = {
   lineas: LineaCarritoBloque[];
   subtotal: number;
   descuentos?: { nombre: string; monto: number }[];
@@ -69,6 +71,11 @@ export type BloqueCarritoResumen = BloqueBase & {
   total?: number;
   avisos?: string[];
   promociones_ok?: boolean;
+};
+
+export type BloqueCarritoResumen = BloqueBase & {
+  tipo: "CARRITO";
+  datos: DatosCarritoBloque;
 };
 
 export type BloqueResumenCheckout = BloqueBase & {
@@ -98,6 +105,8 @@ export type Bloque =
   | BloqueTexto
   | BloqueCarrusel
   | BloqueDetalle
+  | BloqueSelectorVariante
+  | BloqueFormulario
   | BloqueAcciones
   | BloqueCarritoResumen
   | BloqueResumenCheckout

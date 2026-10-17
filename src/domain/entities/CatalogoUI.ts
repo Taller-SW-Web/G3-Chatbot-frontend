@@ -42,7 +42,8 @@ export type BackendCarouselItem = {
   name?: string;
   brand?: string | null;
   image?: string | null;
-  price?: number;
+  /** Decimal serialized by SSE as a string, or a plain number. */
+  price?: number | string;
   price_text?: string;
   short_description?: string | null;
   has_variants?: boolean;
@@ -59,7 +60,8 @@ export type BackendProductDetail = {
   name?: string;
   brand?: string | null;
   image?: string | null;
-  price?: number;
+  /** Decimal serialized by SSE as a string, or a plain number. */
+  price?: number | string;
   price_text?: string;
   short_description?: string | null;
   has_variants?: boolean;
