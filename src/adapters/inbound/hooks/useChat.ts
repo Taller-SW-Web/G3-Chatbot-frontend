@@ -77,6 +77,15 @@ export function useChat(conversacionId: string) {
     if (!enviandoRef.current) setRecarga((n) => n + 1);
   }, []);
 
+  /** Recarga el historial sin vaciar la conversación mientras termina una acción REST. */
+  const recargarSilencioso = useCallback(async () => {
+    const controlador = controladorRef.current;
+    if (!controlador || controlador.signal.aborted) return;
+    const historial = await cargarHistorialUseCase(container.api, conversacionId);
+    if (controlador.signal.aborted) return;
+    dispatch({ tipo: "historialCargado", mensajes: historial });
+  }, [conversacionId]);
+
   return {
     mensajes: turno.mensajes,
     borrador: turno.borrador,
@@ -93,5 +102,6 @@ export function useChat(conversacionId: string) {
     enviar,
     reintentar,
     recargar,
+    recargarSilencioso,
   };
 }

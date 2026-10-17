@@ -96,6 +96,7 @@ export function turnoChatReducer(estado: TurnoChat, accion: AccionTurno): TurnoC
         rol: "bot",
         texto: b.texto,
         ...(b.bloques.length > 0 ? { bloques: b.bloques } : {}),
+        ...(b.degradado ? { motivoDegradado: b.degradado } : {}),
         creadoEn: accion.creadoEn,
       };
       return { ...estado, mensajes: [...estado.mensajes, bot], borrador: null, estado: "inactivo" };

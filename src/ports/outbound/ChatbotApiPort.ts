@@ -1,4 +1,5 @@
 import type { Mensaje } from "@/domain/entities/Mensaje";
+import type { Bloque } from "@/domain/entities/Bloque";
 import type { PoliticaContrasena } from "@/domain/utils/passwordPolicy";
 
 export type { PoliticaContrasena };
@@ -106,6 +107,16 @@ export type DisponibilidadPuntual = {
   veredicto?: string | null;
 };
 
+export type AccionChat = {
+  tipo: string;
+  payload: Record<string, unknown>;
+};
+
+export type ResultadoAccionChat = {
+  texto: string;
+  bloques: Bloque[];
+};
+
 /** Línea del carrito tal como la expone `GET /carrito` (SPEC-11, contratos §2.4). */
 export type LineaCarritoBackend = {
   item_id: string;
@@ -158,6 +169,10 @@ export interface ChatbotApiPort {
   crearConversacion(): Promise<{ conversacionId: string }>;
   /** Últimos mensajes de la conversación. El envío va por `ChatStreamPort`. */
   cargarHistorial(conversacionId: string): Promise<Mensaje[]>;
+  ejecutarAccion(
+    conversacionId: string,
+    accion: AccionChat
+  ): Promise<ResultadoAccionChat>;
   listarConversaciones(pagina?: number): Promise<ConversacionResumen[]>;
   buscarConversaciones(q: string, pagina?: number): Promise<ConversacionResumen[]>;
   agregarAlCarrito(input: AgregarAlCarritoInput, conversacionId?: string): Promise<{ ok: true; carrito?: CarritoBackend }>;

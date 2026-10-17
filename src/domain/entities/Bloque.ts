@@ -40,7 +40,11 @@ export type BloqueDetalle = BloqueBase & {
 export type BloqueAcciones = BloqueBase & {
   tipo: "ACCIONES_RAPIDAS";
   pregunta?: string;
-  acciones: { id: string; etiqueta: string }[];
+  acciones: {
+    id: string;
+    etiqueta: string;
+    payload?: Record<string, unknown>;
+  }[];
 };
 
 export type LineaCarritoBloque = {

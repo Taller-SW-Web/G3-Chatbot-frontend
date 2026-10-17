@@ -8,7 +8,7 @@ export function BloqueError({
 }: {
   code: string;
   mensaje: string;
-  onRetry: () => void;
+  onRetry?: () => void;
 }) {
   const titulo =
     code === "REQUIERE_SESION" ? "Necesitas iniciar sesión" :
@@ -17,11 +17,13 @@ export function BloqueError({
     "Algo salió mal";
 
   return (
-    <div className="rounded-md bg-error-background border border-error-default p-3 flex flex-col gap-2" role="alert">
-      <p className="text-[14px] font-bold text-error-default">{titulo} · {code}</p>
+    <div data-testid="bloque-error" data-code={code} className="rounded-md bg-error-background border border-error-default p-3 flex flex-col gap-2" role="alert">
+      <p className="text-[14px] font-bold text-error-default">{titulo}</p>
       <p className="text-[13px] text-text-primary">{sanitize(mensaje)}</p>
-      <button onClick={onRetry}
-        className="wf-btn py-2.5 text-[12px] font-bold bg-white border border-border-default">REINTENTAR</button>
+      {onRetry && (
+        <button onClick={onRetry}
+          className="wf-btn py-2.5 text-[12px] font-bold bg-white border border-border-default">REINTENTAR</button>
+      )}
     </div>
   );
 }

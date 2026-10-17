@@ -4,6 +4,7 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { apiConfig } from "@/infrastructure/config/apiConfig";
 import { useChatStore } from "@/application/state/chatStore";
 import { createSingleFlight } from "@/domain/utils/singleFlight";
+import type { Bloque } from "@/domain/entities/Bloque";
 import type {
   BuscarProductosInput,
   CarritoBackend,
@@ -169,6 +170,16 @@ export const chatbotApi: ChatbotApiPort = {
       `/chat/conversaciones/${encodeURIComponent(conversacionId)}/mensajes`
     );
     return mapearHistorial(data);
+  },
+  async ejecutarAccion(conversacionId, accion) {
+    const { data } = await http.post(
+      `/chat/conversaciones/${encodeURIComponent(conversacionId)}/mensajes`,
+      { accion }
+    );
+    return {
+      texto: data.texto as string,
+      bloques: data.bloques as Bloque[],
+    };
   },
   async crearConversacion() {
     const { data } = await http.post(`/chat/conversaciones`);

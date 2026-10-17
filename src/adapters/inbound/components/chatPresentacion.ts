@@ -13,6 +13,8 @@ export type ItemChat = {
   texto: string;
   bloques: Bloque[];
   streaming: boolean;
+  degradado?: boolean;
+  motivoDegradado?: string;
 };
 
 /** Aviso de error dentro del chat. Sin `reintentable` el usuario debe corregir y reenviar. */
@@ -60,6 +62,9 @@ export function construirItemsChat(mensajes: Mensaje[], borrador: BorradorBot | 
     texto: m.texto,
     bloques: m.bloques ?? [],
     streaming: false,
+    ...(m.motivoDegradado
+      ? { degradado: true, motivoDegradado: m.motivoDegradado }
+      : {}),
   }));
   if (borrador && (borrador.texto || borrador.bloques.length > 0)) {
     items.push({
@@ -68,6 +73,9 @@ export function construirItemsChat(mensajes: Mensaje[], borrador: BorradorBot | 
       texto: borrador.texto,
       bloques: borrador.bloques,
       streaming: true,
+      ...(borrador.degradado
+        ? { degradado: true, motivoDegradado: borrador.degradado }
+        : {}),
     });
   }
   return items;
