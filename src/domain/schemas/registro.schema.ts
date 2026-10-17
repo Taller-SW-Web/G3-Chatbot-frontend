@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { politicaCumplida, type PoliticaContrasena } from "@/domain/utils/passwordPolicy";
 
 /** Celular peruano: +51 seguido de 9 dígitos que empiezan con 9 (SPEC-01 Req. 2). */
 export const CELULAR_PERU_REGEX = /^\+519\d{8}$/;
@@ -16,7 +17,15 @@ export function normalizarCelular(valor: string): string {
   return valor.trim();
 }
 
-export const registroSchema = z
+export const POLITICA_INCUMPLIDA_MENSAJE = "La contraseña no cumple la política de seguridad";
+
+/**
+ * Registration schema. When the fetched password policy is provided, the password
+ * must also satisfy it (SPEC-01 "Contraseña que no cumple la política"); without a
+ * policy only the minimum length applies.
+ */
+export function crearRegistroSchema(politica?: PoliticaContrasena) {
+  return z
   .object({
     nombres: z.string().trim().min(1, "Requerido").max(80),
     apellidos: z.string().trim().min(1, "Requerido").max(80),
@@ -26,7 +35,11 @@ export const registroSchema = z
       .min(1, "Requerido")
       .transform(normalizarCelular)
       .refine((v) => CELULAR_PERU_REGEX.test(v), CELULAR_PERU_MENSAJE),
-    contrasena: z.string().min(8, "Mínimo 8 caracteres").max(256),
+    contrasena: z
+      .string()
+      .min(8, "Mínimo 8 caracteres")
+      .max(256)
+      .refine((v) => !politica || politicaCumplida(politica, v), POLITICA_INCUMPLIDA_MENSAJE),
     confirmar: z.string(),
     aceptaTerminos: z.literal(true, {
       errorMap: () => ({ message: "Debes aceptar los términos y condiciones" }),
@@ -36,5 +49,8 @@ export const registroSchema = z
     message: "No coincide",
     path: ["confirmar"],
   });
+}
+
+export const registroSchema = crearRegistroSchema();
 
 export type RegistroInput = z.infer<typeof registroSchema>;

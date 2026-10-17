@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   normalizarCelular,
-  registroSchema,
+  crearRegistroSchema,
   type RegistroInput,
 } from "@/domain/schemas/registro.schema";
 import {
@@ -24,22 +24,27 @@ export function RegistroForm({
   error,
   erroresCampo,
   cargando,
+  onIniciarSesion,
 }: {
   onOk: (d: RegistroInput) => void;
   politica?: PoliticaContrasena;
   error?: string | null;
   erroresCampo?: Partial<Record<keyof RegistroInput, string>>;
   cargando?: boolean;
+  /** Shown when the email is already taken (SPEC-01 "Correo no disponible"). */
+  onIniciarSesion?: () => void;
 }) {
+  const schema = useMemo(() => crearRegistroSchema(politica), [politica]);
   const {
     register,
     handleSubmit,
     setValue,
     setError,
+    resetField,
     watch,
     formState: { errors },
   } = useForm<RegistroInput>({
-    resolver: zodResolver(registroSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       nombres: "",
       apellidos: "",
@@ -52,6 +57,13 @@ export function RegistroForm({
   });
   const [verContrasena, setVerContrasena] = useState(false);
   const contrasena = watch("contrasena") ?? "";
+
+  // After a failed submit keep the entered values but clear both passwords (SPEC-01 Req. 4).
+  useEffect(() => {
+    if (!error && !erroresCampo) return;
+    resetField("contrasena", { defaultValue: "" });
+    resetField("confirmar", { defaultValue: "" });
+  }, [error, erroresCampo, resetField]);
 
   // Errores por campo que devuelve el BFF (`400 VALIDACION`, `422 POLITICA_INCUMPLIDA`).
   useEffect(() => {
@@ -178,6 +190,15 @@ export function RegistroForm({
         <p role="alert" className="text-[12px] text-error-default">
           {error}
         </p>
+      )}
+      {onIniciarSesion && (
+        <button
+          type="button"
+          onClick={onIniciarSesion}
+          className="self-start text-[12px] font-semibold underline text-text-primary"
+        >
+          Iniciar sesión
+        </button>
       )}
 
       <button

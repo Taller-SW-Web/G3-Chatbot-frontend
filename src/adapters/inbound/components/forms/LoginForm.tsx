@@ -8,16 +8,19 @@ import { loginSchema, type LoginInput } from "@/domain/schemas/login.schema";
 export function LoginForm({
   onOk,
   onReenviar,
+  correoInicial,
   error,
   cargando,
 }: {
   onOk: (d: LoginInput) => void;
   onReenviar?: () => void;
+  correoInicial?: string;
   error?: string | null;
   cargando?: boolean;
 }) {
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    defaultValues: { correo: correoInicial ?? "" },
   });
   return (
     <form onSubmit={handleSubmit(onOk)} className="flex flex-col gap-2">

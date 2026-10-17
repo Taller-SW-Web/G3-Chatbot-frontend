@@ -158,10 +158,11 @@ export function describeRegistroFailure(
     };
   }
   if (code === "POLITICA_INCUMPLIDA" || status === 422) {
+    const detalle = errores?.find((e) => e.campo === "password" && e.mensaje)?.mensaje;
     return {
       message: "La contraseña no cumple la política de seguridad",
       ofrecerLogin: false,
-      erroresCampo: { contrasena: "No cumple la política de seguridad" },
+      erroresCampo: { contrasena: detalle ?? "No cumple la política de seguridad" },
     };
   }
   if (code === "SERVICIO_NO_DISPONIBLE" || code === "MODULO_NO_DISPONIBLE" || status === 503) {

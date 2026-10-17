@@ -88,6 +88,34 @@ describe("registro en el adapter REST (SPEC-01)", () => {
   });
 });
 
+describe("errores por campo del registro (SPEC-01 Req. 4)", () => {
+  const entrada = {
+    nombres: "Ana",
+    apellidos: "Quispe",
+    correo: "ana@ejemplo.com",
+    celular: "+51987654321",
+    contrasena: "secreto123",
+    aceptaTerminos: true as const,
+  };
+
+  it("propaga errores[] del 400 VALIDACION y del 422 POLITICA_INCUMPLIDA", async () => {
+    handler = (config) =>
+      reply(config, 400, { code: "VALIDACION", errores: [{ campo: "email", mensaje: "Correo inválido" }] });
+    await expect(chatbotApi.registrar(entrada)).rejects.toMatchObject({
+      response: { status: 400, data: { errores: [{ campo: "email", mensaje: "Correo inválido" }] } },
+    });
+
+    handler = (config) =>
+      reply(config, 422, {
+        code: "POLITICA_INCUMPLIDA",
+        errores: [{ campo: "password", mensaje: "Debe incluir un número" }],
+      });
+    await expect(chatbotApi.registrar(entrada)).rejects.toMatchObject({
+      response: { status: 422, data: { errores: [{ campo: "password", mensaje: "Debe incluir un número" }] } },
+    });
+  });
+});
+
 describe("política de contraseña en el adapter (SPEC-01 Req. 2)", () => {
   beforeEach(() => {
     calls.length = 0;

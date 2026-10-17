@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CELULAR_PERU_MENSAJE,
+  crearRegistroSchema,
   normalizarCelular,
   registroSchema,
 } from "@/domain/schemas/registro.schema";
@@ -26,6 +27,25 @@ const valido = {
   confirmar: "secreto123",
   aceptaTerminos: true as const,
 };
+
+describe("crearRegistroSchema con política (SPEC-01 Req. 2)", () => {
+  const politica: PoliticaContrasena = { minLength: 10, requireDigit: true, requireSymbol: true };
+
+  it("bloquea una contraseña que no cumple la política cargada", () => {
+    const r = crearRegistroSchema(politica).safeParse({ ...valido, contrasena: "secreto1234", confirmar: "secreto1234" });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0].path).toEqual(["contrasena"]);
+  });
+
+  it("acepta una contraseña que cumple la política", () => {
+    const pass = "secreto1234!";
+    expect(crearRegistroSchema(politica).safeParse({ ...valido, contrasena: pass, confirmar: pass }).success).toBe(true);
+  });
+
+  it("sin política mantiene solo el mínimo de 8", () => {
+    expect(crearRegistroSchema().safeParse(valido).success).toBe(true);
+  });
+});
 
 describe("registroSchema (SPEC-01 Req. 1/2)", () => {
   it("acepta un formulario completo", () => {
@@ -129,6 +149,16 @@ describe("describeRegistroFailure (SPEC-01 Req. 4)", () => {
   it("marca la contraseña cuando la política falla", () => {
     const fallo = describeRegistroFailure(422, "POLITICA_INCUMPLIDA");
     expect(fallo.erroresCampo?.contrasena).toBeTruthy();
+  });
+
+  it("usa el mensaje de errores[] del 422 y cae al texto por defecto", () => {
+    const fallo = describeRegistroFailure(422, "POLITICA_INCUMPLIDA", [
+      { campo: "password", mensaje: "Debe incluir un símbolo" },
+    ]);
+    expect(fallo.erroresCampo?.contrasena).toBe("Debe incluir un símbolo");
+    expect(describeRegistroFailure(422, "POLITICA_INCUMPLIDA", []).erroresCampo?.contrasena).toBe(
+      "No cumple la política de seguridad"
+    );
   });
 
   it("informa servicio no disponible y límite de intentos", () => {

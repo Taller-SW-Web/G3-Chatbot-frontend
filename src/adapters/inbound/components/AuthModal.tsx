@@ -69,6 +69,7 @@ export function AuthModal() {
   const [contacto, setContacto] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [ofrecerLogin, setOfrecerLogin] = useState(false);
   const [erroresCampo, setErroresCampo] = useState<ErroresCampo | undefined>();
   const [politica, setPolitica] = useState<PoliticaContrasena | undefined>();
   const [correoIngresado, setCorreoIngresado] = useState("");
@@ -141,6 +142,8 @@ export function AuthModal() {
     setCargando(true);
     setError(null);
     setErroresCampo(undefined);
+    setOfrecerLogin(false);
+    setCorreoIngresado(d.correo);
     try {
       const resultado = await container.api.registrar(d);
       setCorreoRegistrado(resultado.correoEnmascarado);
@@ -152,6 +155,7 @@ export function AuthModal() {
       const fallo = describeRegistroFailure(status, code, errores);
       setError(fallo.message);
       setErroresCampo(fallo.erroresCampo);
+      setOfrecerLogin(fallo.ofrecerLogin);
     } finally {
       setCargando(false);
     }
@@ -200,6 +204,13 @@ export function AuthModal() {
       setError(fallo.message);
       if (fallo.volverALogin) setPaso("login");
     }
+  }
+
+  function irAIniciarSesion() {
+    setTab("login");
+    setError(null);
+    setErroresCampo(undefined);
+    setOfrecerLogin(false);
   }
 
   function abrirReenvio() {
@@ -282,11 +293,11 @@ export function AuthModal() {
               <>
                 <p className="text-[12px] text-text-secondary">Necesitas una cuenta para pagar y ver tu historial. Como invitado puedes chatear y ver ofertas.</p>
                 <div className="grid grid-cols-2 gap-2 rounded-md bg-surface-cloud-subtle p-1">
-                  <button onClick={() => { setTab("login"); setError(null); setErroresCampo(undefined); }} className={`wf-btn py-2.5 text-[12px] font-bold ${tab === "login" ? "bg-surface-ink text-text-inverse" : "text-text-secondary"}`}>INICIAR SESIÓN</button>
-                  <button onClick={() => { setTab("registro"); setError(null); }} className={`wf-btn py-2.5 text-[12px] font-bold ${tab === "registro" ? "bg-surface-ink text-text-inverse" : "text-text-secondary"}`}>CREAR CUENTA</button>
+                  <button onClick={irAIniciarSesion} className={`wf-btn py-2.5 text-[12px] font-bold ${tab === "login" ? "bg-surface-ink text-text-inverse" : "text-text-secondary"}`}>INICIAR SESIÓN</button>
+                  <button onClick={() => { setTab("registro"); setError(null); setOfrecerLogin(false); }} className={`wf-btn py-2.5 text-[12px] font-bold ${tab === "registro" ? "bg-surface-ink text-text-inverse" : "text-text-secondary"}`}>CREAR CUENTA</button>
                 </div>
                 {tab === "login" ? (
-                  <LoginForm onOk={ingresar} onReenviar={abrirReenvio} error={error} cargando={cargando} />
+                  <LoginForm onOk={ingresar} correoInicial={correoIngresado} onReenviar={abrirReenvio} error={error} cargando={cargando} />
                 ) : (
                   <RegistroForm
                     onOk={registrar}
@@ -294,6 +305,7 @@ export function AuthModal() {
                     error={error}
                     erroresCampo={erroresCampo}
                     cargando={cargando}
+                    onIniciarSesion={ofrecerLogin ? irAIniciarSesion : undefined}
                   />
                 )}
               </>
