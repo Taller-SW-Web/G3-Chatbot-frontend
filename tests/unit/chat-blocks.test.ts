@@ -57,7 +57,7 @@ describe("bloques del chat de H3-11", () => {
         rol: "bot",
         texto: "Estoy teniendo problemas para entenderte.",
         degradado: true,
-        motivoDegradado: "llm_no_disponible",
+        motivoDegradado: "unavailable",
       })
     );
 

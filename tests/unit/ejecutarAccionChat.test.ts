@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { postMock, requestUseMock } = vi.hoisted(() => ({
+const { postMock, requestUseMock, responseUseMock } = vi.hoisted(() => ({
   postMock: vi.fn(),
   requestUseMock: vi.fn(),
+  responseUseMock: vi.fn(),
 }));
 
 vi.mock("axios", () => ({
   default: {
     create: vi.fn(() => ({
-      interceptors: { request: { use: requestUseMock } },
+      interceptors: {
+        request: { use: requestUseMock },
+        response: { use: responseUseMock },
+      },
       post: postMock,
       get: vi.fn(),
     })),
