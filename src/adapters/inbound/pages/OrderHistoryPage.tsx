@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon } from "../components/icons";
 import { StatusBadge } from "../components/StatusBadge";
-import { ListaPedidos } from "../components/blocks/ListaPedidos";
+import { DeliveryRating } from "../components/DeliveryRating";
 import { EstadoPedido } from "../components/blocks/EstadoPedido";
 import { ListaReclamos } from "../components/blocks/ListaReclamos";
 import { ListaDevoluciones } from "../components/blocks/ListaDevoluciones";
@@ -50,13 +50,17 @@ export function OrderHistoryPage({ initialTab = "proceso" }: { initialTab?: Tab 
       {tab === "entregados" && (
         <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-1 wf-card">
           <div className="flex justify-between items-center">
-            <span className="text-[13px] text-text-secondary">Pedido #A-0987</span>
+            <span className="text-[13px] text-text-secondary">Pedido PED-2026-00891</span>
             <StatusBadge status="ENTREGADO" icon={<CheckIcon size={16} />}>ENTREGADO</StatusBadge>
           </div>
-          <ListaPedidos pedidos={[{ id: "#A-0987", direccion: "Calle Los Olivos 120, Lima", fecha: "2 sep 2026" }]} />
+          <div className="flex justify-between text-[14px]"><span className="text-text-secondary">Entrega</span><span className="text-right">Calle Los Olivos 120, Lima</span></div>
+          <div className="flex justify-between text-[14px]"><span className="text-text-secondary">Entregado el</span><span>2 sep 2026</span></div>
+          <div className="mt-2">
+            <DeliveryRating orderId="PED-2026-00891" />
+          </div>
           <div className="grid grid-cols-2 gap-2 mt-2">
-            <button onClick={() => router.push("/reclamo")} className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default inline-flex items-center justify-center gap-1"><FileAlertIcon size={16} />RECLAMAR</button>
-            <button onClick={() => router.push("/devolucion")} className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default inline-flex items-center justify-center gap-1"><RefreshIcon size={16} />DEVOLVER</button>
+            <button onClick={() => router.push("/reclamo")} className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-1"><FileAlertIcon size={16} />REPORTAR UN PROBLEMA</button>
+            <button onClick={() => router.push("/devolucion")} className="wf-btn py-2.5 px-3 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-2 text-center"><RefreshIcon size={16} className="shrink-0 ml-1" />SOLICITAR CAMBIO O DEVOLUCIÓN</button>
           </div>
           <button disabled title="Próximamente" aria-label="Preguntar en el chat (próximamente)"
               className="wf-btn py-2.5 text-[11px] font-bold mt-2 w-full bg-surface-ink text-text-inverse disabled:opacity-45 disabled:cursor-not-allowed">PREGUNTAR EN EL CHAT</button>

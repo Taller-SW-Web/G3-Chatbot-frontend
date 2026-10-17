@@ -2,12 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowUpIcon, PhotoIcon } from "../components/icons";
 import { ProductCard } from "../components/ProductCard";
-import { PRODUCTOS_MOCK } from "@/adapters/outbound/mockData";
-import type { ProductoUI } from "@/domain/entities/ProductoUI";
+import {
+  toAvailabilityState,
+  type CatalogCardItem,
+  type CatalogDetail,
+} from "@/domain/entities/CatalogoUI";
+import { isUnavailable, problemCode } from "@/domain/utils/httpError";
 import { useChatStore } from "@/application/state/chatStore";
-import { ProductDetailModal } from "../components/blocks/DetalleProducto";
+import {
+  ModalShell,
+  ProductDetailModal,
+} from "../components/blocks/DetalleProducto";
+import { buscarProductosUseCase } from "@/application/use_cases/buscarProductosUseCase";
+import { verDetalleProductoUseCase } from "@/application/use_cases/verDetalleProductoUseCase";
+import { consultarDisponibilidadUseCase } from "@/application/use_cases/consultarDisponibilidadUseCase";
+import { agregarProductoAlCarritoUseCase } from "@/application/use_cases/agregarProductoAlCarritoUseCase";
 import { crearConversacionUseCase } from "@/application/use_cases/crearConversacionUseCase";
 import { MENSAJE_MAX_CARACTERES } from "@/application/use_cases/enviarMensajeUseCase";
 import { container } from "@/infrastructure/di/container";
@@ -16,7 +28,7 @@ import { container } from "@/infrastructure/di/container";
 export function HomePage() {
   const router = useRouter();
   const [banner, setBanner] = useState(0);
-  const [detalle, setDetalle] = useState<ProductoUI | null>(null);
+  const [detalleId, setDetalleId] = useState<string | null>(null);
   const [composer, setComposer] = useState("");
   const [creando, setCreando] = useState(false);
   /** Texto cuyo intento de crear la conversación falló, para reintentarlo. */
@@ -25,18 +37,33 @@ export function HomePage() {
   const setCarrito = useChatStore((s) => s.setCarrito);
   const setPrimerMensaje = useChatStore((s) => s.setPrimerMensaje);
 
-  const productos: ProductoUI[] = PRODUCTOS_MOCK.map((p) => ({
-    sku: p.sku, nombre: p.nombre, categoria: p.categoria,
-    talla: p.talla, color: p.color, precio: p.precio, stock: p.stock,
-  }));
+  // Grid con datos reales (SPEC-06). Sin fallback a mocks en este flujo.
+  const catalogo = useQuery({
+    queryKey: ["catalogo", "ofertas"],
+    queryFn: () => buscarProductosUseCase(container.api, { pagina: 1, tamanio: 10 }),
+  });
+  const productos: CatalogCardItem[] = catalogo.data?.items ?? [];
 
-  function agregar(p: ProductoUI) {
-    const found = carrito.lineas.find((l) => l.producto.sku === p.sku);
+  const detalleQuery = useQuery({
+    queryKey: ["catalogo", "detalle", detalleId],
+    queryFn: () => verDetalleProductoUseCase(container.api, detalleId as string),
+    enabled: detalleId != null,
+  });
+  const detalle: CatalogDetail | null = detalleQuery.data ?? null;
+
+  async function agregarDesdeDetalle(
+    item: CatalogCardItem,
+    sel: { sku: string | null; talla: string | null; color: string | null }
+  ) {
+    if (sel.sku == null) return;
+    await agregarProductoAlCarritoUseCase(container.api, { sku: sel.sku, cantidad: 1 });
+    const found = carrito.lineas.find((l) => l.producto.sku === sel.sku);
     const lineas = found
-      ? carrito.lineas.map((l) => l.producto.sku === p.sku ? { ...l, cantidad: Math.min(10, l.cantidad + 1) } : l)
-      : [...carrito.lineas, { producto: p, cantidad: 1 }];
+      ? carrito.lineas.map((l) => (l.producto.sku === sel.sku ? { ...l, cantidad: Math.min(10, l.cantidad + 1) } : l))
+      : [...carrito.lineas, { producto: { sku: sel.sku, nombre: item.name, categoria: item.brand ?? "Catálogo", talla: sel.talla ?? "", color: sel.color ?? "", precio: item.price, stock: 5 }, cantidad: 1 }];
     const subtotal = lineas.reduce((a, l) => a + l.cantidad * l.producto.precio, 0);
     setCarrito({ lineas, subtotal, count: lineas.reduce((a, l) => a + l.cantidad, 0) });
+    setDetalleId(null);
   }
 
   /** Crea una conversación real, deja el texto como primer mensaje y abre el chat. */
@@ -88,9 +115,31 @@ export function HomePage() {
         <button className="text-[12px] font-semibold underline text-text-secondary" disabled={creando} onClick={() => irChat("Ver todo en oferta")}>Ver todo</button>
       </div>
 
+      {catalogo.isPending && <p className="text-[13px] text-text-secondary">Cargando productos…</p>}
+      {catalogo.isError && (
+        <div className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
+          <p>
+            {isUnavailable(catalogo.error)
+              ? "El catálogo no está disponible ahora (servicio o red). Revisa tu conexión e intenta de nuevo."
+              : "No pudimos cargar el catálogo."}
+          </p>
+          <button
+            onClick={() => void catalogo.refetch()}
+            className="wf-chip w-fit px-3 py-1.5 text-[12px] font-semibold text-text-primary"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+      {!catalogo.isPending && !catalogo.isError && productos.length === 0 && (
+        <p className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3">
+          No hay productos para mostrar ahora mismo.
+        </p>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         {productos.map((p) => (
-          <ProductCard key={p.sku} producto={p} onDetalle={setDetalle} />
+          <ProductCard key={p.product_id} producto={p} onDetalle={(item) => setDetalleId(item.product_id)} />
         ))}
       </div>
 
@@ -137,11 +186,43 @@ export function HomePage() {
           className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse disabled:opacity-45 disabled:cursor-not-allowed"><ArrowUpIcon size={20} /></button>
       </div>
 
-      {detalle && (
+      {detalleId != null && detalleQuery.isPending && (
+        <ModalShell title="Detalle de producto" onClose={() => setDetalleId(null)}>
+          <p data-testid="detalle-cargando" className="text-[13px] text-text-secondary">
+            Cargando detalle…
+          </p>
+        </ModalShell>
+      )}
+      {detalleId != null && detalleQuery.isError && (
+        <ModalShell title="Detalle de producto" onClose={() => setDetalleId(null)}>
+          <p data-testid="detalle-error" className="text-[13px] text-text-secondary">
+            {problemCode(detalleQuery.error) === "PRODUCTO_NO_DISPONIBLE"
+              ? "Producto no disponible."
+              : isUnavailable(detalleQuery.error)
+                ? "No pudimos cargar el detalle. Revisa tu conexión e intenta de nuevo."
+                : "No pudimos cargar el detalle del producto."}
+          </p>
+          <button
+            onClick={() => void detalleQuery.refetch()}
+            className="wf-chip py-2 text-[13px] font-bold text-text-primary"
+          >
+            Reintentar
+          </button>
+        </ModalShell>
+      )}
+      {detalleId != null && detalle != null && (
         <ProductDetailModal
-          p={{ nombre: detalle.nombre, categoria: detalle.categoria, talla: detalle.talla, color: detalle.color, precio: detalle.precio }}
-          onClose={() => setDetalle(null)}
-          onAdd={(d) => { agregar({ sku: detalle.sku, nombre: d.nombre, categoria: d.categoria, talla: d.talla, color: d.color, precio: d.precio, stock: 5 }); setDetalle(null); }}
+          p={detalle}
+          onClose={() => setDetalleId(null)}
+          onAdd={(sel) => {
+            const item = productos.find((c) => c.product_id === detalleId);
+            if (item) void agregarDesdeDetalle(item, sel);
+          }}
+          consultarDisponibilidad={(sku) =>
+            consultarDisponibilidadUseCase(container.api, { sku }).then((r) =>
+              toAvailabilityState(r.status)
+            )
+          }
         />
       )}
     </div>

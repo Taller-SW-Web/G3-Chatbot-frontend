@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, Menu2Icon, ShoppingCartIcon, XIcon } from "../components/icons";
 import { BrandLogo } from "../components/BrandLogo";
 import { AuthModal } from "../components/AuthModal";
+import { SesionIndicator } from "../components/SesionIndicator";
 import { useChatStore } from "@/application/state/chatStore";
+import { container } from "@/infrastructure/di/container";
+import { clienteDesdePerfil, clienteDesdeUsuario } from "@/domain/utils/sesion";
 import { Sidebar } from "./Sidebar";
 
 export type ScreenKind =
@@ -28,6 +31,20 @@ export function AppShell({
   const [sidebar, setSidebar] = useState(false);
   const carrito = useChatStore((s) => s.carrito);
   const authOpen = useChatStore((s) => s.authOpen);
+
+  useEffect(() => {
+    const { accessToken, isTokenExpiringSoon, applySession, setCliente } = useChatStore.getState();
+    if (accessToken && !isTokenExpiringSoon()) return;
+    container.api
+      .refreshSession()
+      .then((opened) => {
+        applySession(opened.accessToken, opened.expiresIn);
+        setCliente(clienteDesdeUsuario(opened.usuario, ""));
+        return container.api.fetchProfile();
+      })
+      .then((perfil) => setCliente(clienteDesdePerfil(perfil, "")))
+      .catch(() => undefined);
+  }, []);
 
   const titulo =
     initialScreen === "carrito" ? "CARRITO" :
@@ -65,7 +82,8 @@ export function AppShell({
         ) : (
           <p className="font-heading uppercase tracking-[0.08em] text-[16px]">{titulo}</p>
         )}
-        <div className="relative">
+        <div className="relative flex items-center gap-2">
+          <SesionIndicator />
           <button aria-label="Ver carrito" onClick={() => router.push("/carrito")}
             className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse text-lg leading-none hover:bg-surface-ink">
             <ShoppingCartIcon size={20} />

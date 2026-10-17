@@ -9,7 +9,9 @@ import type {
   BloqueError,
   BloqueResumenCheckout,
   BloqueTexto,
+  ProductoResumen,
 } from "@/domain/entities/Bloque";
+import type { CatalogCardItem, CatalogDetail } from "@/domain/entities/CatalogoUI";
 import { sanitize } from "@/domain/utils/sanitize";
 import { AccionesRapidas } from "./blocks/AccionesRapidas";
 import { CarruselProductos } from "./blocks/CarruselProductos";
@@ -55,6 +57,32 @@ function esBloqueError(b: Bloque): b is BloqueError {
 
 const noop = () => {};
 
+/** Adapts a chat block product to the card shape the catalog components paint. */
+function aTarjeta(p: ProductoResumen): CatalogCardItem {
+  return {
+    product_id: p.sku,
+    sku: p.sku,
+    name: p.nombre,
+    price: p.precio,
+    hasVariants: false,
+    availability: p.stock <= 0 ? "AGOTADO" : "DISPONIBLE",
+    talla: p.talla,
+    color: p.color,
+  };
+}
+
+/** Adapts a chat block product to the detail shape of the catalog modal. */
+function aDetalle(p: ProductoResumen & { descripcion: string }): CatalogDetail {
+  return {
+    ...aTarjeta(p),
+    shortDescription: p.descripcion,
+    singleSku: p.sku,
+    variants: [{ sku: p.sku, talla: p.talla, color: p.color }],
+    tallas: p.talla ? [p.talla] : [],
+    colores: p.color ? [p.color] : [],
+  };
+}
+
 /**
  * Renderiza un bloque por tipo con los componentes existentes. Los que dependen de
  * funcionalidades pendientes (carrito, detalle, reenvío de correo) se pintan inertes;
@@ -94,7 +122,7 @@ export function renderBloque(
       if (!b.producto) return null;
       return (
         <div key={clave} data-testid="bloque-detalle-producto" className="mt-2">
-          <DetalleProducto p={b.producto} />
+          <DetalleProducto p={aDetalle(b.producto)} />
         </div>
       );
     }
@@ -116,7 +144,7 @@ export function renderBloque(
       return (
         // Inerte: agregar al carrito y ver detalle dependen de funcionalidades pendientes.
         <div key={clave} data-testid="bloque-carrusel-productos" className="mt-2" inert>
-          <CarruselProductos titulo={b.titulo} productos={b.productos} onAdd={noop} onDetalle={noop} />
+          <CarruselProductos titulo={b.titulo} productos={b.productos.map(aTarjeta)} onAdd={noop} onDetalle={noop} />
         </div>
       );
     }

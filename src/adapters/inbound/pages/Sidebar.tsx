@@ -121,7 +121,9 @@ export function Sidebar({
     <div className="absolute inset-0 z-30 flex flex-row">
       <aside className="order-1 w-[85%] max-w-[340px] bg-surface-ink text-text-inverse h-full flex flex-col side-in">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border-inverse">
-          <BrandLogo variant="volt" className="h-12 w-auto" />
+          <span style={{ filter: "hue-rotate(-48deg) saturate(1.35)" }} className="inline-flex">
+            <BrandLogo variant="volt" className="h-12 w-auto" />
+          </span>
           <button aria-label="Cerrar menú" onClick={onClose}
             className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft border border-border-inverse"><XIcon size={20} /></button>
         </div>
@@ -142,7 +144,7 @@ export function Sidebar({
             <button key={c.id} onClick={() => onNavigate(`/chat/${c.id}`)}
               aria-current={conversacionActual === c.id ? "page" : undefined}
               className={`w-full flex items-center gap-3 px-4 py-3 border-b border-dashed border-border-inverse text-left hover:bg-surface-ink-soft ${conversacionActual === c.id ? "bg-surface-ink-soft" : ""}`}>
-              <span className="w-2 h-2 rounded-full bg-accent-volt inline-block shrink-0" aria-hidden />
+              <span className="w-2 h-2 rounded-full bg-action-primary inline-block shrink-0" aria-hidden />
               <span className="min-w-0">
                 <span className="block text-sm font-bold truncate">{c.titulo}</span>
                 <span className="block text-[12px] text-text-muted-dark truncate max-w-[220px]">{c.preview}</span>
@@ -154,7 +156,7 @@ export function Sidebar({
         </div>
         <button onClick={() => irPrivado("/cuenta")}
           className="flex items-center gap-3 px-4 py-4 border-t border-border-inverse text-left hover:bg-surface-ink-soft">
-          <span className="w-9 h-9 rounded-full bg-accent-volt text-surface-ink flex items-center justify-center font-bold text-sm shrink-0">
+          <span className="w-9 h-9 rounded-full bg-action-primary text-text-inverse flex items-center justify-center font-bold text-sm shrink-0">
             {cliente ? cliente.nombreCompleto.charAt(0).toUpperCase() : "?"}
           </span>
           <span className="text-sm font-bold">{cliente?.nombreCompleto ?? "Iniciar sesión"}</span>

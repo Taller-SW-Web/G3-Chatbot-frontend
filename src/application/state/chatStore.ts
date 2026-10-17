@@ -4,9 +4,12 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Cliente } from "@/domain/entities/Cliente";
 import type { CarritoUI } from "@/domain/entities/CarritoUI";
+import { isTokenExpiringSoon } from "@/domain/utils/sesion";
 
 type ChatState = {
   accessToken: string | null;
+  /** Epoch ms when the access token expires (SPEC-03: 15 min lifetime). */
+  expiraEn: number | null;
   chatSid: string | null;
   cliente: Cliente | null;
   carrito: CarritoUI;
@@ -22,6 +25,11 @@ type ChatState = {
   primerMensaje: string | null;
   setToken: (t: string | null) => void;
   setCliente: (c: Cliente | null) => void;
+  setExpiraEn: (v: number | null) => void;
+  /** Stores a freshly opened session (SPEC-03 Req. 1/2/5). */
+  applySession: (token: string, expiresIn: number, cliente?: Cliente | null) => void;
+  /** True when the token expires within the next 60 s (SPEC-03 Req. 5). */
+  isTokenExpiringSoon: () => boolean;
   setCarrito: (c: CarritoUI) => void;
   setAccionPendiente: (a: string | null) => void;
   setAuthOpen: (v: boolean) => void;
@@ -44,8 +52,9 @@ export type UltimoPedido = {
 
 export const useChatStore = create<ChatState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       accessToken: null,
+      expiraEn: null,
       chatSid: null,
       cliente: null,
       carrito: carritoVacio,
@@ -53,8 +62,22 @@ export const useChatStore = create<ChatState>()(
       authOpen: false,
       ultimoPedido: null,
       primerMensaje: null,
-      setToken: (accessToken) => set({ accessToken }),
+      setToken: (accessToken) => set({
+        accessToken,
+        expiraEn: accessToken ? Date.now() + 15 * 60 * 1000 : null,
+      }),
       setCliente: (cliente) => set({ cliente }),
+      setExpiraEn: (expiraEn) => set({ expiraEn }),
+      applySession: (accessToken, expiresIn, cliente) => set((s) => ({
+        accessToken,
+        expiraEn: Date.now() + expiresIn * 1000,
+        cliente: cliente === undefined ? s.cliente : cliente,
+      })),
+      isTokenExpiringSoon: () => {
+        const { accessToken, expiraEn } = get();
+        if (!accessToken) return false;
+        return isTokenExpiringSoon(expiraEn);
+      },
       setCarrito: (carrito) => set({ carrito }),
       setAccionPendiente: (accionPendiente) => set({ accionPendiente }),
       setAuthOpen: (authOpen) => set({ authOpen }),
@@ -63,6 +86,7 @@ export const useChatStore = create<ChatState>()(
       logout: () =>
         set({
           accessToken: null,
+          expiraEn: null,
           cliente: null,
           carrito: carritoVacio,
           accionPendiente: null,
