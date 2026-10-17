@@ -185,7 +185,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
             {errorAccion}
           </p>
         )}
-        <div className="px-3 flex flex-wrap gap-2 pb-24">
+        <div className="px-3 flex flex-wrap gap-2 pb-4">
           {SUGERENCIAS.map((q) => (
             <button
               key={q}
@@ -199,7 +199,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] border-t border-border-default bg-surface-cloud px-3 py-3 flex items-center gap-2">
+      <div className="sticky bottom-3 z-10 mx-3 mb-3 rounded-[28px] border border-border-default bg-surface-cloud/95 backdrop-blur px-2 py-2 flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
         <button
           aria-label="Agregar imagen (próximamente)"
           title="Próximamente"
