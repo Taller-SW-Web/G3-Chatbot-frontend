@@ -7,7 +7,7 @@ vi.mock("axios", () => ({
     create: () => ({
       get: peticiones.get,
       post: peticiones.post,
-      interceptors: { request: { use: () => {} } },
+      interceptors: { request: { use: () => {} }, response: { use: () => {} } },
     }),
   },
 }));
