@@ -47,10 +47,28 @@ export type BloqueAcciones = BloqueBase & {
   }[];
 };
 
+export type LineaCarritoBloque = {
+  item_id: string;
+  sku?: string;
+  nombre: string;
+  variante?: string | null;
+  cantidad: number;
+  precio: number;
+  disponible: boolean;
+  imagen?: string | null;
+  nota?: string | null;
+};
+
 export type BloqueCarritoResumen = BloqueBase & {
   tipo: "CARRITO";
-  lineas: { sku: string; nombre: string; cantidad: number; precio: number }[];
+  lineas: LineaCarritoBloque[];
   subtotal: number;
+  descuentos?: { nombre: string; monto: number }[];
+  costoEnvio?: number | null;
+  envio?: string | null;
+  total?: number;
+  avisos?: string[];
+  promociones_ok?: boolean;
 };
 
 export type BloqueResumenCheckout = BloqueBase & {

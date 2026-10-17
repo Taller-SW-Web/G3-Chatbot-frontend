@@ -10,12 +10,14 @@ import { SesionIndicator } from "../components/SesionIndicator";
 import { useChatStore } from "@/application/state/chatStore";
 import { container } from "@/infrastructure/di/container";
 import { clienteDesdePerfil, clienteDesdeUsuario } from "@/domain/utils/sesion";
+import { useCarrito } from "@/application/hooks/useCarrito";
+import { conversacionParaCarrito } from "@/domain/utils/carrito";
 import { Sidebar } from "./Sidebar";
 
 export type ScreenKind =
   | "home" | "chat" | "carrito" | "checkout" | "exito"
   | "pedidos" | "seguimiento" | "reclamo" | "devolucion"
-  | "cuenta" | "sugerencias";
+  | "cuenta" | "sugerencias" | "verificar-correo";
 
 /** Layout raíz único (decisión: no duplicar layout.tsx). Orquesta UI. */
 export function AppShell({
@@ -29,8 +31,17 @@ export function AppShell({
 }) {
   const router = useRouter();
   const [sidebar, setSidebar] = useState(false);
+  // El badge del header es siempre verdad del servidor (no del store inventado).
+  useCarrito();
   const carrito = useChatStore((s) => s.carrito);
   const authOpen = useChatStore((s) => s.authOpen);
+  const setUltimaConversacionId = useChatStore((s) => s.setUltimaConversacionId);
+
+  // La conversación abierta ubica el carrito anónimo en cualquier pantalla.
+  useEffect(() => {
+    const id = conversacionParaCarrito(conversationId);
+    if (id) setUltimaConversacionId(id);
+  }, [conversationId, setUltimaConversacionId]);
 
   useEffect(() => {
     const { accessToken, isTokenExpiringSoon, applySession, setCliente } = useChatStore.getState();
@@ -46,6 +57,21 @@ export function AppShell({
       .catch(() => undefined);
   }, []);
 
+  // Deep-link del correo de recuperación/verificación: `?abrirLogin=1` abre el modal (SPEC-02).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("abrirLogin") !== "1") return;
+    useChatStore.getState().setAuthOpen(true);
+    params.delete("abrirLogin");
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      query ? `${window.location.pathname}?${query}` : window.location.pathname
+    );
+  }, []);
+
   const titulo =
     initialScreen === "carrito" ? "CARRITO" :
     initialScreen === "checkout" ? "CHECKOUT" :
@@ -55,7 +81,8 @@ export function AppShell({
     initialScreen === "reclamo" ? "RECLAMO" :
     initialScreen === "devolucion" ? "DEVOLUCIÓN" :
     initialScreen === "cuenta" ? "MI CUENTA" :
-    initialScreen === "sugerencias" ? "SUGERENCIAS" : "LOGO";
+    initialScreen === "sugerencias" ? "SUGERENCIAS" :
+    initialScreen === "verificar-correo" ? "VERIFICAR CORREO" : "LOGO";
 
   const esHomeChat = initialScreen === "home" || initialScreen === "chat";
 

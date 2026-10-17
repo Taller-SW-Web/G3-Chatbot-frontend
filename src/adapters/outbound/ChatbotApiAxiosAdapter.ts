@@ -7,14 +7,22 @@ import { createSingleFlight } from "@/domain/utils/singleFlight";
 import type { Bloque } from "@/domain/entities/Bloque";
 import type {
   BuscarProductosInput,
+  CarritoBackend,
   ChatbotApiPort,
   ConversacionResumen,
   DisponibilidadPuntual,
   MfaChallenge,
   PaginaCatalogo,
   PerfilCliente,
+  PoliticaContrasena,
+  RegistroClienteInput,
+  RegistroResultado,
   SessionOpened,
 } from "@/ports/outbound/ChatbotApiPort";
+import {
+  getPoliticaContrasenaCache,
+  setPoliticaContrasenaCache,
+} from "@/domain/utils/passwordPolicy";
 import { mapearHistorial } from "./mapearHistorial";
 
 /**
@@ -37,6 +45,9 @@ const PUBLIC_PATHS = [
   "/sesion/refresh",
   "/sesion/mfa/",
   "/sesion/logout",
+  "/sesion/registro",
+  "/sesion/verificar-correo",
+  "/sesion/politica-contrasena",
 ];
 
 function isPublic(path: string | undefined): boolean {
@@ -101,6 +112,35 @@ export const chatbotApi: ChatbotApiPort = {
     if (data?.mfaRequerido) return data as MfaChallenge;
     return data as SessionOpened;
   },
+  // SPEC-01: sin fallback a mocks; los errores problem+json los ramifica la UI por `code`.
+  async registrar(input: RegistroClienteInput): Promise<RegistroResultado> {
+    const { data } = await http.post("/sesion/registro", {
+      email: input.correo,
+      password: input.contrasena,
+      phone: input.celular,
+      firstName: input.nombres,
+      lastName: input.apellidos,
+      acceptTerms: input.aceptaTerminos,
+    });
+    return data as RegistroResultado;
+  },
+  async obtenerPoliticaContrasena(): Promise<PoliticaContrasena> {
+    const cache = getPoliticaContrasenaCache();
+    if (cache) return cache;
+    const { data } = await http.get("/sesion/politica-contrasena");
+    const politica = data as PoliticaContrasena;
+    setPoliticaContrasenaCache(politica);
+    return politica;
+  },
+  async verificarCorreo(token: string): Promise<void> {
+    await http.post("/sesion/verificar-correo", { token });
+  },
+  async reenviarVerificacion(correo: string) {
+    const { data } = await http.post("/sesion/verificar-correo/reenviar", {
+      email: correo,
+    });
+    return data as { ok: true };
+  },
   async requestMfaCode(canal) {
     const { data } = await http.post("/sesion/mfa/solicitar", { canal });
     return data as { ok: true };
@@ -155,12 +195,63 @@ export const chatbotApi: ChatbotApiPort = {
     });
     return data as ConversacionResumen[];
   },
-  async agregarAlCarrito(input) {
+  async agregarAlCarrito(input, conversacionId?: string) {
     // SPEC-09 Req. 2 "agregar desde la tarjeta": endpoint real del carrito.
-    await http.post(`/carrito/items`, input, {
+    // conversacionId ubica el carrito anónimo; sin él solo funciona el de cliente.
+    // Se envían product_id/talla/color cuando la tarjeta los conoce para que la
+    // línea conserve nombre, imagen e id reales (sin inventar nada en el front).
+    const body: Record<string, unknown> = {
+      sku: input.sku,
+      cantidad: input.cantidad,
+    };
+    if (input.product_id) body.product_id = input.product_id;
+    if (input.talla) body.talla = input.talla;
+    if (input.color) body.color = input.color;
+    const { data } = await http.post(`/carrito/items`, body, {
+      params: conversacionId ? { conversacionId } : undefined,
       timeout: apiConfig.timeouts.catalogo,
     });
-    return { ok: true as const };
+    const carrito =
+      (data as { carrito?: CarritoBackend }).carrito ?? (data as CarritoBackend);
+    return { ok: true as const, carrito: carrito?.lineas ? carrito : undefined };
+  },
+  // Carrito con datos reales, sin fallback a mocks (SPEC-10, SPEC-11).
+  // Los errores problem+json los ramifica la UI por `code`.
+  async listarCarrito(conversacionId?: string): Promise<CarritoBackend> {
+    const { data } = await http.get(`/carrito`, {
+      params: conversacionId ? { conversacionId } : undefined,
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return data as CarritoBackend;
+  },
+  async actualizarCantidadCarrito(itemId: string, cantidad: number, conversacionId?: string): Promise<CarritoBackend> {
+    const { data } = await http.patch(
+      `/carrito/items/${encodeURIComponent(itemId)}`,
+      { cantidad },
+      {
+        params: conversacionId ? { conversacionId } : undefined,
+        timeout: apiConfig.timeouts.catalogo,
+      }
+    );
+    return (data as { carrito: CarritoBackend }).carrito ?? (data as CarritoBackend);
+  },
+  async eliminarLineaCarrito(itemId: string, conversacionId?: string): Promise<{ mensaje: string }> {
+    const { data } = await http.delete(
+      `/carrito/items/${encodeURIComponent(itemId)}`,
+      {
+        params: conversacionId ? { conversacionId } : undefined,
+        timeout: apiConfig.timeouts.catalogo,
+      }
+    );
+    return data as { mensaje: string };
+  },
+  async vaciarCarrito(conversacionId?: string): Promise<{ mensaje: string }> {
+    const { data } = await http.delete(`/carrito`, {
+      params: conversacionId ? { conversacionId } : undefined,
+      data: { confirmado: true },
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return data as { mensaje: string };
   },
   // Catálogo con datos reales, sin fallback a mocks (SPEC-06, SPEC-09,
   // SPEC-10). Los errores problem+json los ramifica la UI por `code`.

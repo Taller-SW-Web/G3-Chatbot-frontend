@@ -1,5 +1,8 @@
 import type { Mensaje } from "@/domain/entities/Mensaje";
 import type { Bloque } from "@/domain/entities/Bloque";
+import type { PoliticaContrasena } from "@/domain/utils/passwordPolicy";
+
+export type { PoliticaContrasena };
 
 /**
  * Contrato REST hacia el backend (contratos §1, §2.8).
@@ -10,6 +13,9 @@ export type ProblemJson = {
   title: string;
   detail?: string;
   disponible?: number;
+  /** 409 VARIANTE_REQUERIDA: atributos que faltan elegir. */
+  faltantes?: string[];
+  product_id?: string;
 };
 
 /** Tramo de texto de un resultado de búsqueda; `coincide` marca el término encontrado. */
@@ -56,6 +62,22 @@ export type MfaChallenge = {
   canal: "EMAIL" | "SMS";
 };
 
+/** Datos del formulario de registro (SPEC-01 Req. 1); el adapter los mapea al contrato del BFF. */
+export type RegistroClienteInput = {
+  nombres: string;
+  apellidos: string;
+  correo: string;
+  celular: string;
+  contrasena: string;
+  aceptaTerminos: true;
+};
+
+/** Respuesta de `POST /sesion/registro`: la cuenta queda PENDIENTE_VERIFICACION, sin sesión. */
+export type RegistroResultado = {
+  estado: string;
+  correoEnmascarado: string;
+};
+
 /** Tamaño de página del listado y la búsqueda (backend: CONVERSATIONS_PAGE_SIZE). */
 export const CONVERSACIONES_POR_PAGINA = 20;
 
@@ -95,8 +117,50 @@ export type ResultadoAccionChat = {
   bloques: Bloque[];
 };
 
+/** Línea del carrito tal como la expone `GET /carrito` (SPEC-11, contratos §2.4). */
+export type LineaCarritoBackend = {
+  item_id: string;
+  sku: string;
+  nombre: string;
+  variante?: string | null;
+  cantidad: number;
+  precio: number;
+  disponible: boolean;
+  imagen?: string | null;
+  nota?: string | null;
+};
+
+/** Carrito con totales recalculados (SPEC-11 Req. 3). Precios desde herramientas. */
+export type CarritoBackend = {
+  lineas: LineaCarritoBackend[];
+  subtotal: number;
+  descuentos: { nombre: string; monto: number }[];
+  costoEnvio: number | null;
+  envio?: string | null;
+  total: number;
+  avisos: string[];
+  promociones_ok?: boolean;
+};
+
+/** Entrada de `POST /carrito/items`. `product_id`/`talla`/`color` completan la línea. */
+export type AgregarAlCarritoInput = {
+  sku: string;
+  cantidad: number;
+  product_id?: string;
+  talla?: string;
+  color?: string;
+};
+
 export interface ChatbotApiPort {
   login(email: string, password: string): Promise<SessionOpened | MfaChallenge>;
+  /** SPEC-01: crea la cuenta y devuelve el correo enmascarado; nunca abre sesión. */
+  registrar(input: RegistroClienteInput): Promise<RegistroResultado>;
+  /** SPEC-01 Req. 2: política de contraseña cacheada durante la sesión del navegador. */
+  obtenerPoliticaContrasena(): Promise<PoliticaContrasena>;
+  /** SPEC-02 Req. 1: canjea el enlace de verificación (204) o falla con 410. */
+  verificarCorreo(token: string): Promise<void>;
+  /** SPEC-02 Req. 2: reenvío neutro del enlace (202). */
+  reenviarVerificacion(correo: string): Promise<{ ok: true }>;
   requestMfaCode(canal: "EMAIL" | "SMS"): Promise<{ ok: true }>;
   verifyMfaCode(code: string): Promise<SessionOpened>;
   refreshSession(): Promise<SessionOpened>;
@@ -111,7 +175,12 @@ export interface ChatbotApiPort {
   ): Promise<ResultadoAccionChat>;
   listarConversaciones(pagina?: number): Promise<ConversacionResumen[]>;
   buscarConversaciones(q: string, pagina?: number): Promise<ConversacionResumen[]>;
-  agregarAlCarrito(input: { sku: string; cantidad: number }): Promise<{ ok: true }>;
+  agregarAlCarrito(input: AgregarAlCarritoInput, conversacionId?: string): Promise<{ ok: true; carrito?: CarritoBackend }>;
+  /** Carrito con datos reales (SPEC-10, SPEC-11). Sin mocks. Errores por `code`. */
+  listarCarrito(conversacionId?: string): Promise<CarritoBackend>;
+  actualizarCantidadCarrito(itemId: string, cantidad: number, conversacionId?: string): Promise<CarritoBackend>;
+  eliminarLineaCarrito(itemId: string, conversacionId?: string): Promise<{ mensaje: string }>;
+  vaciarCarrito(conversacionId?: string): Promise<{ mensaje: string }>;
   /** Catálogo con datos reales (SPEC-06, SPEC-09, SPEC-10). Sin mocks. */
   buscarProductos(input: BuscarProductosInput): Promise<PaginaCatalogo>;
   verDetalleProducto(productId: string): Promise<unknown>;

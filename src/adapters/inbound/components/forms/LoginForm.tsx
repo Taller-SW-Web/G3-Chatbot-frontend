@@ -7,15 +7,20 @@ import { loginSchema, type LoginInput } from "@/domain/schemas/login.schema";
 /** SPEC-03 Req. 1: email + password with generic errors and helper links. */
 export function LoginForm({
   onOk,
+  onReenviar,
+  correoInicial,
   error,
   cargando,
 }: {
   onOk: (d: LoginInput) => void;
+  onReenviar?: () => void;
+  correoInicial?: string;
   error?: string | null;
   cargando?: boolean;
 }) {
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    defaultValues: { correo: correoInicial ?? "" },
   });
   return (
     <form onSubmit={handleSubmit(onOk)} className="flex flex-col gap-2">
@@ -38,7 +43,11 @@ export function LoginForm({
         <button type="button" className="text-[12px] font-semibold underline text-text-secondary text-left">
           ¿Olvidaste tu contraseña?
         </button>
-        <button type="button" className="text-[12px] font-semibold underline text-text-secondary text-left">
+        <button
+          type="button"
+          onClick={onReenviar}
+          className="text-[12px] font-semibold underline text-text-secondary text-left"
+        >
           ¿No verificaste tu correo? Reenviar verificación
         </button>
       </div>
