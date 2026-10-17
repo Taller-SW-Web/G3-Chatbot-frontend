@@ -63,7 +63,8 @@ export function AuthModal() {
   const setCliente = useChatStore((s) => s.setCliente);
   const accionPendiente = useChatStore((s) => s.accionPendiente);
   const setAccionPendiente = useChatStore((s) => s.setAccionPendiente);
-  const [tab, setTab] = useState<"login" | "registro">("login");
+  const vistaInicial = useChatStore((s) => s.authVista);
+  const [tab, setTab] = useState<"login" | "registro">(vistaInicial);
   const [paso, setPaso] = useState<Paso>("login");
   const [canal, setCanal] = useState<Canal>("EMAIL");
   const [contacto, setContacto] = useState("");
