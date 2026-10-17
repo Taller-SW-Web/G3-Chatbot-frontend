@@ -12,8 +12,15 @@ import type {
   MfaChallenge,
   PaginaCatalogo,
   PerfilCliente,
+  PoliticaContrasena,
+  RegistroClienteInput,
+  RegistroResultado,
   SessionOpened,
 } from "@/ports/outbound/ChatbotApiPort";
+import {
+  getPoliticaContrasenaCache,
+  setPoliticaContrasenaCache,
+} from "@/domain/utils/passwordPolicy";
 import type { Mensaje } from "@/domain/entities/Mensaje";
 import { MOCK_MENSAJES } from "./mockData";
 
@@ -36,6 +43,9 @@ const PUBLIC_PATHS = [
   "/sesion/refresh",
   "/sesion/mfa/",
   "/sesion/logout",
+  "/sesion/registro",
+  "/sesion/verificar-correo",
+  "/sesion/politica-contrasena",
 ];
 
 function isPublic(path: string | undefined): boolean {
@@ -99,6 +109,35 @@ export const chatbotApi: ChatbotApiPort = {
     const { data } = await http.post("/sesion/login", { email, password });
     if (data?.mfaRequerido) return data as MfaChallenge;
     return data as SessionOpened;
+  },
+  // SPEC-01: sin fallback a mocks; los errores problem+json los ramifica la UI por `code`.
+  async registrar(input: RegistroClienteInput): Promise<RegistroResultado> {
+    const { data } = await http.post("/sesion/registro", {
+      email: input.correo,
+      password: input.contrasena,
+      phone: input.celular,
+      firstName: input.nombres,
+      lastName: input.apellidos,
+      acceptTerms: input.aceptaTerminos,
+    });
+    return data as RegistroResultado;
+  },
+  async obtenerPoliticaContrasena(): Promise<PoliticaContrasena> {
+    const cache = getPoliticaContrasenaCache();
+    if (cache) return cache;
+    const { data } = await http.get("/sesion/politica-contrasena");
+    const politica = data as PoliticaContrasena;
+    setPoliticaContrasenaCache(politica);
+    return politica;
+  },
+  async verificarCorreo(token: string): Promise<void> {
+    await http.post("/sesion/verificar-correo", { token });
+  },
+  async reenviarVerificacion(correo: string) {
+    const { data } = await http.post("/sesion/verificar-correo/reenviar", {
+      email: correo,
+    });
+    return data as { ok: true };
   },
   async requestMfaCode(canal) {
     const { data } = await http.post("/sesion/mfa/solicitar", { canal });

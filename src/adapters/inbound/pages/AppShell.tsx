@@ -15,7 +15,7 @@ import { Sidebar } from "./Sidebar";
 export type ScreenKind =
   | "home" | "chat" | "carrito" | "checkout" | "exito"
   | "pedidos" | "seguimiento" | "reclamo" | "devolucion"
-  | "cuenta" | "sugerencias";
+  | "cuenta" | "sugerencias" | "verificar-correo";
 
 /** Layout raíz único (decisión: no duplicar layout.tsx). Orquesta UI. */
 export function AppShell({
@@ -46,6 +46,21 @@ export function AppShell({
       .catch(() => undefined);
   }, []);
 
+  // Deep-link del correo de recuperación/verificación: `?abrirLogin=1` abre el modal (SPEC-02).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("abrirLogin") !== "1") return;
+    useChatStore.getState().setAuthOpen(true);
+    params.delete("abrirLogin");
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      query ? `${window.location.pathname}?${query}` : window.location.pathname
+    );
+  }, []);
+
   const titulo =
     initialScreen === "carrito" ? "CARRITO" :
     initialScreen === "checkout" ? "CHECKOUT" :
@@ -55,7 +70,8 @@ export function AppShell({
     initialScreen === "reclamo" ? "RECLAMO" :
     initialScreen === "devolucion" ? "DEVOLUCIÓN" :
     initialScreen === "cuenta" ? "MI CUENTA" :
-    initialScreen === "sugerencias" ? "SUGERENCIAS" : "LOGO";
+    initialScreen === "sugerencias" ? "SUGERENCIAS" :
+    initialScreen === "verificar-correo" ? "VERIFICAR CORREO" : "LOGO";
 
   const esHomeChat = initialScreen === "home" || initialScreen === "chat";
 

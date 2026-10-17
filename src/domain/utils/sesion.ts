@@ -1,6 +1,7 @@
 /** Pure session helpers (SPEC-03). No React, no network, no storage. */
 
 import type { Cliente, TipoDocumento } from "@/domain/entities/Cliente";
+import type { RegistroInput } from "@/domain/schemas/registro.schema";
 import { maskCelular } from "@/domain/utils/sanitize";
 import type { PerfilCliente, UsuarioSesion } from "@/ports/outbound/ChatbotApiPort";
 
@@ -116,4 +117,105 @@ export function clienteDesdePerfil(perfil: PerfilCliente, correoFallback: string
     documentoEnmascarado: perfil.ultimoDocumento?.numeroEnmascarado,
     ultimoDocumento: perfil.ultimoDocumento,
   };
+}
+
+/** Camino del campo del BFF (`errores[].campo`) al campo visible del formulario (SPEC-01 Req. 4). */
+const CAMPO_BFF_A_FORM: Record<string, keyof RegistroInput> = {
+  email: "correo",
+  phone: "celular",
+  firstName: "nombres",
+  lastName: "apellidos",
+  password: "contrasena",
+  acceptTerms: "aceptaTerminos",
+};
+
+export type RegistroFailure = {
+  message: string;
+  ofrecerLogin: boolean;
+  erroresCampo?: Partial<Record<keyof RegistroInput, string>>;
+};
+
+/** Mapea el problem+json de `/sesion/registro` a mensajes, sin revelar si el correo existe (SPEC-01 Req. 4). */
+export function describeRegistroFailure(
+  status?: number,
+  code?: string,
+  errores?: Array<{ campo?: string; mensaje?: string }>
+): RegistroFailure {
+  if (code === "VALIDACION" && errores?.length) {
+    const porCampo: Partial<Record<keyof RegistroInput, string>> = {};
+    for (const e of errores) {
+      const destino = CAMPO_BFF_A_FORM[e.campo ?? ""] ?? (e.campo as keyof RegistroInput | undefined);
+      if (destino && e.mensaje) porCampo[destino] = e.mensaje;
+    }
+    if (Object.keys(porCampo).length) {
+      return { message: "Revisa los campos marcados", ofrecerLogin: false, erroresCampo: porCampo };
+    }
+  }
+  if (code === "CORREO_NO_DISPONIBLE" || status === 409) {
+    return {
+      message: "Si el correo es válido, recibirás un mensaje con los pasos a seguir",
+      ofrecerLogin: true,
+    };
+  }
+  if (code === "POLITICA_INCUMPLIDA" || status === 422) {
+    return {
+      message: "La contraseña no cumple la política de seguridad",
+      ofrecerLogin: false,
+      erroresCampo: { contrasena: "No cumple la política de seguridad" },
+    };
+  }
+  if (code === "SERVICIO_NO_DISPONIBLE" || code === "MODULO_NO_DISPONIBLE" || status === 503) {
+    return {
+      message: "No pudimos crear tu cuenta en este momento, intenta en unos minutos",
+      ofrecerLogin: false,
+    };
+  }
+  if (status === 429) {
+    return {
+      message: "Demasiados intentos. Espera unos minutos e inténtalo de nuevo",
+      ofrecerLogin: false,
+    };
+  }
+  return { message: "No pudimos crear tu cuenta. Inténtalo de nuevo", ofrecerLogin: false };
+}
+
+export type VerificacionEstado = "vencido" | "usado" | "error";
+
+export type VerificacionResultado = {
+  estado: VerificacionEstado;
+  titulo: string;
+  mensaje: string;
+};
+
+/** Mapea el problem+json de `/sesion/verificar-correo` a un estado visible (SPEC-02 Req. 1). */
+export function describeVerificacionResult(
+  status?: number,
+  code?: string
+): VerificacionResultado {
+  if (code === "ENLACE_YA_USADO") {
+    return { estado: "usado", titulo: "Tu cuenta ya fue verificada", mensaje: "Puedes iniciar sesión cuando quieras." };
+  }
+  if (code === "ENLACE_EXPIRADO" || status === 410) {
+    return { estado: "vencido", titulo: "Este enlace venció", mensaje: "Solicita un enlace nuevo para activar tu cuenta." };
+  }
+  return {
+    estado: "error",
+    titulo: "No pudimos verificar tu cuenta",
+    mensaje: "Intenta de nuevo en un momento o solicita un enlace nuevo.",
+  };
+}
+
+/** Mensaje neutro del reenvío: nunca confirma que la cuenta exista (SPEC-02 Req. 2). */
+export const REENVIO_NEUTRO =
+  "Si hay una cuenta pendiente con ese correo, te enviamos un enlace nuevo";
+
+/** Mapea el fallo del reenvío (SPEC-02 Req. 2). */
+export function describeReenvioFailure(status?: number, code?: string): string {
+  if (code === "DEMASIADAS_SOLICITUDES" || status === 429) {
+    return "Ya enviamos varios enlaces. Revisa tu bandeja y spam, o intenta en una hora";
+  }
+  if (code === "SERVICIO_NO_DISPONIBLE" || code === "MODULO_NO_DISPONIBLE" || status === 503) {
+    return "El servicio no está disponible. Intenta de nuevo en unos segundos";
+  }
+  return "No pudimos enviar el enlace. Inténtalo de nuevo";
 }
