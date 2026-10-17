@@ -5,21 +5,16 @@ export type LineaCarrito = {
   cantidad: number;
 };
 
-/** Carrito UI. Stock se valida en backend (409/503). */
+/** Carrito UI. El stock y los totales los decide el backend (409/503). */
 export type CarritoUI = {
   lineas: LineaCarrito[];
   subtotal: number;
-  cupon?: string;
-  /** Cupón aplicado: descuenta 20% (SPEC-13, paridad mockup). */
-  cuponAplicado?: boolean;
   count: number;
 };
 
-/** Descuento del 20% si hay cupón aplicado + total. Cálculo puro de UI. */
-export function totalesCarrito(c: Pick<CarritoUI, "subtotal" | "cuponAplicado">): {
-  descuento: number;
+/** Total de UI: el subtotal ya viene calculado del backend (sin descuentos inventados). */
+export function totalesCarrito(c: Pick<CarritoUI, "subtotal">): {
   total: number;
 } {
-  const descuento = c.cuponAplicado ? c.subtotal * 0.2 : 0;
-  return { descuento, total: c.subtotal - descuento };
+  return { total: c.subtotal };
 }

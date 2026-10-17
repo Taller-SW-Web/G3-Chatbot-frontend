@@ -1,7 +1,8 @@
 /** Entidad Mensaje (SPEC-05 motor-conversacion Req. 4).
  *
- * Fuente: openspec/specs/motor-conversacion (POST /chat/conversaciones/{id}/mensajes → 202 {mensajeId}).
- * El adaptador del API traduce role CUSTOMER/ASSISTANT a user/bot.
+ * Fuente: openspec/specs/motor-conversacion. El historial llega de
+ * GET /chat/conversaciones/{id}/mensajes (últimos 50, `rol` ya es user/bot);
+ * el turno nuevo se arma en vivo con los eventos SSE del POST del mensaje.
  * Sin React, sin fetch, sin localStorage (regla hexagonal domain/).
  */
 import type { Bloque } from "./Bloque";
@@ -15,5 +16,7 @@ export type Mensaje = {
   rol: MensajeRol;
   texto: string;
   bloques?: Bloque[];
+  /** Motivo disponible durante el turno en vivo; el historial no lo conserva. */
+  motivoDegradado?: string;
   creadoEn: string;
 };

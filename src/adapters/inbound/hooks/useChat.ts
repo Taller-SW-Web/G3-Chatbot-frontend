@@ -1,94 +1,107 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { container } from "@/infrastructure/di/container";
-import { enviarMensajeUseCase } from "@/application/use_cases/enviarMensajeUseCase";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { turnoChatReducer, turnoInicial } from "@/application/state/turnoChat";
 import { cargarHistorialUseCase } from "@/application/use_cases/cargarHistorialUseCase";
-import { useChatStore } from "@/application/state/chatStore";
-import { apiConfig } from "@/infrastructure/config/apiConfig";
+import { ejecutarTurnoUseCase } from "@/application/use_cases/ejecutarTurnoUseCase";
+import { container } from "@/infrastructure/di/container";
 
 /**
- * Invoca casos, suscribe store, maneja WS token/bloque/fin/error + polling fallback.
- * SPEC-05 Req.4
+ * Chat de una conversación: historial del backend y turno por SSE (ADR-0021).
+ * El estado es local al hook, así que no se filtra entre conversaciones.
  */
 export function useChat(conversacionId: string) {
-  const mensajes = useChatStore((s) => s.mensajes);
-  const escribiendo = useChatStore((s) => s.escribiendo);
-  const pushMensaje = useChatStore((s) => s.pushMensaje);
-  const setMensajes = useChatStore((s) => s.setMensajes);
-  const setEscribiendo = useChatStore((s) => s.setEscribiendo);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [turno, dispatch] = useReducer(turnoChatReducer, turnoInicial);
+  const [recarga, setRecarga] = useState(0);
+  const [cargadoDe, setCargadoDe] = useState<string | null>(null);
+  const [ultimoTexto, setUltimoTexto] = useState<string | null>(null);
+  const controladorRef = useRef<AbortController | null>(null);
+  const enviandoRef = useRef(false);
+  const ultimoTextoRef = useRef<string | null>(null);
 
+  // Un controlador por conversación: al cambiar o desmontar se cancela el turno en curso
+  // y se ignoran los resultados tardíos.
   useEffect(() => {
-    let vivo = true;
-    // historial inicial
-    cargarHistorialUseCase(container.api, { conversacionId }).then((ms) => {
-      if (vivo && ms.length > 0) setMensajes(ms);
-    });
-    // WS
-    container.ws.conectar(conversacionId, (e) => {
-      if (e.kind === "token") {
-        // efecto "escribiendo en vivo": se agrega al último borrador en store
-        setEscribiendo(true);
-      }
-      if (e.kind === "fin") setEscribiendo(false);
-      if (e.kind === "error") {
-        setEscribiendo(false);
-        pushMensaje({
-          id: `err-${Date.now()}`,
-          conversacionId,
-          rol: "bot",
-          texto: `Ocurrió un error (${e.code}). Pulsa Reintentar.`,
-          creadoEn: new Date().toISOString(),
-        });
-      }
-    });
-    // polling fallback cada 2s
-    pollRef.current = setInterval(async () => {
-      const ultimo = useChatStore.getState().mensajes.at(-1);
-      const nuevos = await cargarHistorialUseCase(container.api, {
-        conversacionId,
-        desde: ultimo?.id,
+    const controlador = new AbortController();
+    controladorRef.current = controlador;
+    enviandoRef.current = false;
+    dispatch({ tipo: "historialCargando" });
+    cargarHistorialUseCase(container.api, conversacionId)
+      .then((mensajes) => {
+        if (controlador.signal.aborted) return;
+        dispatch({ tipo: "historialCargado", mensajes });
+        setCargadoDe(conversacionId);
+      })
+      .catch(() => {
+        if (!controlador.signal.aborted) {
+          dispatch({ tipo: "historialFallido", code: "ERROR_HISTORIAL" });
+        }
       });
-      if (nuevos.length > 0)
-        setMensajes([...useChatStore.getState().mensajes, ...nuevos]);
-    }, apiConfig.pollingMs);
+    return () => controlador.abort();
+  }, [conversacionId, recarga]);
 
-    return () => {
-      vivo = false;
-      container.ws.desconectar();
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const enviar = useCallback(
+    async (texto: string) => {
+      const controlador = controladorRef.current;
+      if (!controlador || enviandoRef.current || turno.estado === "cargando") return;
+      enviandoRef.current = true;
+      ultimoTextoRef.current = texto;
+      setUltimoTexto(texto);
+      try {
+        await ejecutarTurnoUseCase({
+          api: container.api,
+          stream: container.stream,
+          conversacionId,
+          texto,
+          dispatch: (accion) => {
+            if (!controlador.signal.aborted) dispatch(accion);
+          },
+          signal: controlador.signal,
+        });
+      } finally {
+        if (controladorRef.current === controlador) enviandoRef.current = false;
+      }
+    },
+    [conversacionId, turno.estado]
+  );
+
+  /**
+   * Reenvía el último texto. Crea un segundo mensaje del cliente: el primero ya quedó
+   * guardado en el backend aunque el turno haya fallado.
+   */
+  const reintentar = useCallback(async () => {
+    if (ultimoTextoRef.current !== null) await enviar(ultimoTextoRef.current);
+  }, [enviar]);
+
+  const recargar = useCallback(() => {
+    if (!enviandoRef.current) setRecarga((n) => n + 1);
+  }, []);
+
+  /** Recarga el historial sin vaciar la conversación mientras termina una acción REST. */
+  const recargarSilencioso = useCallback(async () => {
+    const controlador = controladorRef.current;
+    if (!controlador || controlador.signal.aborted) return;
+    const historial = await cargarHistorialUseCase(container.api, conversacionId);
+    if (controlador.signal.aborted) return;
+    dispatch({ tipo: "historialCargado", mensajes: historial });
   }, [conversacionId]);
 
-  async function enviar(texto: string) {
-    if (!texto.trim()) return;
-    pushMensaje({
-      id: `u-${Date.now()}`,
-      conversacionId,
-      rol: "user",
-      texto: texto.trim(),
-      creadoEn: new Date().toISOString(),
-    });
-    setEscribiendo(true);
-    try {
-      await enviarMensajeUseCase(container.api, { conversacionId, texto });
-      // Respuesta simulada wireframe (backend la reemplazará por WS real):
-      setTimeout(() => {
-        setEscribiendo(false);
-        pushMensaje({
-          id: `b-${Date.now()}`,
-          conversacionId,
-          rol: "bot",
-          texto: "Entendido. Te muestro opciones con stock verificado.",
-          creadoEn: new Date().toISOString(),
-        });
-      }, 900);
-    } catch {
-      setEscribiendo(false);
-    }
-  }
-
-  return { mensajes, escribiendo, enviar };
+  return {
+    mensajes: turno.mensajes,
+    borrador: turno.borrador,
+    estado: turno.estado,
+    error: turno.error,
+    incompleto: turno.incompleto,
+    /** Último texto enviado: la UI lo devuelve al campo si el mensaje no llegó a aceptarse. */
+    ultimoTexto,
+    /** El historial de esta conversación ya se cargó y no hay una recarga en curso. */
+    historialCargado:
+      cargadoDe === conversacionId &&
+      turno.estado !== "cargando" &&
+      turno.error?.code !== "ERROR_HISTORIAL",
+    enviar,
+    reintentar,
+    recargar,
+    recargarSilencioso,
+  };
 }

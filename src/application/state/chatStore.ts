@@ -2,34 +2,42 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Mensaje } from "@/domain/entities/Mensaje";
 import type { Cliente } from "@/domain/entities/Cliente";
 import type { CarritoUI } from "@/domain/entities/CarritoUI";
+import { isTokenExpiringSoon } from "@/domain/utils/sesion";
 
 type ChatState = {
   accessToken: string | null;
+  /** Epoch ms when the access token expires (SPEC-03: 15 min lifetime). */
+  expiraEn: number | null;
   chatSid: string | null;
   cliente: Cliente | null;
-  mensajes: Mensaje[];
-  escribiendo: boolean;
   carrito: CarritoUI;
   accionPendiente: string | null;
   /** Abre el modal de login/registro global (AppShell). */
   authOpen: boolean;
-  /** Par user/bot que otra página deja sembrado para el chat (confirm al agregar, preguntar en el chat). */
-  mensajePendiente: { user?: string; bot: string } | null;
   /** Resumen del último pedido confirmado (pantalla /exito). */
   ultimoPedido: UltimoPedido;
+  /**
+   * Primer mensaje que Home deja para la conversación recién creada; el chat lo envía una
+   * sola vez y lo limpia. Es transitorio: no se persiste.
+   */
+  primerMensaje: string | null;
+  /** Última conversación abierta: ubica el carrito anónimo desde /carrito. */
+  ultimaConversacionId: string | null;
+  setUltimaConversacionId: (id: string | null) => void;
   setToken: (t: string | null) => void;
   setCliente: (c: Cliente | null) => void;
-  pushMensaje: (m: Mensaje) => void;
-  setMensajes: (m: Mensaje[]) => void;
-  setEscribiendo: (v: boolean) => void;
+  setExpiraEn: (v: number | null) => void;
+  /** Stores a freshly opened session (SPEC-03 Req. 1/2/5). */
+  applySession: (token: string, expiresIn: number, cliente?: Cliente | null) => void;
+  /** True when the token expires within the next 60 s (SPEC-03 Req. 5). */
+  isTokenExpiringSoon: () => boolean;
   setCarrito: (c: CarritoUI) => void;
   setAccionPendiente: (a: string | null) => void;
   setAuthOpen: (v: boolean) => void;
-  setMensajePendiente: (m: { user?: string; bot: string } | null) => void;
   setUltimoPedido: (p: UltimoPedido) => void;
+  setPrimerMensaje: (m: string | null) => void;
   logout: () => void;
 };
 
@@ -47,37 +55,70 @@ export type UltimoPedido = {
 
 export const useChatStore = create<ChatState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       accessToken: null,
+      expiraEn: null,
       chatSid: null,
       cliente: null,
-      mensajes: [],
-      escribiendo: false,
       carrito: carritoVacio,
       accionPendiente: null,
       authOpen: false,
-      mensajePendiente: null,
       ultimoPedido: null,
-      setToken: (accessToken) => set({ accessToken }),
+      primerMensaje: null,
+      ultimaConversacionId: null,
+      setUltimaConversacionId: (ultimaConversacionId) => set({ ultimaConversacionId }),
+      setToken: (accessToken) => set({
+        accessToken,
+        expiraEn: accessToken ? Date.now() + 15 * 60 * 1000 : null,
+      }),
       setCliente: (cliente) => set({ cliente }),
-      pushMensaje: (m) => set((s) => ({ mensajes: [...s.mensajes, m] })),
-      setMensajes: (mensajes) => set({ mensajes }),
-      setEscribiendo: (escribiendo) => set({ escribiendo }),
+      setExpiraEn: (expiraEn) => set({ expiraEn }),
+      applySession: (accessToken, expiresIn, cliente) => set((s) => ({
+        accessToken,
+        expiraEn: Date.now() + expiresIn * 1000,
+        cliente: cliente === undefined ? s.cliente : cliente,
+      })),
+      isTokenExpiringSoon: () => {
+        const { accessToken, expiraEn } = get();
+        if (!accessToken) return false;
+        return isTokenExpiringSoon(expiraEn);
+      },
       setCarrito: (carrito) => set({ carrito }),
       setAccionPendiente: (accionPendiente) => set({ accionPendiente }),
       setAuthOpen: (authOpen) => set({ authOpen }),
-      setMensajePendiente: (mensajePendiente) => set({ mensajePendiente }),
       setUltimoPedido: (ultimoPedido) => set({ ultimoPedido }),
+      setPrimerMensaje: (primerMensaje) => set({ primerMensaje }),
       logout: () =>
         set({
           accessToken: null,
+          expiraEn: null,
           cliente: null,
-          mensajes: [],
           carrito: carritoVacio,
           accionPendiente: null,
-          mensajePendiente: null,
         }),
     }),
-    { name: "g3-chat-storage" } // LocalStorage, token 15 min (refresh en cookie httpOnly backend)
+    {
+      name: "g3-chat-storage", // LocalStorage, token 15 min (refresh en cookie httpOnly backend)
+      version: 2,
+      // Los mensajes del chat viven en el backend (historial) y en el estado local del turno.
+      migrate: (persistido) => {
+        const resto = { ...(persistido as Record<string, unknown>) };
+        delete resto.mensajes;
+        delete resto.escribiendo;
+        delete resto.mensajePendiente;
+        return resto as unknown as ChatState;
+      },
+      partialize: (s) => ({
+        accessToken: s.accessToken,
+        chatSid: s.chatSid,
+        cliente: s.cliente,
+        carrito: s.carrito,
+        accionPendiente: s.accionPendiente,
+        authOpen: s.authOpen,
+        ultimoPedido: s.ultimoPedido,
+        // El carrito anónimo vive por conversación: sobrevive a un recargado de /carrito.
+        ultimaConversacionId: s.ultimaConversacionId,
+      }),
+    }
   )
 );

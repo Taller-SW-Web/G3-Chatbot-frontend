@@ -12,6 +12,7 @@ export type ProductoUI = {
   talla: string;
   color: string;
   precio: number;
-  stock: number;
+  /** El stock lo decide el backend (409/503); la UI nunca lo inventa. */
+  stock?: number;
   imagen?: string;
 };

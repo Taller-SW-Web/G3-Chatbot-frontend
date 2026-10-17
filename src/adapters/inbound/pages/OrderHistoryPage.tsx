@@ -4,11 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon } from "../components/icons";
 import { StatusBadge } from "../components/StatusBadge";
-import { ListaPedidos } from "../components/blocks/ListaPedidos";
+import { DeliveryRating } from "../components/DeliveryRating";
 import { EstadoPedido } from "../components/blocks/EstadoPedido";
 import { ListaReclamos } from "../components/blocks/ListaReclamos";
 import { ListaDevoluciones } from "../components/blocks/ListaDevoluciones";
-import { useChatStore } from "@/application/state/chatStore";
 
 type Tab = "proceso" | "entregados" | "reembolso" | "reclamos";
 
@@ -16,13 +15,6 @@ type Tab = "proceso" | "entregados" | "reembolso" | "reclamos";
 export function OrderHistoryPage({ initialTab = "proceso" }: { initialTab?: Tab }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const router = useRouter();
-  const setMensajePendiente = useChatStore((s) => s.setMensajePendiente);
-
-  function preguntar(user: string, bot: string) {
-    setMensajePendiente({ user, bot });
-    router.push("/chat/consulta");
-  }
-
   return (
     <div className="p-4 flex flex-col gap-3">
       <div className="grid grid-cols-4 gap-1 bg-white border border-border-default rounded-md p-1">
@@ -49,9 +41,8 @@ export function OrderHistoryPage({ initialTab = "proceso" }: { initialTab?: Tab 
           <div className="grid grid-cols-2 gap-2 mt-2">
             <button onClick={() => router.push("/seguimiento")}
               className="wf-btn py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink inline-flex items-center justify-center gap-1"><TruckIcon size={16} />VER SEGUIMIENTO</button>
-            <button
-              onClick={() => preguntar("Tengo una consulta sobre mi pedido #A-1042", "¡Claro! Tu pedido #A-1042 está EN CAMINO y llega el 18 sep a Av. Siempre Viva 742, Lima. ¿Quieres el detalle del seguimiento o ayuda con algo más?")}
-              className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary">PREGUNTAR EN EL CHAT</button>
+            <button disabled title="Próximamente" aria-label="Preguntar en el chat (próximamente)"
+              className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary disabled:opacity-45 disabled:cursor-not-allowed">PREGUNTAR EN EL CHAT</button>
           </div>
         </div>
       )}
@@ -59,17 +50,20 @@ export function OrderHistoryPage({ initialTab = "proceso" }: { initialTab?: Tab 
       {tab === "entregados" && (
         <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-1 wf-card">
           <div className="flex justify-between items-center">
-            <span className="text-[13px] text-text-secondary">Pedido #A-0987</span>
+            <span className="text-[13px] text-text-secondary">Pedido PED-2026-00891</span>
             <StatusBadge status="ENTREGADO" icon={<CheckIcon size={16} />}>ENTREGADO</StatusBadge>
           </div>
-          <ListaPedidos pedidos={[{ id: "#A-0987", direccion: "Calle Los Olivos 120, Lima", fecha: "2 sep 2026" }]} />
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            <button onClick={() => router.push("/reclamo")} className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default inline-flex items-center justify-center gap-1"><FileAlertIcon size={16} />RECLAMAR</button>
-            <button onClick={() => router.push("/devolucion")} className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default inline-flex items-center justify-center gap-1"><RefreshIcon size={16} />DEVOLVER</button>
+          <div className="flex justify-between text-[14px]"><span className="text-text-secondary">Entrega</span><span className="text-right">Calle Los Olivos 120, Lima</span></div>
+          <div className="flex justify-between text-[14px]"><span className="text-text-secondary">Entregado el</span><span>2 sep 2026</span></div>
+          <div className="mt-2">
+            <DeliveryRating orderId="PED-2026-00891" />
           </div>
-          <button
-            onClick={() => preguntar("Tengo una consulta sobre mi pedido entregado #A-0987", "Tu pedido #A-0987 fue ENTREGADO el 2 sep en Calle Los Olivos 120, Lima. ¿Necesitas reportar un problema o solicitar un cambio?")}
-            className="wf-btn py-2.5 text-[11px] font-bold mt-2 w-full bg-surface-ink text-text-inverse">PREGUNTAR EN EL CHAT</button>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button onClick={() => router.push("/reclamo")} className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-1"><FileAlertIcon size={16} />REPORTAR UN PROBLEMA</button>
+            <button onClick={() => router.push("/devolucion")} className="wf-btn py-2.5 px-3 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-2 text-center"><RefreshIcon size={16} className="shrink-0 ml-1" />SOLICITAR CAMBIO O DEVOLUCIÓN</button>
+          </div>
+          <button disabled title="Próximamente" aria-label="Preguntar en el chat (próximamente)"
+              className="wf-btn py-2.5 text-[11px] font-bold mt-2 w-full bg-surface-ink text-text-inverse disabled:opacity-45 disabled:cursor-not-allowed">PREGUNTAR EN EL CHAT</button>
         </div>
       )}
 
@@ -79,9 +73,8 @@ export function OrderHistoryPage({ initialTab = "proceso" }: { initialTab?: Tab 
             { codigo: "#R-0312", estado: "EN REVISIÓN", motivo: "Talla incorrecta", fecha: "10 sep 2026" },
             { codigo: "DEV-2026-00045", estado: "APROBADO", motivo: "Cambio 41 → 42", fecha: "8 sep 2026" },
           ]} />
-          <button
-            onClick={() => preguntar("Tengo una consulta sobre mi solicitud DEV-2026-0042", "Tu solicitud DEV-2026-0042 por talla incorrecta está En revisión. Te avisaremos por correo al aprobarse. ¿Te ayudo en algo más?")}
-            className="wf-btn py-2.5 text-[11px] font-bold w-full bg-surface-ink text-text-inverse">PREGUNTAR EN EL CHAT</button>
+          <button disabled title="Próximamente" aria-label="Preguntar en el chat (próximamente)"
+              className="wf-btn py-2.5 text-[11px] font-bold w-full bg-surface-ink text-text-inverse disabled:opacity-45 disabled:cursor-not-allowed">PREGUNTAR EN EL CHAT</button>
         </div>
       )}
 
@@ -90,9 +83,8 @@ export function OrderHistoryPage({ initialTab = "proceso" }: { initialTab?: Tab 
           <ListaReclamos items={[
             { codigo: "REC-2026-0118", estado: "EN PROCESO", motivo: "Producto defectuoso", plazo: "15 días hábiles" },
           ]} />
-          <button
-            onClick={() => preguntar("Tengo una consulta sobre mi reclamo REC-2026-0118", "Tu reclamo REC-2026-0118 sigue En revisión y el plazo es de 15 días hábiles. ¿Quieres agregar más información?")}
-            className="wf-btn py-2.5 text-[11px] font-bold w-full bg-surface-ink text-text-inverse">PREGUNTAR EN EL CHAT</button>
+          <button disabled title="Próximamente" aria-label="Preguntar en el chat (próximamente)"
+              className="wf-btn py-2.5 text-[11px] font-bold w-full bg-surface-ink text-text-inverse disabled:opacity-45 disabled:cursor-not-allowed">PREGUNTAR EN EL CHAT</button>
         </div>
       )}
     </div>
