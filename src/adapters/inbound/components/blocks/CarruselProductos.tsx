@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { PlusIcon } from "../icons";
-import type { CatalogCardItem } from "@/domain/entities/CatalogoUI";
+import {
+  formatPrice,
+  type CatalogCardItem,
+} from "@/domain/entities/CatalogoUI";
 import { sanitize } from "@/domain/utils/sanitize";
+import { AvailabilityBadge } from "../AvailabilityBadge";
+import { ProductImage } from "../ProductImage";
 
 export type { CatalogCardItem };
 
@@ -26,18 +31,21 @@ export function CarruselProductos({
       <p className="px-1 text-[14px] font-semibold text-text-primary">{sanitize(titulo)}</p>
       <div className="grid grid-cols-2 gap-2">
         {visibles.map((p) => (
-          <div key={p.product_id} className="rounded-md p-1.5 bg-white border border-border-default">
-            <button onClick={() => onDetalle(p)} className="block w-full" aria-label={`Ver detalle de ${p.name}`}>
-              <span className="h-24 w-full rounded-md flex items-center justify-center text-[28px]"
-                style={{ background: "linear-gradient(135deg, var(--color-surface-ink-soft), var(--color-accent-signal-soft), var(--color-surface-ink))" }} role="img" aria-label={sanitize(p.name)}>👟</span>
-            </button>
-            <button onClick={() => onDetalle(p)} className="text-left mt-1">
+          <div key={p.product_id} className="relative rounded-md p-1.5 bg-white border border-border-default">
+            {/* Una sola parada de tabulación para el detalle: imagen + textos. */}
+            <button onClick={() => onDetalle(p)} className="w-full text-left flex flex-col gap-1">
+              <ProductImage
+                src={p.image}
+                alt={sanitize(p.name)}
+                className="h-24 w-full"
+                emojiClassName="text-[28px]"
+              />
               <span className="block font-heading text-[15px] uppercase leading-tight text-text-primary">{sanitize(p.name)}</span>
-              <span className="block text-[13px] font-semibold text-text-secondary">S/ {p.price.toFixed(2)}</span>
+              <span className="block text-[13px] font-semibold text-text-secondary">{formatPrice(p)}</span>
             </button>
             <div className="flex items-center justify-between mt-1">
-              <span className="wf-chip text-[11px] font-semibold px-2 py-0.5 text-text-secondary">{p.availability === "DISPONIBLE" ? "Disponible" : p.availability === "AGOTADO" ? "Agotado" : "Stock limitado"}</span>
-              <button aria-label={`Agregar ${p.name}`} onClick={() => onAdd(p)}
+              <AvailabilityBadge state={p.availability} className="text-[11px] font-semibold" />
+              <button aria-label={`Agregar ${sanitize(p.name)}`} onClick={() => onAdd(p)}
                 disabled={p.availability === "AGOTADO"}
                 className="w-8 h-8 wf-btn flex items-center justify-center bg-action-primary text-surface-ink disabled:opacity-40 disabled:cursor-not-allowed"><PlusIcon size={16} /></button>
             </div>

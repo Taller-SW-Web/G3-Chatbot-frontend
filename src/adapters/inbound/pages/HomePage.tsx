@@ -6,14 +6,21 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowUpIcon, PhotoIcon } from "../components/icons";
 import { ProductCard } from "../components/ProductCard";
 import { AttachmentPopup } from "../components/AttachmentPopup";
-import type {
-  CatalogCardItem,
-  CatalogDetail,
+import {
+  formatPrice,
+  toAvailabilityState,
+  type CatalogCardItem,
+  type CatalogDetail,
 } from "@/domain/entities/CatalogoUI";
+import { isUnavailable, problemCode } from "@/domain/utils/httpError";
 import { useChatStore } from "@/application/state/chatStore";
-import { ProductDetailModal } from "../components/blocks/DetalleProducto";
+import {
+  ModalShell,
+  ProductDetailModal,
+} from "../components/blocks/DetalleProducto";
 import { buscarProductosUseCase } from "@/application/use_cases/buscarProductosUseCase";
 import { verDetalleProductoUseCase } from "@/application/use_cases/verDetalleProductoUseCase";
+import { consultarDisponibilidadUseCase } from "@/application/use_cases/consultarDisponibilidadUseCase";
 import { agregarProductoAlCarritoUseCase } from "@/application/use_cases/agregarProductoAlCarritoUseCase";
 import { container } from "@/infrastructure/di/container";
 
@@ -56,7 +63,7 @@ export function HomePage() {
     setCarrito({ lineas, subtotal, count: lineas.reduce((a, l) => a + l.cantidad, 0) });
     // Botleta confirma en el chat lo agregado (paridad mockup).
     setMensajePendiente({
-      bot: `Agregué ${item.name} (S/ ${item.price.toFixed(2)}). Tu carrito se actualizó.`,
+      bot: `Agregué ${item.name} (${formatPrice(item)}). Tu carrito se actualizó.`,
     });
     setDetalleId(null);
     router.push("/chat/talla-42");
@@ -110,9 +117,19 @@ export function HomePage() {
 
       {catalogo.isPending && <p className="text-[13px] text-text-secondary">Cargando productos…</p>}
       {catalogo.isError && (
-        <p className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3">
-          No pudimos cargar el catálogo. Revisa tu conexión e intenta de nuevo.
-        </p>
+        <div className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
+          <p>
+            {isUnavailable(catalogo.error)
+              ? "El catálogo no está disponible ahora (servicio o red). Revisa tu conexión e intenta de nuevo."
+              : "No pudimos cargar el catálogo."}
+          </p>
+          <button
+            onClick={() => void catalogo.refetch()}
+            className="wf-chip w-fit px-3 py-1.5 text-[12px] font-semibold text-text-primary"
+          >
+            Reintentar
+          </button>
+        </div>
       )}
       {!catalogo.isPending && !catalogo.isError && productos.length === 0 && (
         <p className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3">
@@ -152,6 +169,30 @@ export function HomePage() {
           className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse"><ArrowUpIcon size={20} /></button>
       </div>
 
+      {detalleId != null && detalleQuery.isPending && (
+        <ModalShell title="Detalle de producto" onClose={() => setDetalleId(null)}>
+          <p data-testid="detalle-cargando" className="text-[13px] text-text-secondary">
+            Cargando detalle…
+          </p>
+        </ModalShell>
+      )}
+      {detalleId != null && detalleQuery.isError && (
+        <ModalShell title="Detalle de producto" onClose={() => setDetalleId(null)}>
+          <p data-testid="detalle-error" className="text-[13px] text-text-secondary">
+            {problemCode(detalleQuery.error) === "PRODUCTO_NO_DISPONIBLE"
+              ? "Producto no disponible."
+              : isUnavailable(detalleQuery.error)
+                ? "No pudimos cargar el detalle. Revisa tu conexión e intenta de nuevo."
+                : "No pudimos cargar el detalle del producto."}
+          </p>
+          <button
+            onClick={() => void detalleQuery.refetch()}
+            className="wf-chip py-2 text-[13px] font-bold text-text-primary"
+          >
+            Reintentar
+          </button>
+        </ModalShell>
+      )}
       {detalleId != null && detalle != null && (
         <ProductDetailModal
           p={detalle}
@@ -160,6 +201,11 @@ export function HomePage() {
             const item = productos.find((c) => c.product_id === detalleId);
             if (item) void agregarDesdeDetalle(item, sel);
           }}
+          consultarDisponibilidad={(sku) =>
+            consultarDisponibilidadUseCase(container.api, { sku }).then((r) =>
+              toAvailabilityState(r.status)
+            )
+          }
         />
       )}
       {attach && <AttachmentPopup onClose={() => setAttach(false)} onSend={(n) => { setAttach(false); sendPhoto(n); }} />}
