@@ -5,9 +5,12 @@ import { apiConfig } from "@/infrastructure/config/apiConfig";
 import { useChatStore } from "@/application/state/chatStore";
 import { createSingleFlight } from "@/domain/utils/singleFlight";
 import type {
+  BuscarProductosInput,
   ChatbotApiPort,
   ConversacionResumen,
+  DisponibilidadPuntual,
   MfaChallenge,
+  PaginaCatalogo,
   PerfilCliente,
   SessionOpened,
 } from "@/ports/outbound/ChatbotApiPort";
@@ -159,12 +162,46 @@ export const chatbotApi: ChatbotApiPort = {
     return data as ConversacionResumen[];
   },
   async agregarAlCarrito(input) {
-    return conFallback(async () => {
-      await http.post(`/carrito/lineas`, input, {
-        timeout: apiConfig.timeouts.catalogo,
-      });
-      return { ok: true as const };
-    }, { ok: true as const });
+    // SPEC-09 Req. 2 "agregar desde la tarjeta": endpoint real del carrito.
+    await http.post(`/carrito/items`, input, {
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return { ok: true as const };
+  },
+  // Catálogo con datos reales, sin fallback a mocks (SPEC-06, SPEC-09,
+  // SPEC-10). Los errores problem+json los ramifica la UI por `code`.
+  async buscarProductos(input: BuscarProductosInput): Promise<PaginaCatalogo> {
+    const { data } = await http.get(`/catalogo/productos`, {
+      params: {
+        q: input.q,
+        categoria: input.categoria,
+        marca: input.marca,
+        precioMin: input.precioMin,
+        precioMax: input.precioMax,
+        orden: input.orden,
+        pagina: input.pagina ?? 1,
+        tamanio: input.tamanio ?? 10,
+      },
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return data as PaginaCatalogo;
+  },
+  async verDetalleProducto(productId: string): Promise<unknown> {
+    const { data } = await http.get(
+      `/catalogo/productos/${encodeURIComponent(productId)}`,
+      { timeout: apiConfig.timeouts.catalogo }
+    );
+    return data as unknown;
+  },
+  async consultarDisponibilidad(
+    sku: string,
+    cantidad?: number
+  ): Promise<DisponibilidadPuntual[]> {
+    const { data } = await http.get(`/catalogo/disponibilidad`, {
+      params: cantidad == null ? { sku } : { sku, cantidad },
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return data as DisponibilidadPuntual[];
   },
   async validarContactoCelular(codigo) {
     return conFallback(async () => {
