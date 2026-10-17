@@ -31,7 +31,10 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   const setAccionPendiente = useChatStore((s) => s.setAccionPendiente);
   const setAuthOpen = useChatStore((s) => s.setAuthOpen);
   const setUltimaConversacionId = useChatStore((s) => s.setUltimaConversacionId);
-  const { query: carritoQuery, queryKey } = useCarrito();
+  // La conversación la resuelve `useCarrito` (store); la prop es solo un override
+  // opcional. Las mutaciones usan la MISMA conversación que el GET.
+  const { query: carritoQuery, queryKey, conversacion } = useCarrito();
+  const conv = conversacionParaCarrito(conversacionId) ?? conversacion;
 
   const [avisoCelular, setAvisoCelular] = useState(false);
   const [deshacer, setDeshacer] = useState<{ sku: string; cantidad: number; nombre: string } | null>(null);
@@ -58,7 +61,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
 
   const cambiarCantidad = useMutation({
     mutationFn: (input: { itemId: string; cantidad: number }) =>
-      actualizarCantidadCarritoUseCase(container.api, { ...input, conversacionId }),
+      actualizarCantidadCarritoUseCase(container.api, { ...input, conversacionId: conv }),
     onSuccess: (data) => {
       setDeshacer(null);
       // La respuesta del PATCH ya trae el carrito recalculado: se usa de inmediato.
@@ -69,7 +72,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
 
   const quitar = useMutation({
     mutationFn: (input: { itemId: string; sku: string; cantidad: number; nombre: string }) =>
-      quitarDelCarritoUseCase(container.api, { itemId: input.itemId, conversacionId }).then((r) => ({
+      quitarDelCarritoUseCase(container.api, { itemId: input.itemId, conversacionId: conv }).then((r) => ({
         ...r,
         borrada: input,
       })),
@@ -80,7 +83,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   });
 
   const vaciar = useMutation({
-    mutationFn: () => vaciarCarritoUseCase(container.api, conversacionId),
+    mutationFn: () => vaciarCarritoUseCase(container.api, conv),
     onSuccess: () => {
       setConfirmarVaciar(false);
       invalidar();
@@ -89,7 +92,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
 
   const reagregar = useMutation({
     mutationFn: (input: { sku: string; cantidad: number }) =>
-      agregarProductoAlCarritoUseCase(container.api, { ...input, conversacionId }),
+      agregarProductoAlCarritoUseCase(container.api, { ...input, conversacionId: conv }),
     onSuccess: (data) => {
       setDeshacer(null);
       if (data.carrito) queryClient.setQueryData(queryKey, data.carrito);

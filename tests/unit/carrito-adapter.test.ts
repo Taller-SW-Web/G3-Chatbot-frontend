@@ -9,7 +9,10 @@ vi.mock("axios", () => ({
       post: peticiones.post,
       patch: peticiones.patch,
       delete: peticiones.delete,
-      interceptors: { request: { use: () => {} } },
+      interceptors: {
+        request: { use: () => {} },
+        response: { use: () => {} },
+      },
     }),
     isAxiosError: (e: unknown) =>
       Boolean((e as { response?: unknown } | null)?.response),

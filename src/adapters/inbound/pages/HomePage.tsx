@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpIcon, PhotoIcon } from "../components/icons";
@@ -10,7 +10,11 @@ import {
   type CatalogCardItem,
   type CatalogDetail,
 } from "@/domain/entities/CatalogoUI";
-import { isUnavailable, problemCode } from "@/domain/utils/httpError";
+import {
+  isUnavailable,
+  problemCode,
+  problemFaltantes,
+} from "@/domain/utils/httpError";
 import { useChatStore } from "@/application/state/chatStore";
 import { conversacionParaCarrito } from "@/domain/utils/carrito";
 import { mensajeCarrito } from "@/application/errors/carritoMensajes";
@@ -25,6 +29,15 @@ import { agregarProductoAlCarritoUseCase } from "@/application/use_cases/agregar
 import { crearConversacionUseCase } from "@/application/use_cases/crearConversacionUseCase";
 import { MENSAJE_MAX_CARACTERES } from "@/application/use_cases/enviarMensajeUseCase";
 import { container } from "@/infrastructure/di/container";
+
+/** Mensaje del agregado; en 409 VARIANTE_REQUERIDA indica qué falta (talla/color). */
+function mensajeAgregar(error: unknown): string {
+  if (problemCode(error) === "VARIANTE_REQUERIDA") {
+    const faltan = problemFaltantes(error);
+    if (faltan.length > 0) return `Elige ${faltan.join(" y ")} antes de agregar.`;
+  }
+  return mensajeCarrito(problemCode(error));
+}
 
 /** `/`: banner ofertas, grid en oferta, campo chat inferior. SPEC-05 Req.2, SPEC-06,08,09 */
 export function HomePage() {
@@ -59,6 +72,9 @@ export function HomePage() {
 
   // SPEC-09 Req. 2 "agregar desde la tarjeta": la línea la crea el backend con
   // nombre, imagen e id reales. El front solo invalida el carrito y el badge.
+  // Si hay que abrir una conversación anónima, se reutiliza en reintentos y solo
+  // se persiste cuando el agregado funcionó (no deja una conversación sin uso).
+  const convCreadaRef = useRef<string | null>(null);
   const agregar = useMutation({
     mutationFn: async (input: {
       item: CatalogCardItem;
@@ -66,11 +82,13 @@ export function HomePage() {
     }) => {
       const { item, sel } = input;
       if (sel.sku == null) throw new Error("sku requerido");
-      // El carrito anónimo vive por conversación: se crea una real si aún no hay.
-      let conversacion = conversacionParaCarrito(ultimaConversacionId);
+      let conversacion =
+        conversacionParaCarrito(ultimaConversacionId) ??
+        convCreadaRef.current ??
+        undefined;
       if (!cliente && !conversacion) {
-        const { conversacionId } = await container.api.crearConversacion();
-        setUltimaConversacionId(conversacionId);
+        const { conversacionId } = await crearConversacionUseCase(container.api);
+        convCreadaRef.current = conversacionId;
         conversacion = conversacionId;
       }
       await agregarProductoAlCarritoUseCase(container.api, {
@@ -81,9 +99,10 @@ export function HomePage() {
         color: sel.color ?? undefined,
         conversacionId: conversacion,
       });
-      return item;
+      return { item, conversacion };
     },
-    onSuccess: (item) => {
+    onSuccess: ({ item, conversacion }) => {
+      if (conversacion) setUltimaConversacionId(conversacion);
       setAviso(null);
       setAgregado(`${item.name} se agregó a tu carrito.`);
       setDetalleId(null);
@@ -91,7 +110,7 @@ export function HomePage() {
     },
     onError: (error) => {
       setAgregado(null);
-      setAviso(mensajeCarrito(problemCode(error)));
+      setAviso(mensajeAgregar(error));
     },
   });
 
