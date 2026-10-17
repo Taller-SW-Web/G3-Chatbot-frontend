@@ -14,13 +14,13 @@ import type {
   PerfilCliente,
   SessionOpened,
 } from "@/ports/outbound/ChatbotApiPort";
-import type { Mensaje } from "@/domain/entities/Mensaje";
-import { MOCK_MENSAJES } from "./mockData";
+import { mapearHistorial } from "./mapearHistorial";
 
 /**
  * Adapter REST con interceptor JWT.
- * Si no hay backend (baseUrl localhost sin respuesta), usa mocks del wireframe
- * para que el equipo frontend/backend pueda trabajar sin bloquearse.
+ * Conversaciones e historial van al backend real y propagan el error; los demás
+ * métodos (carrito, cotización, checkout, contacto) caen a valores del wireframe
+ * si no hay backend, para que el equipo no se bloquee.
  * Ramifica por `code` problem+json.
  */
 const http = axios.create({
@@ -123,30 +123,13 @@ export const chatbotApi: ChatbotApiPort = {
     const { data } = await http.get("/sesion/perfil");
     return data as PerfilCliente;
   },
-  async enviarMensaje(conversacionId, texto) {
-    return conFallback(
-      async () => {
-        const { data } = await http.post(
-          `/chat/conversaciones/${conversacionId}/mensajes`,
-          { texto }
-        );
-        return { mensajeId: data.mensajeId as string };
-      },
-      { mensajeId: `mock-${Date.now()}` }
+  // Conversaciones e historial (SPEC-05): sin fallback a mocks; el error llega a la UI.
+  async cargarHistorial(conversacionId) {
+    const { data } = await http.get(
+      `/chat/conversaciones/${encodeURIComponent(conversacionId)}/mensajes`
     );
+    return mapearHistorial(data);
   },
-  async cargarHistorial(conversacionId, desde) {
-    const base: Mensaje[] =
-      MOCK_MENSAJES[conversacionId] ?? MOCK_MENSAJES["talla-42"] ?? [];
-    if (!desde) return conFallback(async () => {
-      const { data } = await http.get(
-        `/chat/conversaciones/${conversacionId}/mensajes`
-      );
-      return data as Mensaje[];
-    }, base);
-    return base.filter((m) => m.id > desde);
-  },
-  // Barra lateral (SPEC-05 Req. 1): sin fallback a mocks; el error llega a la UI.
   async crearConversacion() {
     const { data } = await http.post(`/chat/conversaciones`);
     return { conversacionId: data.conversacionId as string };
@@ -230,8 +213,5 @@ export const chatbotApi: ChatbotApiPort = {
       await http.post(`/pedidos/${encodeURIComponent(pedidoId)}/reenviar`);
       return { ok: true as const };
     }, { ok: true as const });
-  },
-  suscribirBloques() {
-    return () => {};
   },
 };

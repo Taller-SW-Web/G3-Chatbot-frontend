@@ -1,4 +1,3 @@
-import type { Bloque } from "@/domain/entities/Bloque";
 import type { Mensaje } from "@/domain/entities/Mensaje";
 
 /**
@@ -93,8 +92,8 @@ export interface ChatbotApiPort {
   logout(): Promise<{ ok: true }>;
   fetchProfile(): Promise<PerfilCliente>;
   crearConversacion(): Promise<{ conversacionId: string }>;
-  enviarMensaje(conversacionId: string, texto: string): Promise<{ mensajeId: string }>;
-  cargarHistorial(conversacionId: string, desde?: string): Promise<Mensaje[]>;
+  /** Últimos mensajes de la conversación. El envío va por `ChatStreamPort`. */
+  cargarHistorial(conversacionId: string): Promise<Mensaje[]>;
   listarConversaciones(pagina?: number): Promise<ConversacionResumen[]>;
   buscarConversaciones(q: string, pagina?: number): Promise<ConversacionResumen[]>;
   agregarAlCarrito(input: { sku: string; cantidad: number }): Promise<{ ok: true }>;
@@ -114,6 +113,4 @@ export interface ChatbotApiPort {
     tarjetaLast4: string;
   }): Promise<{ pedidoId: string }>;
   reenviarConfirmacion(pedidoId: string): Promise<{ ok: true }>;
-  // Resolución de streaming WS ya normalizada a bloques:
-  suscribirBloques(onBloque: (b: Bloque) => void): () => void;
 }

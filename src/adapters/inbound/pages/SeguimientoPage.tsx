@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { TruckIcon } from "../components/icons";
-import { useChatStore } from "@/application/state/chatStore";
 import { EstadoPedido } from "../components/blocks/EstadoPedido";
 
 /**
@@ -11,16 +10,6 @@ import { EstadoPedido } from "../components/blocks/EstadoPedido";
  */
 export function SeguimientoPage() {
   const router = useRouter();
-  const setMensajePendiente = useChatStore((s) => s.setMensajePendiente);
-
-  function preguntar() {
-    setMensajePendiente({
-      user: "Tengo una consulta sobre el seguimiento de mi pedido #A-1042",
-      bot: "¡Claro! Tu pedido #A-1042 está EN CAMINO y llega el 18 sep. ¿Te ayudo con algo más del seguimiento?",
-    });
-    router.push("/chat/consulta");
-  }
-
   return (
     <div className="p-4 flex flex-col gap-3">
       <div className="rounded-md bg-surface-ink text-text-inverse p-3 flex items-center gap-3">
@@ -36,7 +25,7 @@ export function SeguimientoPage() {
         { titulo: "En centro de despacho", fecha: "12 sep · 14:00", done: true },
         { titulo: "En camino", fecha: "18 sep · estimado", done: false },
       ]} />
-      <button onClick={preguntar} className="wf-btn py-3 text-[12px] font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover">
+      <button disabled title="Próximamente" aria-label="Preguntar en el chat (próximamente)" className="wf-btn py-3 text-[12px] font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-45 disabled:cursor-not-allowed">
         PREGUNTAR EN EL CHAT
       </button>
       <button onClick={() => router.push("/pedidos")} className="text-[14px] font-semibold underline text-text-secondary">Volver al historial</button>

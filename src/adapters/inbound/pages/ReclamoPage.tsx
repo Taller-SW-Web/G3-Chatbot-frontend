@@ -21,7 +21,7 @@ export function ReclamoPage() {
         <p className="text-[14px] text-text-secondary">Código #{codigo} · Plazo de respuesta: 15 días hábiles.</p>
         <div className="rounded-md bg-white border border-border-default w-full p-3 text-[12px] text-text-secondary">Puedes hacerle seguimiento por el chat o en Historial de pedidos → Reclamos.</div>
         <button onClick={() => router.push("/pedidos/reclamos")} className="wf-btn w-full py-3 text-[12px] font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover">VER EN HISTORIAL</button>
-        <button onClick={() => router.push("/chat/reclamo-defecto")} className="wf-btn w-full py-3 text-[12px] font-bold tracking-wide bg-surface-ink text-text-inverse">SEGUIR POR EL CHAT</button>
+        <button disabled title="Próximamente" aria-label="Seguir por el chat (próximamente)" className="wf-btn w-full py-3 text-[12px] font-bold tracking-wide bg-surface-ink text-text-inverse disabled:opacity-45 disabled:cursor-not-allowed">SEGUIR POR EL CHAT</button>
       </div>
     );
   }

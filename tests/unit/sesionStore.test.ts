@@ -6,9 +6,7 @@ function reset() {
     accessToken: null,
     expiraEn: null,
     cliente: null,
-    mensajes: [],
     accionPendiente: null,
-    mensajePendiente: null,
   });
 }
 
@@ -32,12 +30,11 @@ describe("chatStore session (SPEC-03)", () => {
     expect(useChatStore.getState().isTokenExpiringSoon()).toBe(false);
   });
 
-  it("logout clears the session and pending data", () => {
+  it("logout clears the session and pending action", () => {
     const s = useChatStore.getState();
     s.applySession("token-1", 900);
     s.setCliente({ nombreCompleto: "Ana", correo: "a@b.pe", celularVerificado: true });
     s.setAccionPendiente("/checkout");
-    s.setMensajePendiente({ bot: "Hola" });
 
     useChatStore.getState().logout();
 
@@ -45,6 +42,5 @@ describe("chatStore session (SPEC-03)", () => {
     expect(after.accessToken).toBeNull();
     expect(after.cliente).toBeNull();
     expect(after.accionPendiente).toBeNull();
-    expect(after.mensajePendiente).toBeNull();
   });
 });
