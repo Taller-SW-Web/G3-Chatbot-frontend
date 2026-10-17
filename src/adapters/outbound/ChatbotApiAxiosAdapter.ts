@@ -1,14 +1,18 @@
 "use client";
 
-import axios from "axios";
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { apiConfig } from "@/infrastructure/config/apiConfig";
 import { useChatStore } from "@/application/state/chatStore";
+import { createSingleFlight } from "@/domain/utils/singleFlight";
 import type {
   BuscarProductosInput,
   ChatbotApiPort,
   ConversacionResumen,
   DisponibilidadPuntual,
+  MfaChallenge,
   PaginaCatalogo,
+  PerfilCliente,
+  SessionOpened,
 } from "@/ports/outbound/ChatbotApiPort";
 import type { Mensaje } from "@/domain/entities/Mensaje";
 import { MOCK_MENSAJES } from "./mockData";
@@ -22,13 +26,65 @@ import { MOCK_MENSAJES } from "./mockData";
 const http = axios.create({
   baseURL: apiConfig.baseUrl,
   timeout: apiConfig.timeouts.defecto,
+  withCredentials: true,
+  headers: { "X-Requested-With": "XMLHttpRequest" },
 });
+
+/** Endpoints públicos: nunca llevan `Authorization` ni disparan refresh (SPEC-03 Req. 1/5). */
+const PUBLIC_PATHS = [
+  "/sesion/login",
+  "/sesion/refresh",
+  "/sesion/mfa/",
+  "/sesion/logout",
+];
+
+function isPublic(path: string | undefined): boolean {
+  return !!path && PUBLIC_PATHS.some((p) => path.includes(p));
+}
 
 http.interceptors.request.use((cfg) => {
   const token = useChatStore.getState().accessToken;
-  if (token) cfg.headers.Authorization = `Bearer ${token}`;
+  if (token && !isPublic(cfg.url)) cfg.headers.Authorization = `Bearer ${token}`;
   return cfg;
 });
+
+/** Single-flight refresh: concurrent calls share one promise (SPEC-03 Req. 5). */
+async function doRefresh(): Promise<SessionOpened> {
+  const { data } = await http.post("/sesion/refresh");
+  return data as SessionOpened;
+}
+
+const refreshOnce = createSingleFlight(doRefresh);
+
+/** The BFF answers an expired, invalid or missing bearer with `401 TOKEN_INVALIDO` (SPEC-03 Req. 5). */
+function isInvalidToken(error: unknown): boolean {
+  const status = (error as AxiosError)?.response?.status;
+  const code = (error as AxiosError<{ code?: string }>)?.response?.data?.code;
+  return status === 401 && code === "TOKEN_INVALIDO";
+}
+
+type ReintentableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
+/** On an expired access token, refresh once and replay the original request (SPEC-03 Req. 5). */
+http.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const config = error.config as ReintentableConfig | undefined;
+    if (!config || config._retry || isPublic(config.url) || !isInvalidToken(error)) {
+      return Promise.reject(error);
+    }
+    try {
+      const opened = await refreshOnce();
+      useChatStore.getState().applySession(opened.accessToken, opened.expiresIn);
+    } catch {
+      useChatStore.getState().logout();
+      return Promise.reject(error);
+    }
+    config._retry = true;
+    config.headers.Authorization = `Bearer ${useChatStore.getState().accessToken}`;
+    return http(config);
+  }
+);
 
 async function conFallback<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try {
@@ -39,6 +95,34 @@ async function conFallback<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 }
 
 export const chatbotApi: ChatbotApiPort = {
+  async login(email, password) {
+    const { data } = await http.post("/sesion/login", { email, password });
+    if (data?.mfaRequerido) return data as MfaChallenge;
+    return data as SessionOpened;
+  },
+  async requestMfaCode(canal) {
+    const { data } = await http.post("/sesion/mfa/solicitar", { canal });
+    return data as { ok: true };
+  },
+  async verifyMfaCode(code) {
+    const { data } = await http.post("/sesion/mfa/verificar", { code });
+    return data as SessionOpened;
+  },
+  async refreshSession() {
+    return refreshOnce();
+  },
+  async logout() {
+    try {
+      const { data } = await http.post("/sesion/logout");
+      return data as { ok: true };
+    } finally {
+      useChatStore.getState().logout();
+    }
+  },
+  async fetchProfile() {
+    const { data } = await http.get("/sesion/perfil");
+    return data as PerfilCliente;
+  },
   async enviarMensaje(conversacionId, texto) {
     return conFallback(
       async () => {

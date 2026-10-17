@@ -31,6 +31,31 @@ export type ConversacionResumen = {
   };
 };
 
+/** Usuario que viaja en el cuerpo de `/sesion/login`, `/refresh` y `/mfa/verificar`. */
+export type UsuarioSesion = {
+  id?: string;
+  nombreCompleto?: string;
+  correo?: string;
+};
+
+export type SessionOpened = {
+  accessToken: string;
+  expiresIn: number;
+  usuario: UsuarioSesion;
+};
+
+/** Respuesta de `GET /sesion/perfil`: Seguridad `/auth/me` + `celularVerificado` y documento enmascarado. */
+export type PerfilCliente = UsuarioSesion & {
+  celular?: string;
+  celularVerificado: boolean;
+  ultimoDocumento: { tipo?: string; numeroEnmascarado: string } | null;
+};
+
+export type MfaChallenge = {
+  mfaRequerido: true;
+  canal: "EMAIL" | "SMS";
+};
+
 /** Tamaño de página del listado y la búsqueda (backend: CONVERSATIONS_PAGE_SIZE). */
 export const CONVERSACIONES_POR_PAGINA = 20;
 
@@ -61,6 +86,12 @@ export type DisponibilidadPuntual = {
 };
 
 export interface ChatbotApiPort {
+  login(email: string, password: string): Promise<SessionOpened | MfaChallenge>;
+  requestMfaCode(canal: "EMAIL" | "SMS"): Promise<{ ok: true }>;
+  verifyMfaCode(code: string): Promise<SessionOpened>;
+  refreshSession(): Promise<SessionOpened>;
+  logout(): Promise<{ ok: true }>;
+  fetchProfile(): Promise<PerfilCliente>;
   crearConversacion(): Promise<{ conversacionId: string }>;
   enviarMensaje(conversacionId: string, texto: string): Promise<{ mensajeId: string }>;
   cargarHistorial(conversacionId: string, desde?: string): Promise<Mensaje[]>;
