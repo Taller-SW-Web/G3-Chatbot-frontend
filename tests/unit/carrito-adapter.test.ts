@@ -11,6 +11,8 @@ vi.mock("axios", () => ({
       delete: peticiones.delete,
       interceptors: { request: { use: () => {} } },
     }),
+    isAxiosError: (e: unknown) =>
+      Boolean((e as { response?: unknown } | null)?.response),
   },
 }));
 
@@ -92,5 +94,30 @@ describe("adapter Axios del carrito (SPEC-10, SPEC-11)", () => {
       response: { status: 409, data: { code: "STOCK_INSUFICIENTE" } },
     });
     await expect(chatbotApi.listarCarrito("conv-1")).rejects.toBeTruthy();
+  });
+
+  it("agregar envía solo los campos definidos y devuelve el carrito", async () => {
+    peticiones.post.mockResolvedValueOnce({ data: { mensaje: "Agregué", carrito: CARRITO } });
+    const out = await chatbotApi.agregarAlCarrito({ sku: "SKU-1", cantidad: 1 }, "conv-1");
+    expect(peticiones.post).toHaveBeenCalledWith(
+      "/carrito/items",
+      { sku: "SKU-1", cantidad: 1 },
+      expect.objectContaining({ params: { conversacionId: "conv-1" } })
+    );
+    expect(out.ok).toBe(true);
+    expect(out.carrito?.subtotal).toBe(200);
+  });
+
+  it("agregar incluye product_id/talla/color cuando la tarjeta los conoce", async () => {
+    peticiones.post.mockResolvedValueOnce({ data: { carrito: CARRITO } });
+    await chatbotApi.agregarAlCarrito(
+      { sku: "SKU-1", cantidad: 1, product_id: "p1", talla: "42", color: "negro" },
+      "conv-1"
+    );
+    expect(peticiones.post).toHaveBeenCalledWith(
+      "/carrito/items",
+      { sku: "SKU-1", cantidad: 1, product_id: "p1", talla: "42", color: "negro" },
+      expect.anything()
+    );
   });
 });

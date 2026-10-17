@@ -26,7 +26,6 @@ const SUGERENCIAS = ["Ver ofertas", "Rastrear pedido", "Ayuda con devolución"];
 export function ChatPage({ conversationId }: { conversationId: string }) {
   const router = useRouter();
   const setPrimerMensaje = useChatStore((s) => s.setPrimerMensaje);
-  const setUltimaConversacionId = useChatStore((s) => s.setUltimaConversacionId);
   const {
     mensajes,
     borrador,
@@ -39,11 +38,6 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
     reintentar,
     recargar,
   } = useChat(conversationId);
-
-  // Ubica el carrito anónimo desde /carrito (SPEC-11: anónimo por conversación).
-  useEffect(() => {
-    setUltimaConversacionId(conversationId);
-  }, [conversationId, setUltimaConversacionId]);
 
   const [composer, setComposer] = useState("");
   const [errorVisto, setErrorVisto] = useState(error);
