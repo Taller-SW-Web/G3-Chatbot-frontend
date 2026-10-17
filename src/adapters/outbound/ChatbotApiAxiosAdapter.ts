@@ -28,7 +28,12 @@ const http = axios.create({
 });
 
 /** Endpoints públicos: nunca llevan `Authorization` ni disparan refresh (SPEC-03 Req. 1/5). */
-const PUBLIC_PATHS = ["/sesion/login", "/sesion/refresh"];
+const PUBLIC_PATHS = [
+  "/sesion/login",
+  "/sesion/refresh",
+  "/sesion/mfa/",
+  "/sesion/logout",
+];
 
 function isPublic(path: string | undefined): boolean {
   return !!path && PUBLIC_PATHS.some((p) => path.includes(p));
@@ -48,10 +53,11 @@ async function doRefresh(): Promise<SessionOpened> {
 
 const refreshOnce = createSingleFlight(doRefresh);
 
+/** The BFF answers an expired, invalid or missing bearer with `401 TOKEN_INVALIDO` (SPEC-03 Req. 5). */
 function isInvalidToken(error: unknown): boolean {
   const status = (error as AxiosError)?.response?.status;
   const code = (error as AxiosError<{ code?: string }>)?.response?.data?.code;
-  return status === 401 && (!code || code === "TOKEN_INVALIDO");
+  return status === 401 && code === "TOKEN_INVALIDO";
 }
 
 type ReintentableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
