@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpIcon, PhotoIcon } from "../components/icons";
 import { ProductCard } from "../components/ProductCard";
 import {
@@ -10,8 +10,14 @@ import {
   type CatalogCardItem,
   type CatalogDetail,
 } from "@/domain/entities/CatalogoUI";
-import { isUnavailable, problemCode } from "@/domain/utils/httpError";
+import {
+  isUnavailable,
+  problemCode,
+  problemFaltantes,
+} from "@/domain/utils/httpError";
 import { useChatStore } from "@/application/state/chatStore";
+import { conversacionParaCarrito } from "@/domain/utils/carrito";
+import { mensajeCarrito } from "@/application/errors/carritoMensajes";
 import {
   ModalShell,
   ProductDetailModal,
@@ -24,6 +30,15 @@ import { crearConversacionUseCase } from "@/application/use_cases/crearConversac
 import { MENSAJE_MAX_CARACTERES } from "@/application/use_cases/enviarMensajeUseCase";
 import { container } from "@/infrastructure/di/container";
 
+/** Mensaje del agregado; en 409 VARIANTE_REQUERIDA indica qué falta (talla/color). */
+function mensajeAgregar(error: unknown): string {
+  if (problemCode(error) === "VARIANTE_REQUERIDA") {
+    const faltan = problemFaltantes(error);
+    if (faltan.length > 0) return `Elige ${faltan.join(" y ")} antes de agregar.`;
+  }
+  return mensajeCarrito(problemCode(error));
+}
+
 /** `/`: banner ofertas, grid en oferta, campo chat inferior. SPEC-05 Req.2, SPEC-06,08,09 */
 export function HomePage() {
   const router = useRouter();
@@ -33,8 +48,12 @@ export function HomePage() {
   const [creando, setCreando] = useState(false);
   /** Texto cuyo intento de crear la conversación falló, para reintentarlo. */
   const [fallido, setFallido] = useState<string | null>(null);
-  const carrito = useChatStore((s) => s.carrito);
-  const setCarrito = useChatStore((s) => s.setCarrito);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [agregado, setAgregado] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const cliente = useChatStore((s) => s.cliente);
+  const ultimaConversacionId = useChatStore((s) => s.ultimaConversacionId);
+  const setUltimaConversacionId = useChatStore((s) => s.setUltimaConversacionId);
   const setPrimerMensaje = useChatStore((s) => s.setPrimerMensaje);
 
   // Grid con datos reales (SPEC-06). Sin fallback a mocks en este flujo.
@@ -51,20 +70,49 @@ export function HomePage() {
   });
   const detalle: CatalogDetail | null = detalleQuery.data ?? null;
 
-  async function agregarDesdeDetalle(
-    item: CatalogCardItem,
-    sel: { sku: string | null; talla: string | null; color: string | null }
-  ) {
-    if (sel.sku == null) return;
-    await agregarProductoAlCarritoUseCase(container.api, { sku: sel.sku, cantidad: 1 });
-    const found = carrito.lineas.find((l) => l.producto.sku === sel.sku);
-    const lineas = found
-      ? carrito.lineas.map((l) => (l.producto.sku === sel.sku ? { ...l, cantidad: Math.min(10, l.cantidad + 1) } : l))
-      : [...carrito.lineas, { producto: { sku: sel.sku, nombre: item.name, categoria: item.brand ?? "Catálogo", talla: sel.talla ?? "", color: sel.color ?? "", precio: item.price, stock: 5 }, cantidad: 1 }];
-    const subtotal = lineas.reduce((a, l) => a + l.cantidad * l.producto.precio, 0);
-    setCarrito({ lineas, subtotal, count: lineas.reduce((a, l) => a + l.cantidad, 0) });
-    setDetalleId(null);
-  }
+  // SPEC-09 Req. 2 "agregar desde la tarjeta": la línea la crea el backend con
+  // nombre, imagen e id reales. El front solo invalida el carrito y el badge.
+  // Si hay que abrir una conversación anónima, se reutiliza en reintentos y solo
+  // se persiste cuando el agregado funcionó (no deja una conversación sin uso).
+  const convCreadaRef = useRef<string | null>(null);
+  const agregar = useMutation({
+    mutationFn: async (input: {
+      item: CatalogCardItem;
+      sel: { sku: string | null; talla: string | null; color: string | null };
+    }) => {
+      const { item, sel } = input;
+      if (sel.sku == null) throw new Error("sku requerido");
+      let conversacion =
+        conversacionParaCarrito(ultimaConversacionId) ??
+        convCreadaRef.current ??
+        undefined;
+      if (!cliente && !conversacion) {
+        const { conversacionId } = await crearConversacionUseCase(container.api);
+        convCreadaRef.current = conversacionId;
+        conversacion = conversacionId;
+      }
+      await agregarProductoAlCarritoUseCase(container.api, {
+        sku: sel.sku,
+        cantidad: 1,
+        product_id: item.product_id,
+        talla: sel.talla ?? undefined,
+        color: sel.color ?? undefined,
+        conversacionId: conversacion,
+      });
+      return { item, conversacion };
+    },
+    onSuccess: ({ item, conversacion }) => {
+      if (conversacion) setUltimaConversacionId(conversacion);
+      setAviso(null);
+      setAgregado(`${item.name} se agregó a tu carrito.`);
+      setDetalleId(null);
+      void queryClient.invalidateQueries({ queryKey: ["carrito"] });
+    },
+    onError: (error) => {
+      setAgregado(null);
+      setAviso(mensajeAgregar(error));
+    },
+  });
 
   /** Crea una conversación real, deja el texto como primer mensaje y abre el chat. */
   async function irChat(texto?: string) {
@@ -86,6 +134,16 @@ export function HomePage() {
 
   return (
     <div className="p-4 flex flex-col gap-4 pb-24">
+      {aviso && (
+        <p role="alert" aria-live="assertive" className="rounded-md bg-error-soft border border-error-default px-3 py-2.5 text-[13px]">
+          {aviso}
+        </p>
+      )}
+      {agregado && (
+        <p role="status" aria-live="polite" className="rounded-md bg-white border border-border-default px-3 py-2.5 text-[13px]">
+          {agregado}
+        </p>
+      )}
       <button onClick={() => irChat("Ver ofertas")} disabled={creando}
         className="relative overflow-hidden rounded-lg w-full text-left bg-surface-ink text-text-inverse px-4 pt-5 pb-6"
         aria-label="Ver ofertas Inka Athletics">
@@ -216,7 +274,7 @@ export function HomePage() {
           onClose={() => setDetalleId(null)}
           onAdd={(sel) => {
             const item = productos.find((c) => c.product_id === detalleId);
-            if (item) void agregarDesdeDetalle(item, sel);
+            if (item) agregar.mutate({ item, sel });
           }}
           consultarDisponibilidad={(sku) =>
             consultarDisponibilidadUseCase(container.api, { sku }).then((r) =>

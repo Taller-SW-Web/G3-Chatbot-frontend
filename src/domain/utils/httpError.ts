@@ -20,6 +20,15 @@ export function problemCode(error: unknown): string | undefined {
   return typeof code === "string" ? code : undefined;
 }
 
+/** `faltantes` de un 409 VARIANTE_REQUERIDA: talla/color que el usuario debe elegir. */
+export function problemFaltantes(error: unknown): string[] {
+  const faltantes = (error as { response?: { data?: { faltantes?: unknown } } })
+    ?.response?.data?.faltantes;
+  return Array.isArray(faltantes)
+    ? faltantes.filter((f): f is string => typeof f === "string")
+    : [];
+}
+
 /** true si el fallo es de red (sin respuesta) o el módulo está caído (503). */
 export function isUnavailable(error: unknown): boolean {
   return (

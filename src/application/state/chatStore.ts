@@ -23,6 +23,9 @@ type ChatState = {
    * sola vez y lo limpia. Es transitorio: no se persiste.
    */
   primerMensaje: string | null;
+  /** Última conversación abierta: ubica el carrito anónimo desde /carrito. */
+  ultimaConversacionId: string | null;
+  setUltimaConversacionId: (id: string | null) => void;
   setToken: (t: string | null) => void;
   setCliente: (c: Cliente | null) => void;
   setExpiraEn: (v: number | null) => void;
@@ -62,6 +65,8 @@ export const useChatStore = create<ChatState>()(
       authOpen: false,
       ultimoPedido: null,
       primerMensaje: null,
+      ultimaConversacionId: null,
+      setUltimaConversacionId: (ultimaConversacionId) => set({ ultimaConversacionId }),
       setToken: (accessToken) => set({
         accessToken,
         expiraEn: accessToken ? Date.now() + 15 * 60 * 1000 : null,
@@ -111,6 +116,8 @@ export const useChatStore = create<ChatState>()(
         accionPendiente: s.accionPendiente,
         authOpen: s.authOpen,
         ultimoPedido: s.ultimoPedido,
+        // El carrito anónimo vive por conversación: sobrevive a un recargado de /carrito.
+        ultimaConversacionId: s.ultimaConversacionId,
       }),
     }
   )

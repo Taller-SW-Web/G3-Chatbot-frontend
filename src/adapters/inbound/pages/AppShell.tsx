@@ -10,6 +10,8 @@ import { SesionIndicator } from "../components/SesionIndicator";
 import { useChatStore } from "@/application/state/chatStore";
 import { container } from "@/infrastructure/di/container";
 import { clienteDesdePerfil, clienteDesdeUsuario } from "@/domain/utils/sesion";
+import { useCarrito } from "@/application/hooks/useCarrito";
+import { conversacionParaCarrito } from "@/domain/utils/carrito";
 import { Sidebar } from "./Sidebar";
 
 export type ScreenKind =
@@ -29,8 +31,17 @@ export function AppShell({
 }) {
   const router = useRouter();
   const [sidebar, setSidebar] = useState(false);
+  // El badge del header es siempre verdad del servidor (no del store inventado).
+  useCarrito();
   const carrito = useChatStore((s) => s.carrito);
   const authOpen = useChatStore((s) => s.authOpen);
+  const setUltimaConversacionId = useChatStore((s) => s.setUltimaConversacionId);
+
+  // La conversación abierta ubica el carrito anónimo en cualquier pantalla.
+  useEffect(() => {
+    const id = conversacionParaCarrito(conversationId);
+    if (id) setUltimaConversacionId(id);
+  }, [conversationId, setUltimaConversacionId]);
 
   useEffect(() => {
     const { accessToken, isTokenExpiringSoon, applySession, setCliente } = useChatStore.getState();
