@@ -16,6 +16,8 @@ type ChatState = {
   accionPendiente: string | null;
   /** Abre el modal de login/registro global (AppShell). */
   authOpen: boolean;
+  /** Pestaña con la que abre el modal de acceso (no se persiste). */
+  authVista: "login" | "registro";
   /** Resumen del último pedido confirmado (pantalla /exito). */
   ultimoPedido: UltimoPedido;
   /**
@@ -36,6 +38,8 @@ type ChatState = {
   setCarrito: (c: CarritoUI) => void;
   setAccionPendiente: (a: string | null) => void;
   setAuthOpen: (v: boolean) => void;
+  /** Abre el modal de acceso directamente en la pestaña de registro. */
+  abrirRegistro: () => void;
   setUltimoPedido: (p: UltimoPedido) => void;
   setPrimerMensaje: (m: string | null) => void;
   logout: () => void;
@@ -63,6 +67,7 @@ export const useChatStore = create<ChatState>()(
       carrito: carritoVacio,
       accionPendiente: null,
       authOpen: false,
+      authVista: "login",
       ultimoPedido: null,
       primerMensaje: null,
       ultimaConversacionId: null,
@@ -85,7 +90,8 @@ export const useChatStore = create<ChatState>()(
       },
       setCarrito: (carrito) => set({ carrito }),
       setAccionPendiente: (accionPendiente) => set({ accionPendiente }),
-      setAuthOpen: (authOpen) => set({ authOpen }),
+      setAuthOpen: (authOpen) => set({ authOpen, authVista: "login" }),
+      abrirRegistro: () => set({ authOpen: true, authVista: "registro" }),
       setUltimoPedido: (ultimoPedido) => set({ ultimoPedido }),
       setPrimerMensaje: (primerMensaje) => set({ primerMensaje }),
       logout: () =>
