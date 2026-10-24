@@ -19,7 +19,7 @@ export function CarruselProductos({
   onAdd,
   onDetalle,
 }: {
-  titulo: string;
+  titulo?: string;
   productos: CatalogCardItem[];
   onAdd: (p: CatalogCardItem) => void;
   onDetalle: (p: CatalogCardItem) => void;
@@ -28,7 +28,7 @@ export function CarruselProductos({
   const visibles = verMas ? productos.slice(0, 10) : productos.slice(0, 2);
   return (
     <div className="self-start w-full rounded-md bg-white border border-border-default p-2 flex flex-col gap-2 wf-card">
-      <p className="px-1 text-[14px] font-semibold text-text-primary">{sanitize(titulo)}</p>
+      {titulo && <p className="px-1 text-[14px] font-semibold text-text-primary">{sanitize(titulo)}</p>}
       <div className="grid grid-cols-2 gap-2">
         {visibles.map((p) => (
           <div key={p.product_id} className="relative rounded-md p-1.5 bg-white border border-border-default">

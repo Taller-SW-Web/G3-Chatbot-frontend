@@ -3,19 +3,30 @@ import type { ReactNode } from "react";
 import type {
   Bloque,
   BloqueAcciones,
+  BloqueCarritoResumen,
   BloqueCarrusel,
   BloqueConfirmacion,
   BloqueDetalle,
   BloqueError,
+  BloqueFormulario,
   BloqueResumenCheckout,
+  BloqueSelectorVariante,
   BloqueTexto,
-  ProductoResumen,
 } from "@/domain/entities/Bloque";
-import type { CatalogCardItem, CatalogDetail } from "@/domain/entities/CatalogoUI";
+import {
+  accionAgregarDeTarjeta,
+  accionVerDetalle,
+  datosDeCarrito,
+  detalleDeBloque,
+  esFormularioRegistro,
+  faltantesDeSelector,
+  productosDeCarrusel,
+} from "@/domain/utils/bloquesChat";
 import { sanitize } from "@/domain/utils/sanitize";
 import { AccionesRapidas } from "./blocks/AccionesRapidas";
 import { AvisoDegradado } from "./blocks/AvisoDegradado";
 import { BloqueError as BloqueErrorView } from "./blocks/BloqueError";
+import { CarritoChat, FormularioRegistroChat, SelectorVarianteChat } from "./blocks/BloquesContenedores";
 import { CarruselProductos } from "./blocks/CarruselProductos";
 import { ConfirmacionPedido } from "./blocks/ConfirmacionPedido";
 import { DetalleProducto } from "./blocks/DetalleProducto";
@@ -59,38 +70,10 @@ function esBloqueError(b: Bloque): b is BloqueError {
   return b.tipo === "ERROR" && typeof (b as BloqueError).code === "string";
 }
 
-const noop = () => {};
-
-/** Adapts a chat block product to the card shape the catalog components paint. */
-function aTarjeta(p: ProductoResumen): CatalogCardItem {
-  return {
-    product_id: p.sku,
-    sku: p.sku,
-    name: p.nombre,
-    price: p.precio,
-    hasVariants: false,
-    availability: p.stock <= 0 ? "AGOTADO" : "DISPONIBLE",
-    talla: p.talla,
-    color: p.color,
-  };
-}
-
-/** Adapts a chat block product to the detail shape of the catalog modal. */
-function aDetalle(p: ProductoResumen & { descripcion: string }): CatalogDetail {
-  return {
-    ...aTarjeta(p),
-    shortDescription: p.descripcion,
-    singleSku: p.sku,
-    variants: [{ sku: p.sku, talla: p.talla, color: p.color }],
-    tallas: p.talla ? [p.talla] : [],
-    colores: p.color ? [p.color] : [],
-  };
-}
-
 /**
- * Renderiza un bloque por tipo con los componentes existentes. Los que dependen de
- * funcionalidades pendientes (carrito, detalle, reenvío de correo) se pintan inertes;
- * los tipos sin forma definida en `Bloque` no se pintan.
+ * Renderiza un bloque por tipo con los componentes existentes. Las acciones de los
+ * bloques (agregar, ver detalle, elegir variante) salen por `onQuickAction`; el reenvío de
+ * correo sigue inerte. Los tipos sin forma definida en `Bloque` no se pintan.
  */
 export function renderBloque(
   bloque: Bloque,
@@ -124,11 +107,11 @@ export function renderBloque(
       );
     }
     case "DETALLE_PRODUCTO": {
-      const b = bloque as BloqueDetalle;
-      if (!b.producto) return null;
+      const detalle = detalleDeBloque(bloque as BloqueDetalle);
+      if (!detalle) return null;
       return (
         <div key={clave} data-testid="bloque-detalle-producto" className="mt-2">
-          <DetalleProducto p={aDetalle(b.producto)} />
+          <DetalleProducto p={detalle} />
         </div>
       );
     }
@@ -145,12 +128,46 @@ export function renderBloque(
       );
     }
     case "CARRUSEL_PRODUCTOS": {
-      const b = bloque as BloqueCarrusel;
-      if (!Array.isArray(b.productos)) return null;
+      const productos = productosDeCarrusel(bloque as BloqueCarrusel);
+      if (!productos) return null;
       return (
-        // Inerte: agregar al carrito y ver detalle dependen de funcionalidades pendientes.
-        <div key={clave} data-testid="bloque-carrusel-productos" className="mt-2" inert>
-          <CarruselProductos titulo={b.titulo} productos={b.productos.map(aTarjeta)} onAdd={noop} onDetalle={noop} />
+        // Inerte mientras otra acción está en curso (`onQuickAction` ausente).
+        <div key={clave} data-testid="bloque-carrusel-productos" className="mt-2" inert={!onQuickAction}>
+          <CarruselProductos
+            productos={productos}
+            onAdd={(p) => onQuickAction?.(accionAgregarDeTarjeta(p))}
+            onDetalle={(p) => onQuickAction?.(accionVerDetalle(p))}
+          />
+        </div>
+      );
+    }
+    case "CARRITO": {
+      const datos = datosDeCarrito(bloque as BloqueCarritoResumen);
+      if (!datos) return null;
+      return (
+        <div key={clave} data-testid="bloque-carrito-chat" className="mt-2">
+          <CarritoChat datos={datos} />
+        </div>
+      );
+    }
+    case "SELECTOR_VARIANTE": {
+      const pedido = faltantesDeSelector(bloque as BloqueSelectorVariante);
+      if (!pedido) return null;
+      return (
+        <div key={clave} className="mt-2">
+          <SelectorVarianteChat
+            productId={pedido.productId}
+            faltantes={pedido.faltantes}
+            onAccion={onQuickAction}
+          />
+        </div>
+      );
+    }
+    case "FORMULARIO": {
+      if (!esFormularioRegistro(bloque as BloqueFormulario)) return null;
+      return (
+        <div key={clave} className="mt-2">
+          <FormularioRegistroChat />
         </div>
       );
     }

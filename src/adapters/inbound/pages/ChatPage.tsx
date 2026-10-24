@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpIcon, PhotoIcon } from "../components/icons";
 import { ChatWindow, type AccionRapidaChat } from "../components/ChatWindow";
 import { AccionesRapidas } from "../components/blocks/AccionesRapidas";
@@ -21,6 +22,7 @@ import { MENSAJE_MAX_CARACTERES } from "@/application/use_cases/enviarMensajeUse
 
 const SUGERENCIAS = ["Ver ofertas", "Rastrear pedido", "Ayuda con devolución"];
 const CATEGORIAS = ["zapatillas", "polos", "chimpunes"];
+const CAMBIAN_CARRITO = new Set(["AGREGAR_AL_CARRITO", "CAMBIAR_CANTIDAD", "QUITAR_DEL_CARRITO"]);
 
 /**
  * `/chat/[id]`: historial y turno en vivo de una conversación real (ADR-0021).
@@ -29,6 +31,7 @@ const CATEGORIAS = ["zapatillas", "polos", "chimpunes"];
  */
 export function ChatPage({ conversationId }: { conversationId: string }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const setPrimerMensaje = useChatStore((s) => s.setPrimerMensaje);
   const {
     mensajes,
@@ -104,6 +107,10 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
         accion: { tipo: accion.id, payload: accion.payload ?? {} },
       });
       setEligeCategoria(false);
+      // Cart-changing actions: refresh the cart cache so the header badge matches the server.
+      if (CAMBIAN_CARRITO.has(accion.id)) {
+        void queryClient.invalidateQueries({ queryKey: ["carrito"] });
+      }
       try {
         await recargarSilencioso();
       } catch {
@@ -178,7 +185,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
             {errorAccion}
           </p>
         )}
-        <div className="px-3 flex flex-wrap gap-2 pb-24">
+        <div className="px-3 flex flex-wrap gap-2 pb-4">
           {SUGERENCIAS.map((q) => (
             <button
               key={q}
@@ -192,7 +199,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] border-t border-border-default bg-surface-cloud px-3 py-3 flex items-center gap-2">
+      <div className="sticky bottom-3 z-10 mx-3 mb-3 rounded-[28px] border border-border-default bg-surface-cloud/95 backdrop-blur px-2 py-2 flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
         <button
           aria-label="Agregar imagen (próximamente)"
           title="Próximamente"
