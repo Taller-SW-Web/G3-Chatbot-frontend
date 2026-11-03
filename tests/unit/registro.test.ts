@@ -61,6 +61,24 @@ describe("registroSchema (SPEC-01 Req. 1/2)", () => {
     expect(registroSchema.safeParse({ ...valido, correo: "no-es-correo" }).success).toBe(false);
   });
 
+  it.each(["987654321", "+51987654321", "51 123456789", "123-456-789"])("acepta celular %s", (celular) => {
+    expect(registroSchema.safeParse({ ...valido, celular }).success).toBe(true);
+  });
+
+  it.each(["12345678", "+1234567890", "+5198765432", "98765432a"])("rechaza celular %s", (celular) => {
+    expect(registroSchema.safeParse({ ...valido, celular }).success).toBe(false);
+  });
+
+  it("exige aceptar los términos", () => {
+    const r = registroSchema.safeParse({ ...valido, aceptaTerminos: undefined });
+    expect(r.success).toBe(false);
+  });
+
+  it("usa la longitud mínima en español de la política", () => {
+    const r = crearRegistroSchema({ longitudMinima: 12 }).safeParse({ ...valido, contrasena: "Abcdef1!xy", confirmar: "Abcdef1!xy" });
+    expect(r.success).toBe(false);
+  });
+
   it("rechaza celular no peruano con el mensaje esperado", () => {
     const result = registroSchema.safeParse({ ...valido, celular: "+1234567890" });
     expect(result.success).toBe(false);
@@ -108,6 +126,13 @@ describe("normalizarCelular (SPEC-01, escenario celular)", () => {
 });
 
 describe("evaluarPolitica / politicaCumplida (SPEC-01 Req. 2)", () => {
+  it("lee los campos en español y los alias como respaldo", () => {
+    const es = evaluarPolitica({ longitudMinima: 10, requiereMayuscula: true }, "abc");
+    const alias = evaluarPolitica({ minLength: 10, requireUpper: true }, "abc");
+    expect(es.map((r) => r.etiqueta)).toEqual(["Al menos 10 caracteres", "Una mayúscula"]);
+    expect(alias).toEqual(es);
+  });
+
   it("solo lista la longitud con la política por defecto", () => {
     const reglas = evaluarPolitica(POLITICA_POR_DEFECTO, "12345678");
     expect(reglas).toHaveLength(1);
@@ -151,11 +176,19 @@ describe("describeRegistroFailure (SPEC-01 Req. 4)", () => {
     expect(fallo.erroresCampo?.contrasena).toBeTruthy();
   });
 
-  it("usa el mensaje de errores[] del 422 y cae al texto por defecto", () => {
+  it("traduce cada regla del 422 a un mensaje legible y cae al texto por defecto", () => {
     const fallo = describeRegistroFailure(422, "POLITICA_INCUMPLIDA", [
-      { campo: "password", mensaje: "Debe incluir un símbolo" },
+      { campo: "password", mensaje: "LONGITUD_MINIMA: 10", regla: "LONGITUD_MINIMA", esperado: 10 },
+      { campo: "password", mensaje: "CARACTER_ESPECIAL: null", regla: "CARACTER_ESPECIAL", esperado: "null" },
+      { campo: "password", mensaje: "REGLA_NUEVA: x", regla: "REGLA_NUEVA", esperado: "x" },
     ]);
-    expect(fallo.erroresCampo?.contrasena).toBe("Debe incluir un símbolo");
+    expect(fallo.erroresCampo?.contrasena).toBe(
+      "Debe tener al menos 10 caracteres. Debe incluir un símbolo. No cumple la política de seguridad"
+    );
+    expect(
+      describeRegistroFailure(422, "POLITICA_INCUMPLIDA", [{ campo: "password", mensaje: "legado" }]).erroresCampo
+        ?.contrasena
+    ).toBe("No cumple la política de seguridad");
     expect(describeRegistroFailure(422, "POLITICA_INCUMPLIDA", []).erroresCampo?.contrasena).toBe(
       "No cumple la política de seguridad"
     );

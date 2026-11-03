@@ -74,6 +74,12 @@ describe("otp error mapping (SPEC-03 Req. 2)", () => {
     expect(r.volverALogin).toBe(false);
   });
 
+  it("explains an expired password on login", () => {
+    const r = describeLoginFailure(403, "PASSWORD_CADUCADA");
+    expect(r.message).toContain("venció");
+    expect(r.message).toContain("Seguridad");
+  });
+
   it("returns to login when attempts are exhausted", () => {
     const r = describeOtpFailure(429, "OTP_INTENTOS_AGOTADOS");
     expect(r.volverALogin).toBe(true);

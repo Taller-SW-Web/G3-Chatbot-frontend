@@ -132,8 +132,12 @@ export function RegistroForm({
         inputMode="tel"
         autoComplete="tel"
         aria-invalid={!!errors.celular}
+        aria-describedby="reg-celular-ayuda"
         className={campoTexto}
       />
+      <span id="reg-celular-ayuda" className="text-[11px] text-text-secondary">
+        Formato: 987654321 o +51987654321
+      </span>
       {errors.celular && <span className="text-[12px] text-error-default">{errors.celular.message}</span>}
 
       <label htmlFor="reg-contrasena" className="text-[12px] font-semibold text-text-primary">

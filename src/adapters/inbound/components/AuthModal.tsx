@@ -15,6 +15,7 @@ import {
   clienteDesdePerfil,
   clienteDesdeUsuario,
   describeLoginFailure,
+  type ErrorFila,
   describeMfaResendFailure,
   describeOtpFailure,
   describeRegistroFailure,
@@ -32,7 +33,7 @@ type ErroresCampo = Partial<Record<keyof RegistroInput, string>>;
 type ProblemShape = {
   code?: string;
   intentosRestantes?: number;
-  errores?: Array<{ campo?: string; mensaje?: string }>;
+  errores?: ErrorFila[];
 };
 
 function problemDe(error: unknown): {
