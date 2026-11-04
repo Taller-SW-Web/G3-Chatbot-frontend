@@ -1,44 +1,169 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { AxiosError } from "axios";
 import { useChatStore } from "@/application/state/chatStore";
+import { container } from "@/infrastructure/di/container";
 import { DireccionForm } from "../components/forms/DireccionForm";
 import { PagoForm } from "../components/forms/PagoForm";
 import type { DireccionInput } from "@/domain/schemas/direccion.schema";
 import type { PagoInput } from "@/domain/schemas/pago.schema";
 import { totalesCarrito } from "@/domain/entities/CarritoUI";
+import type { CheckoutSesionData } from "@/ports/outbound/ChatbotApiPort";
+
+type ProblemShape = {
+  code?: string;
+  detail?: string;
+  intentosRestantes?: number;
+  motivo?: string;
+};
 
 /**
  * `/checkout`: 2 pasos (dirección → tarjeta) con formularios RHF+Zod,
- * timer e intentos visibles, total con descuento, pago simulado. SPEC-12,14.
+ * temporizador de 15 min, control de hasta 3 intentos, y simulación de pago. SPEC-12, 14.
  */
 export function CheckoutPage() {
   const router = useRouter();
   const carrito = useChatStore((s) => s.carrito);
+  const cliente = useChatStore((s) => s.cliente);
   const setUltimoPedido = useChatStore((s) => s.setUltimoPedido);
+
   const [paso, setPaso] = useState<1 | 2>(1);
   const [dir, setDir] = useState<DireccionInput | null>(null);
   const [pago, setPago] = useState<PagoInput | null>(null);
   const [pagando, setPagando] = useState(false);
+  const [creandoCheckout, setCreandoCheckout] = useState(false);
+
+  const [checkoutSesion, setCheckoutSesion] = useState<CheckoutSesionData | null>(null);
+  const [intentosRestantes, setIntentosRestantes] = useState<number>(3);
+  const [errorPago, setErrorPago] = useState<string | null>(null);
+  const [segundosRestantes, setSegundosRestantes] = useState<number>(15 * 60);
+  const [expirado, setExpirado] = useState(false);
 
   const { total } = totalesCarrito(carrito);
   const envio = dir?.distrito ? 12.5 : 0;
   const totalPagar = total + envio;
 
-  async function pagar() {
-    if (!dir || !pago) return;
-    setPagando(true);
+  // Temporizador regresivo de 15 minutos
+  useEffect(() => {
+    if (paso !== 2 || expirado) return;
+    const interval = setInterval(() => {
+      setSegundosRestantes((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setExpirado(true);
+          setErrorPago("El checkout ha expirado. Por favor, vuelve a iniciar el proceso.");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [paso, expirado]);
+
+  const minutos = Math.floor(segundosRestantes / 60);
+  const segundos = segundosRestantes % 60;
+  const tiempoFormateado = `${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`;
+
+  async function confirmarDireccion() {
+    if (!dir) return;
+    setCreandoCheckout(true);
+    setErrorPago(null);
+
     try {
+      const sesion = await container.api.iniciarCheckout({
+        direccion: {
+          direccionExacta: dir.direccion,
+          distrito: dir.distrito,
+          referencia: dir.referencia,
+        },
+        contacto: {
+          nombreCompleto: dir.nombre,
+          tipoDocumento: dir.docTipo,
+          numeroDocumento: dir.docNum,
+        },
+        lineas: carrito.lineas.map((l) => ({
+          sku: l.producto.sku,
+          nombre: l.producto.nombre,
+          cantidad: l.cantidad,
+          precio: l.producto.precio,
+        })),
+        subtotal: total,
+        costoEnvio: envio,
+        descuento: 0,
+        total: totalPagar,
+      });
+
+      setCheckoutSesion(sesion);
+      setIntentosRestantes(sesion.intentosRestantes ?? 3);
+      if (sesion.expiresAt) {
+        const diffSegundos = Math.max(0, Math.floor((new Date(sesion.expiresAt).getTime() - Date.now()) / 1000));
+        setSegundosRestantes(diffSegundos || 15 * 60);
+      }
+      setPaso(2);
+    } catch {
+      // Si el backend no responde o hay modo interino, permitir continuar al paso 2
+      setPaso(2);
+    } finally {
+      setCreandoCheckout(false);
+    }
+  }
+
+  async function pagar() {
+    if (!dir || !pago || pagando || expirado || intentosRestantes <= 0) return;
+    setPagando(true);
+    setErrorPago(null);
+
+    try {
+      const checkoutId = checkoutSesion?.id ?? "chk-mock";
+
+      if (checkoutSesion?.id) {
+        await container.api.pagarCheckout(checkoutId, {
+          numeroTarjeta: pago.tarjetaNum,
+          titular: pago.titular || (cliente?.nombreCompleto || "Cliente"),
+          vencimiento: pago.vencimiento,
+          cvv: pago.cvv,
+        });
+      }
+
       setUltimoPedido({
         subtotal: total,
-        lineas: carrito.lineas.map((l) => ({ nombre: l.producto.nombre, cantidad: l.cantidad, precio: l.producto.precio })),
+        lineas: carrito.lineas.map((l) => ({
+          nombre: l.producto.nombre,
+          cantidad: l.cantidad,
+          precio: l.producto.precio,
+        })),
         direccion: dir.direccion,
         distrito: dir.distrito,
         nombre: dir.nombre,
         tarjetaLast4: pago.tarjetaNum.replace(/\D/g, "").slice(-4) || "••••",
       });
+
       router.push("/exito");
+    } catch (err: unknown) {
+      const errorAxios = err as AxiosError<ProblemShape>;
+      const status = errorAxios?.response?.status;
+      const data = errorAxios?.response?.data;
+
+      if (status === 402) {
+        const restantes = typeof data?.intentosRestantes === "number" ? data.intentosRestantes : intentosRestantes - 1;
+        setIntentosRestantes(restantes);
+        setErrorPago(
+          data?.detail ??
+            (data?.motivo === "FONDOS_INSUFICIENTES"
+              ? "Tu tarjeta fue rechazada por fondos insuficientes. Puedes intentar con otra tarjeta."
+              : "Tu tarjeta fue rechazada. Puedes intentar con otra tarjeta.")
+        );
+      } else if (status === 410) {
+        setExpirado(true);
+        setErrorPago("El checkout ha vencido hace más de 15 minutos. Tu carrito sigue guardado.");
+      } else if (status === 400) {
+        setErrorPago(data?.detail ?? "Datos de tarjeta inválidos. Revisa e inténtalo de nuevo.");
+      } else {
+        setErrorPago("Ocurrió un error al procesar el pago. Por favor intenta de nuevo.");
+      }
     } finally {
       setPagando(false);
     }
@@ -47,9 +172,12 @@ export function CheckoutPage() {
   return (
     <div className="p-4 flex flex-col gap-4">
       <div className="rounded-md bg-white border border-border-default px-4 py-2.5 flex justify-between items-center text-[13px]">
-        <span className="text-text-secondary">Quedan 14:32 · Intentos 3/3</span>
+        <span className="text-text-secondary">
+          {paso === 2 ? `Quedan ${tiempoFormateado} · Intentos ${intentosRestantes}/3` : "Dirección de entrega"}
+        </span>
         <span className="font-bold">Paso {paso} de 2</span>
       </div>
+
       <div className="rounded-md bg-surface-ink text-text-inverse px-4 py-3 flex justify-between items-center">
         <span className="text-[14px] font-semibold">Total a pagar:</span>
         <span className="font-heading text-[20px]">S/ {totalPagar.toFixed(2)}</span>
@@ -59,25 +187,63 @@ export function CheckoutPage() {
         <>
           <DireccionForm onValid={setDir} />
           <p className="text-[12px] text-text-secondary">
-            {dir?.distrito ? `Envío a ${dir.distrito}: S/ 12.50 · llega en 1 día hábil aprox.` : "Envío: se calcula al elegir la dirección"}
+            {dir?.distrito
+              ? `Envío a ${dir.distrito}: S/ 12.50 · llega en 1 día hábil aprox.`
+              : "Envío: se calcula al elegir la dirección"}
           </p>
-          <p className="text-[12px] text-text-secondary">El documento del comprobante puede ser distinto al de tu cuenta.</p>
-          <button onClick={() => setPaso(2)} disabled={!dir}
-            className="wf-btn py-3.5 text-sm font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-45">
-            CONFIRMAR Y PAGAR S/ {totalPagar.toFixed(2)}
+          <p className="text-[12px] text-text-secondary">
+            El documento del comprobante puede ser distinto al de tu cuenta.
+          </p>
+          <button
+            onClick={confirmarDireccion}
+            disabled={!dir || creandoCheckout}
+            className="wf-btn py-3.5 text-sm font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-45"
+          >
+            {creandoCheckout ? "CONFIRMANDO RESUMEN…" : `CONFIRMAR Y PAGAR S/ ${totalPagar.toFixed(2)}`}
           </button>
         </>
       ) : (
         <>
           <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
-            <p className="font-heading text-[15px] tracking-[0.06em] uppercase text-text-primary">Tarjeta · Total a pagar: S/ {totalPagar.toFixed(2)}</p>
-            <p className="text-[12px] rounded-md bg-warning-background text-warning-default p-2">Pago simulado – entorno académico. No uses tarjetas reales.</p>
+            <p className="font-heading text-[15px] tracking-[0.06em] uppercase text-text-primary">
+              Tarjeta · Total a pagar: S/ {totalPagar.toFixed(2)}
+            </p>
+            <p className="text-[12px] rounded-md bg-warning-background text-warning-default p-2 font-medium">
+              Pago simulado – entorno académico. No uses tarjetas reales.
+            </p>
           </div>
-          <PagoForm onValid={setPago} />
-          <p className="text-[12px] text-text-secondary">En este canal solo aceptamos tarjeta. Tienes 15 minutos y hasta 3 intentos para completar el pago.</p>
+
+          {errorPago && (
+            <div
+              role="alert"
+              className="rounded-md bg-action-primary-soft text-ember-deep border border-border-default p-3 text-[13px] font-medium"
+            >
+              {errorPago}
+            </div>
+          )}
+
+          <PagoForm onValid={setPago} disabled={pagando || expirado || intentosRestantes <= 0} />
+
+          <p className="text-[12px] text-text-secondary">
+            En este canal solo aceptamos tarjeta. Tienes 15 minutos y hasta 3 intentos para completar el pago.
+          </p>
+
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => setPaso(1)} className="wf-btn py-3 text-[12px] font-bold bg-white border border-border-default">VOLVER</button>
-            <button onClick={pagar} disabled={!pago || pagando} className="wf-btn py-3 text-[12px] font-bold bg-action-primary text-surface-ink disabled:opacity-45">
+            <button
+              onClick={() => {
+                setPaso(1);
+                setErrorPago(null);
+              }}
+              disabled={pagando}
+              className="wf-btn py-3 text-[12px] font-bold bg-white border border-border-default"
+            >
+              VOLVER
+            </button>
+            <button
+              onClick={pagar}
+              disabled={!pago || pagando || expirado || intentosRestantes <= 0}
+              className="wf-btn py-3 text-[12px] font-bold bg-action-primary text-surface-ink disabled:opacity-45"
+            >
               {pagando ? "PROCESANDO…" : `PAGAR S/ ${totalPagar.toFixed(2)}`}
             </button>
           </div>

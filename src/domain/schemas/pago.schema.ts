@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-// Solo tarjeta en este canal. Sin guardar PAN: solo se valida formato.
+// Solo tarjeta en este canal (SPEC-14). Sin guardar PAN: validación estricta de formato.
 export const pagoSchema = z.object({
+  titular: z.string().min(3, "Ingresa el nombre del titular").optional(),
   tarjetaNum: z
     .string()
     .transform((v) => v.replace(/\D/g, ""))
