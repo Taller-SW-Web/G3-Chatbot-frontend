@@ -63,6 +63,11 @@ export function AppShell({
     const params = new URLSearchParams(window.location.search);
     if (params.get("abrirLogin") !== "1") return;
     useChatStore.getState().setAuthOpen(true);
+    const destino = params.get("destino");
+    if (destino) {
+      useChatStore.getState().setAccionPendiente(destino);
+      params.delete("destino");
+    }
     params.delete("abrirLogin");
     const query = params.toString();
     window.history.replaceState(
