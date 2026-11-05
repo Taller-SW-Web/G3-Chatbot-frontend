@@ -2,6 +2,7 @@
 
 import type { Cliente, TipoDocumento } from "@/domain/entities/Cliente";
 import type { RegistroInput } from "@/domain/schemas/registro.schema";
+import { describirReglaPolitica } from "@/domain/utils/passwordPolicy";
 import { maskCelular } from "@/domain/utils/sanitize";
 import type { PerfilCliente, UsuarioSesion } from "@/ports/outbound/ChatbotApiPort";
 
@@ -30,6 +31,12 @@ export type AuthFailure = {
 
 /** Maps the problem+json `code`/status of `/sesion/login` to a user message (SPEC-03 Req. 1/2). */
 export function describeLoginFailure(status?: number, code?: string): AuthFailure {
+  if (code === "PASSWORD_CADUCADA") {
+    return {
+      message: "Tu contraseña venció. Cámbiala en el portal de Seguridad y vuelve a iniciar sesión",
+      volverALogin: false,
+    };
+  }
   if (code === "CUENTA_NO_PERMITIDA" || status === 403) {
     return { message: "Esta cuenta no puede iniciar sesión en este canal", volverALogin: false };
   }
@@ -129,6 +136,13 @@ const CAMPO_BFF_A_FORM: Record<string, keyof RegistroInput> = {
   acceptTerms: "aceptaTerminos",
 };
 
+export type ErrorFila = {
+  campo?: string;
+  mensaje?: string;
+  regla?: string;
+  esperado?: string | number;
+};
+
 export type RegistroFailure = {
   message: string;
   ofrecerLogin: boolean;
@@ -139,7 +153,7 @@ export type RegistroFailure = {
 export function describeRegistroFailure(
   status?: number,
   code?: string,
-  errores?: Array<{ campo?: string; mensaje?: string }>
+  errores?: Array<ErrorFila>
 ): RegistroFailure {
   if (code === "VALIDACION" && errores?.length) {
     const porCampo: Partial<Record<keyof RegistroInput, string>> = {};
@@ -158,11 +172,13 @@ export function describeRegistroFailure(
     };
   }
   if (code === "POLITICA_INCUMPLIDA" || status === 422) {
-    const detalle = errores?.find((e) => e.campo === "password" && e.mensaje)?.mensaje;
+    const filas = (errores ?? []).filter((e) => e.campo === "password" || e.regla);
+    const mensajes = filas.map((e) => describirReglaPolitica(e.regla, e.esperado));
+    const unicos = [...new Set(mensajes)];
     return {
       message: "La contraseña no cumple la política de seguridad",
       ofrecerLogin: false,
-      erroresCampo: { contrasena: detalle ?? "No cumple la política de seguridad" },
+      erroresCampo: { contrasena: unicos.length ? unicos.join(". ") : "No cumple la política de seguridad" },
     };
   }
   if (code === "SERVICIO_NO_DISPONIBLE" || code === "MODULO_NO_DISPONIBLE" || status === 503) {

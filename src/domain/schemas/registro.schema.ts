@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { politicaCumplida, type PoliticaContrasena } from "@/domain/utils/passwordPolicy";
+import { longitudMinimaDe, politicaCumplida, type PoliticaContrasena } from "@/domain/utils/passwordPolicy";
 
-/** Celular peruano: +51 seguido de 9 dígitos que empiezan con 9 (SPEC-01 Req. 2). */
-export const CELULAR_PERU_REGEX = /^\+519\d{8}$/;
+/** Celular aceptado por Seguridad: 9 dígitos con prefijo +51 opcional (SPEC-01 Req. 2). */
+export const CELULAR_PERU_REGEX = /^(\+51)?[0-9]{9}$/;
 
-export const CELULAR_PERU_MENSAJE = "Ingresa un celular peruano de 9 dígitos";
+export const CELULAR_PERU_MENSAJE = "Ingresa 9 dígitos, por ejemplo 987654321 o +51987654321";
 
 /**
  * Normaliza el celular al formato `+51987654321` (SPEC-01, escenario celular):
@@ -12,8 +12,8 @@ export const CELULAR_PERU_MENSAJE = "Ingresa un celular peruano de 9 dígitos";
  */
 export function normalizarCelular(valor: string): string {
   const digitos = valor.replace(/[\s-]/g, "");
-  if (/^9\d{8}$/.test(digitos)) return `+51${digitos}`;
-  if (/^519\d{8}$/.test(digitos)) return `+${digitos}`;
+  if (/^\d{9}$/.test(digitos)) return `+51${digitos}`;
+  if (/^51\d{9}$/.test(digitos)) return `+${digitos}`;
   return valor.trim();
 }
 
@@ -37,7 +37,7 @@ export function crearRegistroSchema(politica?: PoliticaContrasena) {
       .refine((v) => CELULAR_PERU_REGEX.test(v), CELULAR_PERU_MENSAJE),
     contrasena: z
       .string()
-      .min(8, "Mínimo 8 caracteres")
+      .min(longitudMinimaDe(politica), `Mínimo ${longitudMinimaDe(politica)} caracteres`)
       .max(256)
       .refine((v) => !politica || politicaCumplida(politica, v), POLITICA_INCUMPLIDA_MENSAJE),
     confirmar: z.string(),
