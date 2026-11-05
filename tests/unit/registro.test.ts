@@ -194,6 +194,55 @@ describe("describeRegistroFailure (SPEC-01 Req. 4)", () => {
     );
   });
 
+  it("mapea los seis campos del BFF (incluidos nombres, apellidos y términos) al formulario", () => {
+    const fallo = describeRegistroFailure(400, "VALIDACION", [
+      { campo: "email", mensaje: "e" },
+      { campo: "password", mensaje: "p" },
+      { campo: "phone", mensaje: "t" },
+      { campo: "firstName", mensaje: "n" },
+      { campo: "lastName", mensaje: "a" },
+      { campo: "acceptTerms", mensaje: "x" },
+    ]);
+    expect(fallo.erroresCampo).toEqual({
+      correo: "e",
+      contrasena: "p",
+      celular: "t",
+      nombres: "n",
+      apellidos: "a",
+      aceptaTerminos: "x",
+    });
+  });
+
+  it("muestra cada regla que G7 puede reportar, sin `esperado` salvo en la longitud", () => {
+    const reglas = [
+      "LONGITUD_MINIMA",
+      "MAYUSCULA",
+      "MINUSCULA",
+      "DIGITO",
+      "CARACTER_ESPECIAL",
+      "CONTRASENA_COMUN",
+      "DATOS_PERSONALES",
+      "YA_UTILIZADA",
+    ];
+    const fallo = describeRegistroFailure(
+      422,
+      "POLITICA_INCUMPLIDA",
+      reglas.map((regla) => ({ campo: "password", mensaje: regla, regla }))
+    );
+    expect(fallo.erroresCampo?.contrasena).toBe(
+      [
+        "No alcanza la longitud mínima",
+        "Debe incluir una mayúscula",
+        "Debe incluir una minúscula",
+        "Debe incluir un número",
+        "Debe incluir un símbolo",
+        "Es una contraseña demasiado común",
+        "No debe contener tus datos personales",
+        "Ya usaste esta contraseña antes. Elige una distinta",
+      ].join(". ")
+    );
+  });
+
   it("informa servicio no disponible y límite de intentos", () => {
     expect(describeRegistroFailure(503, "SERVICIO_NO_DISPONIBLE").message).toMatch(/intenta/i);
     expect(describeRegistroFailure(429).message).toMatch(/intentos/i);
