@@ -162,7 +162,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
       summary: {},
     });
 
-    render(createElement(CheckoutPage));
+    renderCheckout();
     llenarDireccionValida();
     const submitBtn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
     await waitFor(() => expect(submitBtn.hasAttribute("disabled")).toBe(false));
