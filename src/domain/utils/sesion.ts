@@ -222,7 +222,19 @@ export function describeVerificacionResult(
   };
 }
 
-/** Mensaje neutro del reenvío: nunca confirma que la cuenta exista (SPEC-02 Req. 2). */
+/** Nombre de la cookie indicadora de sesión (H4-S5). */
+export const SESION_COOKIE_NAME = "g3_sesion_activa";
+
+/** Sincroniza la cookie indicadora de sesión en el navegador (H4-S5). */
+export function sincronizarCookieSesion(activa: boolean): void {
+  if (typeof document === "undefined") return;
+  if (activa) {
+    document.cookie = `${SESION_COOKIE_NAME}=1; path=/; max-age=86400; SameSite=Lax`;
+  } else {
+    document.cookie = `${SESION_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
+  }
+}
+
 export const REENVIO_NEUTRO =
   "Si hay una cuenta pendiente con ese correo, te enviamos un enlace nuevo";
 

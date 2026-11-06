@@ -87,9 +87,14 @@ export type BloqueResumenCheckout = BloqueBase & {
 
 export type BloqueConfirmacion = BloqueBase & {
   tipo: "CONFIRMACION_PEDIDO";
-  pedidoId: string;
-  correoEnmascarado: string;
-  total: number;
+  pedidoId?: string;
+  correoEnmascarado?: string;
+  total?: number;
+  datos?: {
+    pedidoId?: string;
+    correoEnmascarado?: string;
+    total?: number;
+  };
 };
 
 export type BloqueError = BloqueBase & {

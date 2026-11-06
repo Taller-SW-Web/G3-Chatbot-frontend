@@ -151,6 +151,48 @@ export type AgregarAlCarritoInput = {
   color?: string;
 };
 
+export type CrearCheckoutInput = {
+  cartId?: string;
+  direccion?: Record<string, unknown>;
+  contacto?: Record<string, unknown>;
+  lineas?: Array<{ sku: string; nombre: string; cantidad: number; precio: number }>;
+  subtotal?: number;
+  costoEnvio?: number;
+  descuento?: number;
+  total: number;
+};
+
+export type CheckoutSesionData = {
+  id: string;
+  cartId: string;
+  orderId?: string;
+  status: string;
+  total: number;
+  expiresAt: string;
+  intentosRestantes: number;
+  summary: Record<string, unknown>;
+};
+
+export type ProcesarPagoInput = {
+  numeroTarjeta: string;
+  titular: string;
+  vencimiento: string;
+  cvv: string;
+};
+
+export type ResultadoPago = {
+  id: string;
+  checkoutId: string;
+  orderId?: string;
+  resultado: string;
+  marca: string;
+  ultimos4: string;
+  monto: number;
+  idTransaccion?: string;
+  correoEnmascarado?: string;
+  mensaje?: string;
+};
+
 export interface ChatbotApiPort {
   login(email: string, password: string): Promise<SessionOpened | MfaChallenge>;
   /** SPEC-01: crea la cuenta y devuelve el correo enmascarado; nunca abre sesión. */
@@ -197,4 +239,10 @@ export interface ChatbotApiPort {
     tarjetaLast4: string;
   }): Promise<{ pedidoId: string }>;
   reenviarConfirmacion(pedidoId: string): Promise<{ ok: true }>;
+  /** SPEC-14: Inicia sesión de checkout en backend con vigencia de 15 min. */
+  iniciarCheckout(input: CrearCheckoutInput): Promise<CheckoutSesionData>;
+  /** SPEC-14: Consulta estado del checkout e intentos restantes. */
+  obtenerCheckout(checkoutId: string): Promise<CheckoutSesionData>;
+  /** SPEC-14: Simula el pago con tarjeta determinista contra el simulador de backend. */
+  pagarCheckout(checkoutId: string, input: ProcesarPagoInput, idempotencyKey?: string): Promise<ResultadoPago>;
 }
