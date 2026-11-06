@@ -14,6 +14,8 @@ import type {
   ProcesarPagoInput,
   ResultadoPago,
   ConversacionResumen,
+  CotizacionEnvio,
+  CotizarEnvioInput,
   DisponibilidadPuntual,
   MfaChallenge,
   PaginaCatalogo,
@@ -258,6 +260,14 @@ export const chatbotApi: ChatbotApiPort = {
       timeout: apiConfig.timeouts.catalogo,
     });
     return data as { mensaje: string };
+  },
+  // Cotización de envío con Despacho (SPEC-12): el costo y el plazo los decide
+  // el backend; la UI nunca inventa un envío. Requiere sesión de cliente.
+  async cotizarEnvio(input: CotizarEnvioInput): Promise<CotizacionEnvio> {
+    const { data } = await http.post(`/envio/cotizar`, input, {
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return data as CotizacionEnvio;
   },
   // Catálogo con datos reales, sin fallback a mocks (SPEC-06, SPEC-09,
   // SPEC-10). Los errores problem+json los ramifica la UI por `code`.

@@ -201,6 +201,26 @@ export type ResultadoPago = {
   mensaje?: string;
 };
 
+/** Entrada de `POST /envio/cotizar` (SPEC-12 Req. 2 y 4). */
+export type CotizarEnvioInput = {
+  destinatario: string;
+  direccion: string;
+  distrito: string;
+  referencia?: string;
+};
+
+/** Respuesta de `POST /envio/cotizar`: cobertura, costo y plazo reales. */
+export type CotizacionEnvio = {
+  coberturaDisponible: boolean;
+  costoEnvio: number;
+  moneda: string;
+  plazoEstimadoDias: number;
+  fechaEstimadaEntrega?: string | null;
+  nombreZona?: string | null;
+  modalidad?: string;
+  distrito: string;
+};
+
 export interface ChatbotApiPort {
   login(email: string, password: string): Promise<SessionOpened | MfaChallenge>;
   /** SPEC-01: crea la cuenta y devuelve el correo enmascarado; nunca abre sesión. */
@@ -231,6 +251,8 @@ export interface ChatbotApiPort {
   actualizarCantidadCarrito(itemId: string, cantidad: number, conversacionId?: string): Promise<CarritoBackend>;
   eliminarLineaCarrito(itemId: string, conversacionId?: string): Promise<{ mensaje: string }>;
   vaciarCarrito(conversacionId?: string): Promise<{ mensaje: string }>;
+  /** Cotiza el envío del carrito a un distrito (SPEC-12). Requiere sesión. */
+  cotizarEnvio(input: CotizarEnvioInput): Promise<CotizacionEnvio>;
   /** Catálogo con datos reales (SPEC-06, SPEC-09, SPEC-10). Sin mocks. */
   buscarProductos(input: BuscarProductosInput): Promise<PaginaCatalogo>;
   verDetalleProducto(productId: string): Promise<unknown>;

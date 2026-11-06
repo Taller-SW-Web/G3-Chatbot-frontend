@@ -11,6 +11,8 @@ import type { DireccionInput } from "@/domain/schemas/direccion.schema";
 import type { PagoInput } from "@/domain/schemas/pago.schema";
 import { totalesCarrito } from "@/domain/entities/CarritoUI";
 import type { CheckoutSesionData } from "@/ports/outbound/ChatbotApiPort";
+import { useCotizacionEnvio } from "@/application/hooks/useCotizacionEnvio";
+import { mensajeCotizacion } from "@/application/errors/cotizacionMensajes";
 
 type ProblemShape = {
   code?: string;
@@ -47,7 +49,9 @@ export function CheckoutPage() {
   );
 
   const { total } = totalesCarrito(carrito);
-  const envio = dir?.distrito ? 12.5 : 0;
+  // El envío sale de Despacho (SPEC-12); sin cotización no se puede confirmar.
+  const { cotizacion, cotizando, error: errorCotizacion, reintentar } = useCotizacionEnvio(dir);
+  const envio = cotizacion?.costoEnvio ?? 0;
   const totalEstimado = total + envio;
 
   // Importes calculados y confirmados por el backend en la sesión de checkout
@@ -230,17 +234,33 @@ export function CheckoutPage() {
             </div>
           )}
           <DireccionForm onValid={setDir} />
-          <p className="text-[12px] text-text-secondary">
-            {dir?.distrito
-              ? `Envío a ${dir.distrito}: S/ 12.50 · llega en 1 día hábil aprox.`
-              : "Envío: se calcula al elegir la dirección"}
+          <p
+            className={`text-[12px] ${errorCotizacion ? "text-error-default" : "text-text-secondary"}`}
+            role={errorCotizacion ? "alert" : undefined}
+          >
+            {cotizando
+              ? "Calculando envío…"
+              : cotizacion
+                ? `Envío a ${cotizacion.distrito}: S/ ${cotizacion.costoEnvio.toFixed(2)} · ${cotizacion.plazoEstimadoDias} día(s) hábil(es)`
+                : errorCotizacion
+                  ? mensajeCotizacion(errorCotizacion)
+                  : "Envío: se calcula al elegir la dirección"}
           </p>
+          {errorCotizacion && (
+            <button
+              type="button"
+              onClick={reintentar}
+              className="wf-chip w-fit px-3 py-1.5 text-[12px] font-semibold text-text-primary"
+            >
+              Reintentar cotización
+            </button>
+          )}
           <p className="text-[12px] text-text-secondary">
             El documento del comprobante puede ser distinto al de tu cuenta.
           </p>
           <button
             onClick={confirmarDireccion}
-            disabled={!dir || creandoCheckout}
+            disabled={!dir || !cotizacion || creandoCheckout}
             className="wf-btn py-3.5 text-sm font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-45"
           >
             {creandoCheckout ? "CONFIRMANDO RESUMEN…" : `CONFIRMAR Y PAGAR S/ ${totalEstimado.toFixed(2)}`}
