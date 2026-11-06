@@ -21,6 +21,7 @@ import type {
 } from "@/ports/outbound/ChatbotApiPort";
 import {
   getPoliticaContrasenaCache,
+  normalizarPolitica,
   setPoliticaContrasenaCache,
 } from "@/domain/utils/passwordPolicy";
 import { mapearHistorial } from "./mapearHistorial";
@@ -128,7 +129,7 @@ export const chatbotApi: ChatbotApiPort = {
     const cache = getPoliticaContrasenaCache();
     if (cache) return cache;
     const { data } = await http.get("/sesion/politica-contrasena");
-    const politica = data as PoliticaContrasena;
+    const politica = normalizarPolitica(data as PoliticaContrasena);
     setPoliticaContrasenaCache(politica);
     return politica;
   },

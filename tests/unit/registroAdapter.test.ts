@@ -122,13 +122,24 @@ describe("política de contraseña en el adapter (SPEC-01 Req. 2)", () => {
     clearPoliticaContrasenaCache();
   });
 
+  it("prefiere los campos en español de la política y cae a los alias", async () => {
+    handler = (config) =>
+      reply(config, 200, { longitudMinima: 10, requiereMayuscula: true, minLength: 8, requireSymbol: true });
+
+    const politica = await chatbotApi.obtenerPoliticaContrasena();
+
+    expect(politica.longitudMinima).toBe(10);
+    expect(politica.requiereMayuscula).toBe(true);
+    expect(politica.requiereCaracterEspecial).toBe(true);
+  });
+
   it("pide la política una vez y reutiliza la caché", async () => {
     handler = (config) => reply(config, 200, { minLength: 10, requireDigit: true });
 
     const primera = await chatbotApi.obtenerPoliticaContrasena();
     const segunda = await chatbotApi.obtenerPoliticaContrasena();
 
-    expect(primera).toEqual({ minLength: 10, requireDigit: true });
+    expect(primera).toMatchObject({ minLength: 10, requireDigit: true, longitudMinima: 10, requiereDigito: true });
     expect(segunda).toBe(primera);
     expect(countOf("/sesion/politica-contrasena")).toBe(1);
   });
