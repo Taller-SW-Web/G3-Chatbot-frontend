@@ -173,10 +173,12 @@ export function renderBloque(
     }
     case "CONFIRMACION_PEDIDO": {
       const b = bloque as BloqueConfirmacion;
+      const pedidoId = b.datos?.pedidoId ?? b.pedidoId ?? "";
+      const correoEnmascarado = b.datos?.correoEnmascarado ?? b.correoEnmascarado ?? "";
       return (
         // Inerte: reenviar la confirmación no está disponible desde el chat todavía.
         <div key={clave} data-testid="bloque-confirmacion-pedido" className="mt-2" inert>
-          <ConfirmacionPedido pedidoId={b.pedidoId} correoEnmascarado={b.correoEnmascarado} />
+          <ConfirmacionPedido pedidoId={pedidoId} correoEnmascarado={correoEnmascarado} />
         </div>
       );
     }

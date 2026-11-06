@@ -59,6 +59,8 @@ export type UltimoPedido = {
   nombre: string;
   tarjetaMarca?: string;
   tarjetaLast4: string;
+  correoEnmascarado?: string;
+  mensajeConfirmacion?: string;
 } | null;
 
 export const useChatStore = create<ChatState>()(

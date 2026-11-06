@@ -162,6 +162,8 @@ export function CheckoutPage() {
         nombre: dir.nombre,
         tarjetaMarca: res.marca || "Visa",
         tarjetaLast4: res.ultimos4 || pago.tarjetaNum.replace(/\D/g, "").slice(-4) || "••••",
+        correoEnmascarado: res.correoEnmascarado,
+        mensajeConfirmacion: res.mensaje,
       });
 
       router.push("/exito");

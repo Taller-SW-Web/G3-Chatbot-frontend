@@ -189,6 +189,8 @@ export type ResultadoPago = {
   ultimos4: string;
   monto: number;
   idTransaccion?: string;
+  correoEnmascarado?: string;
+  mensaje?: string;
 };
 
 export interface ChatbotApiPort {
