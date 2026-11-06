@@ -17,6 +17,7 @@ import type {
   PoliticaContrasena,
   RegistroClienteInput,
   RegistroResultado,
+  ReenvioConfirmacion,
   SessionOpened,
 } from "@/ports/outbound/ChatbotApiPort";
 import {
@@ -311,10 +312,13 @@ export const chatbotApi: ChatbotApiPort = {
       return data as { pedidoId: string };
     }, { pedidoId: "#A-1043" });
   },
-  async reenviarConfirmacion(pedidoId) {
-    return conFallback(async () => {
-      await http.post(`/pedidos/${encodeURIComponent(pedidoId)}/reenviar`);
-      return { ok: true as const };
-    }, { ok: true as const });
+  // Real backend, no fallback: a fake "ok" would tell the customer the e-mail was resent.
+  async reenviarConfirmacion(pedidoId, idempotencyKey) {
+    const { data } = await http.post(
+      `/pedidos/${encodeURIComponent(pedidoId)}/reenviar-confirmacion`,
+      null,
+      { headers: { "Idempotency-Key": idempotencyKey } }
+    );
+    return data as ReenvioConfirmacion;
   },
 };

@@ -151,6 +151,14 @@ export type AgregarAlCarritoInput = {
   color?: string;
 };
 
+/** 202 de `POST /pedidos/{pedidoId}/reenviar-confirmacion` (contratos-integracion §2.5.2). */
+export type ReenvioConfirmacion = {
+  ok: boolean;
+  pedidoId: string;
+  reenviosRestantes: number;
+  correoEnmascarado: string;
+};
+
 export interface ChatbotApiPort {
   login(email: string, password: string): Promise<SessionOpened | MfaChallenge>;
   /** SPEC-01: crea la cuenta y devuelve el correo enmascarado; nunca abre sesión. */
@@ -196,5 +204,6 @@ export interface ChatbotApiPort {
     docNum: string;
     tarjetaLast4: string;
   }): Promise<{ pedidoId: string }>;
-  reenviarConfirmacion(pedidoId: string): Promise<{ ok: true }>;
+  /** SPEC-16 Req. 3: reenvía el correo de confirmación (máx. 2). Propaga 429 LIMITE_REENVIOS_EXCEDIDO. */
+  reenviarConfirmacion(pedidoId: string, idempotencyKey: string): Promise<ReenvioConfirmacion>;
 }
