@@ -55,12 +55,16 @@ export function ConfirmacionPedido({
     }
   }
 
-  let estadoTexto = "";
-  if (estado.fase === "enviando") estadoTexto = "Reenviando el correo…";
+  // One line per sentence: the resend confirmation and, below it, how many are left.
+  let estadoLineas: string[] = [];
+  if (estado.fase === "enviando") estadoLineas = ["Reenviando el correo…"];
   if (estado.fase === "enviado") {
-    estadoTexto = `Listo, reenviamos la confirmación a ${correoParaChat(estado.correo)}. ${textoReenviosRestantes(estado.restantes)}`;
+    estadoLineas = [
+      `Listo, reenviamos la confirmación a ${correoParaChat(estado.correo)}.`,
+      textoReenviosRestantes(estado.restantes),
+    ];
   }
-  if (estado.fase === "limite" || estado.fase === "error") estadoTexto = estado.mensaje;
+  if (estado.fase === "limite" || estado.fase === "error") estadoLineas = [estado.mensaje];
 
   return (
     <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2 text-center text-text-primary">
@@ -82,7 +86,9 @@ export function ConfirmacionPedido({
         data-testid="estado-reenvio"
         className={`text-[12px] ${estado.fase === "error" || estado.fase === "limite" ? "text-error-default" : "text-text-secondary"}`}
       >
-        {estadoTexto}
+        {estadoLineas.map((linea) => (
+          <span key={linea} className="block">{linea}</span>
+        ))}
       </p>
     </div>
   );

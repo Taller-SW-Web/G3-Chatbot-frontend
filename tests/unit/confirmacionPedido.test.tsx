@@ -59,9 +59,12 @@ describe("Reenviar correo", () => {
     fireEvent.click(boton);
 
     const estado = screen.getByRole("status");
-    await waitFor(() =>
-      expect(estado.textContent).toBe("Listo, reenviamos la confirmación a m***a@…. Te queda 1 reenvío.")
-    );
+    await waitFor(() => expect(estado.querySelectorAll("span")).toHaveLength(2));
+    // Each sentence on its own line, inside the same live region.
+    expect([...estado.querySelectorAll("span")].map((s) => s.textContent)).toEqual([
+      "Listo, reenviamos la confirmación a m***a@….",
+      "Te queda 1 reenvío.",
+    ]);
     expect(estado.getAttribute("aria-live")).toBe("polite");
     expect(h.reenviar).toHaveBeenCalledWith("PED-2026-00891", expect.stringMatching(UUID));
     expect((boton as HTMLButtonElement).disabled).toBe(false);
