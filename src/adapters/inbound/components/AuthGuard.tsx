@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useChatStore } from "@/application/state/chatStore";
 
@@ -40,12 +40,32 @@ export function AuthGuard({
   const setAccionPendiente = useChatStore((s) => s.setAccionPendiente);
   const setAuthOpen = useChatStore((s) => s.setAuthOpen);
 
-  // Comprueba tanto presencia como vigencia real del token (H4-S5)
-  const isExpired = Boolean(accessToken && expiraEn && Date.now() >= expiraEn);
-  const isAuthenticated = Boolean(accessToken) && !isExpired;
+  // Comprueba tanto presencia como vigencia real del token (H4-S5).
+  // `Date.now()` no puede llamarse en el render y el efecto tampoco debe hacer
+  // `setState` síncrono (reglas del React Compiler): la primera comprobación se
+  // agenda en un timeout y luego se refresca cada 30 s. `lista` evita redirigir
+  // antes de haber evaluado la vigencia.
+  const [vigencia, setVigencia] = useState({ lista: false, expirado: true });
 
   useEffect(() => {
-    if (!mounted) return;
+    const revisar = () =>
+      setVigencia({
+        lista: true,
+        expirado: !accessToken || !expiraEn || Date.now() >= expiraEn,
+      });
+    const inicial = window.setTimeout(revisar, 0);
+    const periodo = window.setInterval(revisar, 30_000);
+    return () => {
+      window.clearTimeout(inicial);
+      window.clearInterval(periodo);
+    };
+  }, [accessToken, expiraEn]);
+
+  const isAuthenticated =
+    Boolean(accessToken) && vigencia.lista && !vigencia.expirado;
+
+  useEffect(() => {
+    if (!mounted || !vigencia.lista) return;
 
     if (!isAuthenticated) {
       const search = typeof window !== "undefined" ? window.location.search : "";
@@ -55,9 +75,9 @@ export function AuthGuard({
       setAuthOpen(true);
       router.replace(redirectTo);
     }
-  }, [mounted, isAuthenticated, pathname, redirectTo, router, setAccionPendiente, setAuthOpen]);
+  }, [mounted, vigencia.lista, isAuthenticated, pathname, redirectTo, router, setAccionPendiente, setAuthOpen]);
 
-  if (!mounted || !isAuthenticated) {
+  if (!mounted || !vigencia.lista || !isAuthenticated) {
     return (
       fallback ?? (
         <div
