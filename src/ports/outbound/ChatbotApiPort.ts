@@ -142,6 +142,21 @@ export type CarritoBackend = {
   promociones_ok?: boolean;
 };
 
+/** Cupón aplicado al carrito (`POST /carrito/cupon`, SPEC-13). */
+export type CuponAplicado = {
+  codigo: string;
+  descuento: number;
+  moneda: string;
+  promocionId?: string | null;
+};
+
+/** Respuesta de aplicar/quitar cupón: mensaje, cupón y carrito recalculado. */
+export type ResultadoCupon = {
+  mensaje: string;
+  cupon: CuponAplicado | null;
+  carrito: CarritoBackend;
+};
+
 /** Entrada de `POST /carrito/items`. `product_id`/`talla`/`color` completan la línea. */
 export type AgregarAlCarritoInput = {
   sku: string;
@@ -253,6 +268,10 @@ export interface ChatbotApiPort {
   vaciarCarrito(conversacionId?: string): Promise<{ mensaje: string }>;
   /** Cotiza el envío del carrito a un distrito (SPEC-12). Requiere sesión. */
   cotizarEnvio(input: CotizarEnvioInput): Promise<CotizacionEnvio>;
+  /** SPEC-13: valida y aplica el cupón (requiere sesión); no lo consume. */
+  aplicarCupon(codigo: string, confirmarReemplazo?: boolean): Promise<ResultadoCupon>;
+  /** SPEC-13: quita el cupón y recalcula los totales. */
+  quitarCupon(): Promise<ResultadoCupon>;
   /** Catálogo con datos reales (SPEC-06, SPEC-09, SPEC-10). Sin mocks. */
   buscarProductos(input: BuscarProductosInput): Promise<PaginaCatalogo>;
   verDetalleProducto(productId: string): Promise<unknown>;

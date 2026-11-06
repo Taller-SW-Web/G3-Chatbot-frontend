@@ -29,6 +29,14 @@ export function problemFaltantes(error: unknown): string[] {
     : [];
 }
 
+/** Campo de texto extra del problem+json (`motivo`, `cuponActual`, …). */
+export function problemField(error: unknown, field: string): string | undefined {
+  const data = (error as { response?: { data?: Record<string, unknown> } })
+    ?.response?.data;
+  const value = data?.[field];
+  return typeof value === "string" ? value : undefined;
+}
+
 /** true si el fallo es de red (sin respuesta) o el módulo está caído (503). */
 export function isUnavailable(error: unknown): boolean {
   return (

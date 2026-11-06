@@ -12,6 +12,7 @@ import type {
   CheckoutSesionData,
   CrearCheckoutInput,
   ProcesarPagoInput,
+  ResultadoCupon,
   ResultadoPago,
   ConversacionResumen,
   CotizacionEnvio,
@@ -268,6 +269,25 @@ export const chatbotApi: ChatbotApiPort = {
       timeout: apiConfig.timeouts.catalogo,
     });
     return data as CotizacionEnvio;
+  },
+  // Cupones (SPEC-13): el backend valida contra Productos sin consumirlos y
+  // devuelve el carrito recalculado. Requieren sesión de cliente.
+  async aplicarCupon(
+    codigo: string,
+    confirmarReemplazo = false
+  ): Promise<ResultadoCupon> {
+    const { data } = await http.post(
+      `/carrito/cupon`,
+      { codigo, confirmarReemplazo },
+      { timeout: apiConfig.timeouts.catalogo }
+    );
+    return data as ResultadoCupon;
+  },
+  async quitarCupon(): Promise<ResultadoCupon> {
+    const { data } = await http.delete(`/carrito/cupon`, {
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return data as ResultadoCupon;
   },
   // Catálogo con datos reales, sin fallback a mocks (SPEC-06, SPEC-09,
   // SPEC-10). Los errores problem+json los ramifica la UI por `code`.
