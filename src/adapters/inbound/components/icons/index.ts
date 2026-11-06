@@ -1,4 +1,5 @@
 export { Menu2Icon } from "./Menu2Icon";
+export { EyeIcon } from "./EyeIcon";
 export { ArrowLeftIcon } from "./ArrowLeftIcon";
 export { ShoppingCartIcon } from "./ShoppingCartIcon";
 export { PlusIcon } from "./PlusIcon";

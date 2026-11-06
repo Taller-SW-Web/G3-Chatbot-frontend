@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginInput } from "@/domain/schemas/login.schema";
+import { PasswordVisibilityButton } from "./PasswordVisibilityButton";
 
 /** SPEC-03 Req. 1: email + password with generic errors and helper links. */
 export function LoginForm({
@@ -18,6 +20,7 @@ export function LoginForm({
   error?: string | null;
   cargando?: boolean;
 }) {
+  const [verContrasena, setVerContrasena] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: { correo: correoInicial ?? "" },
@@ -29,9 +32,12 @@ export function LoginForm({
         aria-describedby={errors.correo ? "correo-login-error" : undefined}
         className="wf-input px-3 py-2.5 text-sm outline-none" />
       {errors.correo && <span id="correo-login-error" className="text-[12px] text-error-default">{errors.correo.message}</span>}
-      <input {...register("password")} type="password" placeholder="Contraseña"
-        aria-label="Contraseña" autoComplete="current-password"
-        className="wf-input px-3 py-2.5 text-sm outline-none" />
+      <div className="relative">
+        <input {...register("password")} type={verContrasena ? "text" : "password"} placeholder="Contraseña"
+          aria-label="Contraseña" autoComplete="current-password"
+          className="wf-input w-full px-3 py-2.5 pr-12 text-sm outline-none" />
+        <PasswordVisibilityButton visible={verContrasena} onToggle={() => setVerContrasena((v) => !v)} />
+      </div>
       {error && (
         <p role="alert" className="text-[12px] text-error-default">{error}</p>
       )}
