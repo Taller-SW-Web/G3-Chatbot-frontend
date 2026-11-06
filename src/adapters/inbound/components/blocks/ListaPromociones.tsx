@@ -1,4 +1,4 @@
-﻿import { formatPromotionDate, type PromotionSummary } from "@/domain/entities/PromocionesUI";
+import { formatPromotionDate, type PromotionSummary } from "@/domain/entities/PromocionesUI";
 import { sanitize } from "@/domain/utils/sanitize";
 
 /** Only public summaries from G3; never provider benefits or coupon data. */

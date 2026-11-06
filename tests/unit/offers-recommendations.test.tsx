@@ -35,10 +35,27 @@ describe("safe additive offer contract", () => {
     expect(parseIsoDate("2026-02-30T12:00:00Z")).toBeNull();
     expect(parseIsoDate("2026-11-01")).toBeNull();
     expect(parseIsoDate("2026-11-01T12:00:00")).toBeNull();
-    expect(formatPromotionDate(promotion.valid_from)).toBe("31/10");
+    expect(formatPromotionDate(promotion.valid_from)).toBe("31/10/2026");
+    expect(formatPromotionDate("2027-01-01T02:00:00Z")).toBe("31/12/2026");
     expect(parsePromotions([{ ...promotion, coupon_code: "PRIVATE" }])).toEqual([promotion]);
     expect(parsePromotions([{ ...promotion, valid_until: "unknown" }])).toBeNull();
     expect(parsePromotions([{ ...promotion, valid_until: "2020-01-01T00:00:00Z" }])).toBeNull();
+  });
+  it("retains only valid public summaries in mixed responses", () => {
+    const another = { ...promotion, promotion_id: "second", valid_until: null };
+    expect(parsePromotions([
+      null, { ...promotion, promotion_id: " " }, { ...promotion, name: 42 },
+      { ...promotion, valid_from: "2026-02-30T00:00:00Z" },
+      { ...promotion, valid_until: "2026-12-01T00:00:00" },
+      { ...promotion, valid_until: "2020-01-01T00:00:00Z" },
+      { ...promotion, coupon_code: "PRIVATE", benefits: ["secret"] }, another,
+    ])).toEqual([promotion, another]);
+  });
+  it("distinguishes empty responses from unavailable or entirely malformed responses", () => {
+    expect(parsePromotions([])).toEqual([]);
+    for (const value of [null, {}, "promotions", [null, {}, { ...promotion, promotion_id: 42 }]]) {
+      expect(parsePromotions(value)).toBeNull();
+    }
   });
   it("renders effective, regular and server savings without calculating a percentage", () => {
     const { container } = render(<PriceTag {...mapCarouselItem({ ...item, savings_pct: 17 }, 1)} />);
@@ -79,9 +96,9 @@ describe("safe additive offer contract", () => {
     expect(screen.getByText(/La oferta de X terminó/)).toBeTruthy();
   });
   it("renders public promotion summaries, empty and malformed states", () => {
-    const { unmount, container } = bubble([{ tipo: "LISTA_PROMOCIONES", datos: { promociones: [{ ...promotion, coupon_code: "PRIVATE", name: "<script>alert(1)</script>Campaña de prueba" }] } }]);
+    const { unmount, container } = bubble([{ tipo: "LISTA_PROMOCIONES", datos: { promociones: [null, { ...promotion, coupon_code: "PRIVATE", name: "<script>alert(1)</script>Campaña de prueba" }] } }]);
     expect(screen.getByText("Campaña de prueba")).toBeTruthy();
-    expect(screen.getByText(/31\/10/)).toBeTruthy();
+    expect(screen.getByText("Desde el 31/10/2026 hasta el 30/11/2026")).toBeTruthy();
     expect(screen.queryByText("PRIVATE")).toBeNull();
     expect(container.querySelector("script")).toBeNull();
     unmount();

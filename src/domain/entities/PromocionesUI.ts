@@ -33,7 +33,7 @@ export function parseIsoDate(value: unknown): string | null {
 }
 
 export function formatPromotionDate(value: string): string {
-  return new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "2-digit", timeZone: "America/Lima" }).format(new Date(value));
+  return new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Lima" }).format(new Date(value));
 }
 
 /** Whitelist public fields. Malformed rows are not promotions or empty success. */
@@ -41,11 +41,11 @@ export function parsePromotions(value: unknown): PromotionSummary[] | null {
   if (!Array.isArray(value)) return null;
   const items: PromotionSummary[] = [];
   for (const row of value) {
-    if (!row || typeof row !== "object" || typeof row.promotion_id !== "string" || !row.promotion_id.trim() || typeof row.name !== "string" || !row.name.trim()) return null;
+    if (!row || typeof row !== "object" || typeof row.promotion_id !== "string" || !row.promotion_id.trim() || typeof row.name !== "string" || !row.name.trim()) continue;
     const from = parseIsoDate(row.valid_from);
     const until = parseIsoDate(row.valid_until);
-    if (!from || (row.valid_until !== null && !until) || (until && Date.parse(until) < Date.parse(from))) return null;
+    if (!from || (row.valid_until !== null && !until) || (until && Date.parse(until) < Date.parse(from))) continue;
     items.push({ promotion_id: row.promotion_id, name: row.name, valid_from: from, valid_until: until });
   }
-  return items;
+  return value.length > 0 && items.length === 0 ? null : items;
 }

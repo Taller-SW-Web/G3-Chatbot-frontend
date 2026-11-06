@@ -113,3 +113,24 @@ test("fixture clarification sends accumulated payload and stream renders offers 
   await expect(page.getByText("Para correr en asfalto")).toBeVisible();
   await expect(page.getByText("Campaña de prueba")).toBeVisible();
 });
+
+for (const width of [390, 1280]) {
+  test(`fixture promotion validation and Lima dates ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await defaults(page);
+    let rows: unknown = [null, { promotion_id: " ", name: "Invalid", valid_from: "bad", valid_until: null },
+      { ...promotions.datos.promociones[0], valid_until: "2027-01-01T02:00:00Z", coupon_code: "PRIVATE" }];
+    await page.route(`**/api/v1/chat/conversaciones/${conversationId}/mensajes`, async (route) => {
+      await route.fulfill({ json: history([{ ...promotions, datos: { promociones: rows } }]) });
+    });
+    await page.goto(`/chat/${conversationId}`);
+    await expect(page.getByText("Desde el 31/10/2026 hasta el 31/12/2026")).toBeVisible();
+    await expect(page.getByText("PRIVATE")).toHaveCount(0);
+    rows = [null];
+    await page.reload();
+    await expect(page.getByText(/No pudimos mostrar las promociones/)).toBeVisible();
+    rows = [];
+    await page.reload();
+    await expect(page.getByText(/No hay promociones vigentes/)).toBeVisible();
+  });
+}
