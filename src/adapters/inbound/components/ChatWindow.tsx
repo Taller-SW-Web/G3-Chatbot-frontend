@@ -22,7 +22,11 @@ export function ChatWindow({
   aviso,
   onReintentar,
   onQuickAction,
+  actionsBusy = false,
+  pendingActionId,
 }: {
+  actionsBusy?: boolean;
+  pendingActionId?: string | null;
   items: ItemChat[];
   typing: boolean;
   aviso?: AvisoChat | null;
@@ -38,7 +42,7 @@ export function ChatWindow({
   const finRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     finRef.current?.scrollIntoView?.({ block: "end" });
-  }, [items, typing, aviso]);
+  }, [items, typing, aviso, pendingActionId]);
 
   return (
     <div className="p-3 flex flex-col gap-2 pb-4">
@@ -59,11 +63,15 @@ export function ChatWindow({
               degradado={m.degradado}
               motivoDegradado={m.motivoDegradado}
               onQuickAction={onQuickAction}
+              actionsBusy={actionsBusy}
             />
             {i === lastBot && m.texto && <BotFeedback text={m.texto} />}
           </div>
         );
       })}
+      {pendingActionId === "RECOMENDAR_PRODUCTOS" && (
+        <p role="status" aria-live="polite" className="text-[14px] text-text-secondary">Buscando opciones para ti…</p>
+      )}
       {typing && (
         <div
           className="self-start bg-white border border-border-default rounded-full px-3.5 py-2.5 flex items-center gap-1.5"

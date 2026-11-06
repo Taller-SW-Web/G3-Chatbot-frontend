@@ -85,7 +85,7 @@ describe("chat blocks with the backend contract", () => {
     );
   });
 
-  it("adds a single-SKU product by sku", () => {
+  it("adds a single-SKU product with its product context for cross-sell", () => {
     const onAction = vi.fn();
     const unico = {
       ...CARRUSEL,
@@ -94,7 +94,7 @@ describe("chat blocks with the backend contract", () => {
     bubble([unico], onAction);
     fireEvent.click(screen.getByRole("button", { name: "Agregar Nike Revolution 7" }));
     expect(onAction).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "AGREGAR_AL_CARRITO", payload: { sku: "SKU-UNICO" } })
+      expect.objectContaining({ id: "AGREGAR_AL_CARRITO", payload: { sku: "SKU-UNICO", product_id: "prod-001" } })
     );
   });
 

@@ -29,6 +29,7 @@ const h = vi.hoisted(() => {
     promociones_ok: true,
   };
   return {
+    cartData: undefined as unknown,
     CONV_STORE,
     CONV_PROP,
     CARRITO,
@@ -64,7 +65,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 // El GET resuelve la conversación del store; la página NO recibe la prop.
 vi.mock("@/application/hooks/useCarrito", () => ({
   useCarrito: () => ({
-    query: { data: h.CARRITO, isPending: false, isError: false, refetch: vi.fn() },
+    query: { data: h.cartData ?? h.CARRITO, isPending: false, isError: false, refetch: vi.fn() },
     queryKey: ["carrito", "anonimo", "cliente"],
     conversacion: h.CONV_STORE,
     dueno: "anonimo",
@@ -83,6 +84,7 @@ function renderCart(props: { conversacionId?: string } = {}) {
 describe("CartPage: mutaciones del carrito anónimo (SPEC-11)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    h.cartData = undefined;
     h.actualizar.mockResolvedValue(h.CARRITO);
     h.quitar.mockResolvedValue({ mensaje: "ok" });
     h.vaciar.mockResolvedValue({ mensaje: "ok" });
@@ -136,6 +138,27 @@ describe("CartPage: mutaciones del carrito anónimo (SPEC-11)", () => {
         conversacionId: h.CONV_PROP,
       })
     );
+  });
+});
+
+
+describe("CartPage untrusted discount presentation", () => {
+  afterEach(() => { cleanup(); h.cartData = undefined; });
+  it.each([{}, [null], [{ nombre: 42, monto: 24.9 }], [{ nombre: {}, monto: 24.9 }], [{ nombre: "Campaign", monto: null }]])("safely renders malformed discounts %j", (discounts) => {
+    h.cartData = { ...h.CARRITO, descuentos: discounts };
+    expect(() => renderCart()).not.toThrow();
+    expect(screen.queryByText("S/ 0.00")).toBeNull();
+    if (Array.isArray(discounts) && discounts[0]?.monto === 24.9) {
+      expect(screen.getByText("Descuento")).toBeTruthy();
+      expect(screen.getByText("S/ 24.90")).toBeTruthy();
+    } else {
+      expect(screen.getByText("No pudimos mostrar todos los descuentos.")).toBeTruthy();
+    }
+  });
+  it("keeps a valid empty discount list distinct from malformed data", () => {
+    h.cartData = { ...h.CARRITO, descuentos: [] };
+    renderCart();
+    expect(screen.queryByText("No pudimos mostrar todos los descuentos.")).toBeNull();
   });
 });
 
@@ -227,6 +250,23 @@ describe("CartPage: cupón (SPEC-13)", () => {
         true
       )
     );
+  });
+
+  it.each([{}, [null], [{ nombre: 42, monto: 10 }], [{ nombre: "Cupón SPORT10", monto: null }]])(
+    "safely handles malformed discounts for signed-in users: %j", (descuentos) => {
+      h.cartData = { ...h.CARRITO, descuentos };
+      expect(() => renderCart()).not.toThrow();
+      expect(screen.queryByRole("button", { name: /Quitar cupón/i })).toBeNull();
+      h.cartData = undefined;
+    }
+  );
+
+  it("shows a coupon with a numeric string amount", () => {
+    h.cartData = { ...h.CARRITO, descuentos: [{ nombre: "Cupón SPORT10", monto: "10" }] };
+    renderCart();
+    expect(screen.getByText(/ahorras S\/ 10.00/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Quitar cupón/i })).toBeTruthy();
+    h.cartData = undefined;
   });
 
   it("quita el cupón cuando el carrito trae el descuento", async () => {

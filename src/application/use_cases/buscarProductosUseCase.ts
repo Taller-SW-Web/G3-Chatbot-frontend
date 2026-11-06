@@ -14,6 +14,7 @@ export async function buscarProductosUseCase(
   input: BuscarProductosInput
 ): Promise<{ items: CatalogCardItem[]; total: number; mensaje?: string }> {
   const page = await api.buscarProductos({
+    soloOfertas: input.soloOfertas,
     q: input.q?.trim() || undefined,
     categoria: input.categoria,
     marca: input.marca,
@@ -25,7 +26,7 @@ export async function buscarProductosUseCase(
   });
   const raw = Array.isArray(page.items) ? page.items : [];
   return {
-    items: raw.map((item, i) =>
+    items: raw.filter((item) => item != null && typeof item === "object" && typeof (item as BackendCarouselItem).product_id === "string").map((item, i) =>
       mapCarouselItem(item as BackendCarouselItem, i + 1)
     ),
     total: typeof page.total === "number" ? page.total : raw.length,

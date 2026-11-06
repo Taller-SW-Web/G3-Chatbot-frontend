@@ -1,5 +1,8 @@
 "use client";
 
+import { CartDiscounts } from "../CartDiscounts";
+import { PriceTag } from "../PriceTag";
+import { parseAmount } from "@/domain/entities/PromocionesUI";
 import { sanitize } from "@/domain/utils/sanitize";
 import type { DatosCarritoBloque } from "@/domain/entities/Bloque";
 
@@ -35,9 +38,14 @@ export function BloqueCarrito({
               </span>
             )}
           </span>
-          <span className="font-semibold shrink-0">S/ {(l.precio * l.cantidad).toFixed(2)}</span>
+          <span className="font-semibold shrink-0"><PriceTag price={parseAmount(l.precio) === null ? null : l.precio * l.cantidad} /></span>
         </div>
       ))}
+      <div className="flex justify-between gap-2 text-[13px]">
+        <span className="text-text-secondary">Subtotal</span>
+        <PriceTag price={parseAmount(datos.subtotal)} />
+      </div>
+      <CartDiscounts value={datos.descuentos} />
       {(datos.avisos ?? []).map((aviso, i) => (
         <p key={i} role="status" className="text-[12px] text-text-secondary">
           {sanitize(aviso)}
@@ -45,7 +53,7 @@ export function BloqueCarrito({
       ))}
       <div className="flex justify-between text-[14px] border-t border-dashed border-border-default pt-2">
         <span className="text-text-secondary">Total</span>
-        <span className="font-heading text-[18px]">S/ {total.toFixed(2)}</span>
+        <span className="font-heading text-[18px]"><PriceTag price={parseAmount(total)} /></span>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <button

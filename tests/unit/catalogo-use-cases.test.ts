@@ -29,8 +29,8 @@ function apiCon(overrides: Partial<ChatbotApiPort> = {}): {
 describe("casos de uso de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {
   it("buscar normaliza paginación y mapea a tarjetas", async () => {
     const { api, llamadas } = apiCon();
-    const r = await buscarProductosUseCase(api, { q: "  Nike ", tamanio: 99 });
-    expect(llamadas.buscar[0]).toMatchObject({ q: "Nike", pagina: 1, tamanio: 10 });
+    const r = await buscarProductosUseCase(api, { q: "  Nike ", tamanio: 99, soloOfertas: true });
+    expect(llamadas.buscar[0]).toMatchObject({ q: "Nike", pagina: 1, tamanio: 10, soloOfertas: true });
     expect(r.items[0]).toMatchObject({ product_id: "prod-001" });
     expect(r.total).toBe(1);
   });

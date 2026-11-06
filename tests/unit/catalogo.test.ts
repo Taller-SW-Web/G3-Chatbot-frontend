@@ -30,7 +30,7 @@ describe("mappers de catálogo (SPEC-06, SPEC-09)", () => {
       { product_id: "x", price: -5, availability: "RARO" } as never,
       2
     );
-    expect(item.price).toBe(0);
+    expect(item.price).toBeNull();
     expect(item.availability).toBe("INDETERMINADO");
   });
 
@@ -91,7 +91,7 @@ describe("mappers de catálogo (SPEC-06, SPEC-09)", () => {
 });
 
 describe("precio, imagen y etiquetas de disponibilidad", () => {
-  it("formatPrice prefiere price_text del backend", () => {
+  it("formatPrice renders validated PEN with two decimals", () => {
     expect(formatPrice({ priceText: "S/ 279.90", price: 279.9 })).toBe("S/ 279.90");
     expect(formatPrice({ price: 12.5 })).toBe("S/ 12.50");
     expect(formatPrice({ priceText: "  ", price: 0 })).toBe("S/ 0.00");

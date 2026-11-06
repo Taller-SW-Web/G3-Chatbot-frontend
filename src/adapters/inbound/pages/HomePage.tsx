@@ -59,7 +59,7 @@ export function HomePage() {
   // Grid con datos reales (SPEC-06). Sin fallback a mocks en este flujo.
   const catalogo = useQuery({
     queryKey: ["catalogo", "ofertas"],
-    queryFn: () => buscarProductosUseCase(container.api, { pagina: 1, tamanio: 10 }),
+    queryFn: () => buscarProductosUseCase(container.api, { pagina: 1, tamanio: 10, soloOfertas: true }),
   });
   const productos: CatalogCardItem[] = catalogo.data?.items ?? [];
 
@@ -157,7 +157,7 @@ export function HomePage() {
             </span>
             <span className="font-heading text-[28px] leading-[32px]">ENCUENTRA TU<br /><span className="text-action-primary">PRÓXIMA META</span></span>
             <span className="inka-energy-bar" aria-hidden />
-            <span className="text-[14px] text-text-inverse-soft">Equípate para dar tu mejor paso. Stock verificado.</span>
+            <span className="text-[14px] text-text-inverse-soft">Equípate para dar tu mejor paso. Consulta disponibilidad.</span>
             <span className="mt-1 inline-flex w-fit items-center gap-2 rounded-sm bg-action-primary px-4 py-2.5 text-[13px] font-bold tracking-wide text-surface-ink">VER OFERTAS →</span>
           </span>
           <span className="absolute bottom-2 right-2 rounded-full bg-surface-ink-soft border border-border-inverse px-2 py-0.5 text-[11px] font-bold text-text-inverse">{banner + 1} / 4</span>
@@ -174,9 +174,9 @@ export function HomePage() {
           <button className="text-[12px] font-semibold underline text-text-secondary" disabled={creando} onClick={() => irChat("Ver todo en oferta")}>Ver todo</button>
         </div>
 
-        {catalogo.isPending && <p className="text-[13px] text-text-secondary">Cargando productos…</p>}
+        {catalogo.isPending && <p role="status" className="text-[13px] text-text-secondary">Cargando productos…</p>}
         {catalogo.isError && (
-          <div className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
+          <div role="alert" className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
             <p>
               {isUnavailable(catalogo.error)
                 ? "El catálogo no está disponible ahora (servicio o red). Revisa tu conexión e intenta de nuevo."
@@ -192,7 +192,7 @@ export function HomePage() {
         )}
         {!catalogo.isPending && !catalogo.isError && productos.length === 0 && (
           <p className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3">
-            No hay productos para mostrar ahora mismo.
+            No hay productos en oferta ahora mismo.
           </p>
         )}
 
