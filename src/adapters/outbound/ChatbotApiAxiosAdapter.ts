@@ -355,10 +355,11 @@ export const chatbotApi: ChatbotApiPort = {
     );
     return data as ReenvioConfirmacion;
   },
-  async iniciarCheckout(input: CrearCheckoutInput): Promise<CheckoutSesionData> {
-    const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `chk-${Date.now()}`;
+  async iniciarCheckout(input: CrearCheckoutInput, idempotencyKey?: string): Promise<CheckoutSesionData> {
+    // The caller keeps the key stable across retries of the same attempt.
+    const key = idempotencyKey || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `chk-${Date.now()}`);
     const { data } = await http.post("/checkout", input, {
-      headers: { "Idempotency-Key": idempotencyKey },
+      headers: { "Idempotency-Key": key },
     });
     return data as CheckoutSesionData;
   },

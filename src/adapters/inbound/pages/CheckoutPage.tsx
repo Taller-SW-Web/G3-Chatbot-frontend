@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AxiosError } from "axios";
 import { useChatStore } from "@/application/state/chatStore";
@@ -19,7 +19,21 @@ type ProblemShape = {
   detail?: string;
   intentosRestantes?: number;
   motivo?: string;
+  summary?: ResumenServidor;
 };
+
+type ResumenServidor = {
+  lineas?: Array<{ sku: string; cantidad: number; precioUnitario: number }>;
+  subtotal?: number;
+  descuento?: number;
+  costoEnvio?: number;
+  total?: number;
+};
+
+const newKey = (prefix: string) =>
+  typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${prefix}-${Date.now()}`;
+
+const money = (n: number | undefined) => `S/ ${Number(n ?? 0).toFixed(2)}`;
 
 /**
  * `/checkout`: 2 pasos (dirección → tarjeta) con formularios RHF+Zod,
@@ -44,15 +58,18 @@ export function CheckoutPage() {
   const [expirado, setExpirado] = useState(false);
 
   // Clave de idempotencia única por intento de pago (conservada en reintentos del mismo intento)
-  const [idempotencyKeyPago, setIdempotencyKeyPago] = useState<string>(() =>
-    typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pay-${Date.now()}`
-  );
+  const [idempotencyKeyPago, setIdempotencyKeyPago] = useState<string>(() => newKey("pay"));
+
+  // Summary returned with 409 CARRITO_DESACTUALIZADO: the server-side amounts the user must re-confirm.
+  const [resumenActualizado, setResumenActualizado] = useState<ResumenServidor | null>(null);
+  // Idempotency-Key of the checkout attempt: reused while the submitted body is unchanged.
+  const checkoutKeyRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const { total } = totalesCarrito(carrito);
   // El envío sale de Despacho (SPEC-12); sin cotización no se puede confirmar.
   const { cotizacion, cotizando, error: errorCotizacion, reintentar } = useCotizacionEnvio(dir);
   const envio = cotizacion?.costoEnvio ?? 0;
-  const totalEstimado = total + envio;
+  const totalEstimado = resumenActualizado?.total ?? total + envio;
 
   // Importes calculados y confirmados por el backend en la sesión de checkout
   const totalServidor = checkoutSesion?.total ?? totalEstimado;
@@ -87,7 +104,7 @@ export function CheckoutPage() {
 
     try {
       const customerEmail = typeof cliente?.correo === "string" ? cliente.correo.trim() : "";
-      const sesion = await container.api.iniciarCheckout({
+      const payload = {
         direccion: {
           direccionExacta: dir.direccion,
           distrito: dir.distrito,
@@ -99,17 +116,14 @@ export function CheckoutPage() {
           numeroDocumento: dir.docNum,
           ...(customerEmail ? { email: customerEmail } : {}),
         },
-        lineas: carrito.lineas.map((l) => ({
-          sku: l.producto.sku,
-          nombre: l.producto.nombre,
-          cantidad: l.cantidad,
-          precio: l.producto.precio,
-        })),
-        subtotal: total,
-        costoEnvio: envio,
-        descuento: 0,
-        total: totalEstimado,
-      });
+      };
+      const fingerprint = JSON.stringify(payload);
+      if (checkoutKeyRef.current?.fingerprint !== fingerprint) {
+        checkoutKeyRef.current = { fingerprint, key: newKey("chk") };
+      }
+      const sesion = await container.api.iniciarCheckout(payload, checkoutKeyRef.current.key);
+      checkoutKeyRef.current = null;
+      setResumenActualizado(null);
 
       setCheckoutSesion(sesion);
       setIntentosRestantes(sesion.intentosRestantes ?? 3);
@@ -124,8 +138,17 @@ export function CheckoutPage() {
       const status = errorAxios?.response?.status;
       const data = errorAxios?.response?.data;
 
-      if (status === 409) {
-        setErrorPago("Los importes del carrito cambiaron en el servidor. Revisa los datos y confirma nuevamente.");
+      if (status === 409 && data?.code === "CARRITO_DESACTUALIZADO") {
+        // The cart changed: new attempt, new key, and the user confirms the updated summary.
+        checkoutKeyRef.current = null;
+        setResumenActualizado(data.summary ?? null);
+        setErrorPago("El carrito cambió en el servidor. Revisa el resumen actualizado y confirma nuevamente.");
+      } else if (status === 409) {
+        setErrorPago(data?.detail ?? "No se pudo crear el checkout con el carrito actual. Revisa tu carrito.");
+      } else if (status === 422 && data?.code === "SIN_COBERTURA") {
+        setErrorPago("No tenemos cobertura de envío para el distrito elegido. Prueba con otra dirección.");
+      } else if (status === 400) {
+        setErrorPago(data?.detail ?? "Revisa los datos de dirección y contacto e inténtalo de nuevo.");
       } else {
         setErrorPago(data?.detail ?? "No se pudo iniciar el checkout en el servidor. Inténtalo de nuevo.");
       }
@@ -156,7 +179,7 @@ export function CheckoutPage() {
       setUltimoPedido({
         orderId: res.orderId || checkoutSesion.orderId || "PED-2026-00891",
         total: res.monto || totalServidor,
-        subtotal: total,
+        subtotal: Number(checkoutSesion.summary?.subtotal ?? total),
         costoEnvio: costoEnvioServidor,
         lineas: carrito.lineas.map((l) => ({
           nombre: l.producto.nombre,
@@ -180,9 +203,7 @@ export function CheckoutPage() {
 
       if (status === 402) {
         // En caso de rechazo de tarjeta, generar nueva clave para el siguiente intento con otra tarjeta
-        setIdempotencyKeyPago(
-          typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pay-${Date.now()}`
-        );
+        setIdempotencyKeyPago(newKey("pay"));
         const restantes = typeof data?.intentosRestantes === "number" ? data.intentosRestantes : intentosRestantes - 1;
         setIntentosRestantes(restantes);
         setErrorPago(
@@ -231,6 +252,20 @@ export function CheckoutPage() {
               className="rounded-md bg-action-primary-soft text-ember-deep border border-border-default p-3 text-[13px] font-medium"
             >
               {errorPago}
+            </div>
+          )}
+          {resumenActualizado && (
+            <div className="rounded-md bg-white border border-border-default p-3 text-[13px] flex flex-col gap-1" data-testid="resumen-actualizado">
+              <p className="font-semibold">Resumen actualizado</p>
+              {(resumenActualizado.lineas ?? []).map((l) => (
+                <p key={l.sku}>
+                  {l.cantidad} x {l.sku} · {money(l.precioUnitario)}
+                </p>
+              ))}
+              <p>Subtotal: {money(resumenActualizado.subtotal)}</p>
+              <p>Descuento: {money(resumenActualizado.descuento)}</p>
+              <p>Envío: {money(resumenActualizado.costoEnvio)}</p>
+              <p className="font-bold">Total: {money(resumenActualizado.total)}</p>
             </div>
           )}
           <DireccionForm onValid={setDir} />
