@@ -63,8 +63,8 @@ export function ConfirmacionPedido({
   if (estado.fase === "limite" || estado.fase === "error") estadoTexto = estado.mensaje;
 
   return (
-    <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2 text-center">
-      <p className="font-heading text-[20px]">¡PEDIDO {pedidoId} CONFIRMADO!</p>
+    <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2 text-center text-text-primary">
+      <p className="font-heading text-[20px] text-text-primary">¡PEDIDO {pedidoId} CONFIRMADO!</p>
       <p className="text-[13px] text-text-secondary">{avisoConfirmacion(correoEnmascarado)}.</p>
       <p className="text-[12px] text-text-secondary">¿No te llegó? Revisa tu carpeta de spam o reenvíalo.</p>
       <button
