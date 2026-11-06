@@ -18,9 +18,3 @@ export const PRODUCTOS_MOCK = [
   { sku: "C", nombre: "Producto C", categoria: "Calzado deportivo", talla: "Talla 42", color: "Negro", precio: 89, stock: 5 },
   { sku: "D", nombre: "Producto D", categoria: "Calzado deportivo", talla: "Talla 42", color: "Negro", precio: 110, stock: 3 },
 ];
-
-export const DISTRITOS = [
-  "Lima Cercado", "Miraflores", "San Isidro", "Santiago de Surco",
-  "La Molina", "San Miguel", "Los Olivos", "San Juan de Lurigancho",
-  "Villa El Salvador", "Callao",
-];

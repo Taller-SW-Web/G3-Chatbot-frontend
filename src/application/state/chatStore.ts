@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Cliente } from "@/domain/entities/Cliente";
 import type { CarritoUI } from "@/domain/entities/CarritoUI";
-import { isTokenExpiringSoon } from "@/domain/utils/sesion";
+import { isTokenExpiringSoon, sincronizarCookieSesion } from "@/domain/utils/sesion";
 
 type ChatState = {
   accessToken: string | null;
@@ -49,12 +49,18 @@ const carritoVacio: CarritoUI = { lineas: [], subtotal: 0, count: 0 };
 
 /** Resumen del último pedido confirmado (pantalla /exito). */
 export type UltimoPedido = {
+  orderId?: string;
+  total?: number;
   subtotal: number;
+  costoEnvio?: number;
   lineas: { nombre: string; cantidad: number; precio: number }[];
   direccion: string;
   distrito: string;
   nombre: string;
+  tarjetaMarca?: string;
   tarjetaLast4: string;
+  correoEnmascarado?: string;
+  mensajeConfirmacion?: string;
 } | null;
 
 export const useChatStore = create<ChatState>()(
@@ -72,17 +78,23 @@ export const useChatStore = create<ChatState>()(
       primerMensaje: null,
       ultimaConversacionId: null,
       setUltimaConversacionId: (ultimaConversacionId) => set({ ultimaConversacionId }),
-      setToken: (accessToken) => set({
-        accessToken,
-        expiraEn: accessToken ? Date.now() + 15 * 60 * 1000 : null,
-      }),
+      setToken: (accessToken) => {
+        sincronizarCookieSesion(Boolean(accessToken));
+        return set({
+          accessToken,
+          expiraEn: accessToken ? Date.now() + 15 * 60 * 1000 : null,
+        });
+      },
       setCliente: (cliente) => set({ cliente }),
       setExpiraEn: (expiraEn) => set({ expiraEn }),
-      applySession: (accessToken, expiresIn, cliente) => set((s) => ({
-        accessToken,
-        expiraEn: Date.now() + expiresIn * 1000,
-        cliente: cliente === undefined ? s.cliente : cliente,
-      })),
+      applySession: (accessToken, expiresIn, cliente) => {
+        sincronizarCookieSesion(true);
+        return set((s) => ({
+          accessToken,
+          expiraEn: Date.now() + expiresIn * 1000,
+          cliente: cliente === undefined ? s.cliente : cliente,
+        }));
+      },
       isTokenExpiringSoon: () => {
         const { accessToken, expiraEn } = get();
         if (!accessToken) return false;
@@ -94,18 +106,25 @@ export const useChatStore = create<ChatState>()(
       abrirRegistro: () => set({ authOpen: true, authVista: "registro" }),
       setUltimoPedido: (ultimoPedido) => set({ ultimoPedido }),
       setPrimerMensaje: (primerMensaje) => set({ primerMensaje }),
-      logout: () =>
-        set({
+      logout: () => {
+        sincronizarCookieSesion(false);
+        return set({
           accessToken: null,
           expiraEn: null,
           cliente: null,
           carrito: carritoVacio,
           accionPendiente: null,
-        }),
+        });
+      },
     }),
     {
       name: "g3-chat-storage", // LocalStorage, token 15 min (refresh en cookie httpOnly backend)
       version: 2,
+      onRehydrateStorage: () => (state) => {
+        if (state?.accessToken) {
+          sincronizarCookieSesion(true);
+        }
+      },
       // Los mensajes del chat viven en el backend (historial) y en el estado local del turno.
       migrate: (persistido) => {
         const resto = { ...(persistido as Record<string, unknown>) };

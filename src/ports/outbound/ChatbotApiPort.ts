@@ -142,6 +142,21 @@ export type CarritoBackend = {
   promociones_ok?: boolean;
 };
 
+/** Cupón aplicado al carrito (`POST /carrito/cupon`, SPEC-13). */
+export type CuponAplicado = {
+  codigo: string;
+  descuento: number;
+  moneda: string;
+  promocionId?: string | null;
+};
+
+/** Respuesta de aplicar/quitar cupón: mensaje, cupón y carrito recalculado. */
+export type ResultadoCupon = {
+  mensaje: string;
+  cupon: CuponAplicado | null;
+  carrito: CarritoBackend;
+};
+
 /** Entrada de `POST /carrito/items`. `product_id`/`talla`/`color` completan la línea. */
 export type AgregarAlCarritoInput = {
   sku: string;
@@ -149,6 +164,76 @@ export type AgregarAlCarritoInput = {
   product_id?: string;
   talla?: string;
   color?: string;
+};
+
+/** 202 de `POST /pedidos/{pedidoId}/reenviar-confirmacion` (contratos-integracion §2.5.2). */
+export type ReenvioConfirmacion = {
+  ok: boolean;
+  pedidoId: string;
+  reenviosRestantes: number;
+  correoEnmascarado: string;
+};
+
+export type CrearCheckoutInput = {
+  cartId?: string;
+  direccion?: Record<string, unknown>;
+  contacto?: Record<string, unknown>;
+  lineas?: Array<{ sku: string; nombre: string; cantidad: number; precio: number }>;
+  subtotal?: number;
+  costoEnvio?: number;
+  descuento?: number;
+  total: number;
+};
+
+export type CheckoutSesionData = {
+  id: string;
+  cartId: string;
+  orderId?: string;
+  status: string;
+  total: number;
+  expiresAt: string;
+  intentosRestantes: number;
+  summary: Record<string, unknown>;
+};
+
+export type ProcesarPagoInput = {
+  numeroTarjeta: string;
+  titular: string;
+  vencimiento: string;
+  cvv: string;
+};
+
+export type ResultadoPago = {
+  id: string;
+  checkoutId: string;
+  orderId?: string;
+  resultado: string;
+  marca: string;
+  ultimos4: string;
+  monto: number;
+  idTransaccion?: string;
+  correoEnmascarado?: string;
+  mensaje?: string;
+};
+
+/** Entrada de `POST /envio/cotizar` (SPEC-12 Req. 2 y 4). */
+export type CotizarEnvioInput = {
+  destinatario: string;
+  direccion: string;
+  distrito: string;
+  referencia?: string;
+};
+
+/** Respuesta de `POST /envio/cotizar`: cobertura, costo y plazo reales. */
+export type CotizacionEnvio = {
+  coberturaDisponible: boolean;
+  costoEnvio: number;
+  moneda: string;
+  plazoEstimadoDias: number;
+  fechaEstimadaEntrega?: string | null;
+  nombreZona?: string | null;
+  modalidad?: string;
+  distrito: string;
 };
 
 export interface ChatbotApiPort {
@@ -181,6 +266,12 @@ export interface ChatbotApiPort {
   actualizarCantidadCarrito(itemId: string, cantidad: number, conversacionId?: string): Promise<CarritoBackend>;
   eliminarLineaCarrito(itemId: string, conversacionId?: string): Promise<{ mensaje: string }>;
   vaciarCarrito(conversacionId?: string): Promise<{ mensaje: string }>;
+  /** Cotiza el envío del carrito a un distrito (SPEC-12). Requiere sesión. */
+  cotizarEnvio(input: CotizarEnvioInput): Promise<CotizacionEnvio>;
+  /** SPEC-13: valida y aplica el cupón (requiere sesión); no lo consume. */
+  aplicarCupon(codigo: string, confirmarReemplazo?: boolean): Promise<ResultadoCupon>;
+  /** SPEC-13: quita el cupón y recalcula los totales. */
+  quitarCupon(): Promise<ResultadoCupon>;
   /** Catálogo con datos reales (SPEC-06, SPEC-09, SPEC-10). Sin mocks. */
   buscarProductos(input: BuscarProductosInput): Promise<PaginaCatalogo>;
   verDetalleProducto(productId: string): Promise<unknown>;
@@ -196,5 +287,12 @@ export interface ChatbotApiPort {
     docNum: string;
     tarjetaLast4: string;
   }): Promise<{ pedidoId: string }>;
-  reenviarConfirmacion(pedidoId: string): Promise<{ ok: true }>;
+  /** SPEC-16 Req. 3: reenvía el correo de confirmación (máx. 2). Propaga 429 LIMITE_REENVIOS_EXCEDIDO. */
+  reenviarConfirmacion(pedidoId: string, idempotencyKey: string): Promise<ReenvioConfirmacion>;
+  /** SPEC-14: Inicia sesión de checkout en backend con vigencia de 15 min. */
+  iniciarCheckout(input: CrearCheckoutInput): Promise<CheckoutSesionData>;
+  /** SPEC-14: Consulta estado del checkout e intentos restantes. */
+  obtenerCheckout(checkoutId: string): Promise<CheckoutSesionData>;
+  /** SPEC-14: Simula el pago con tarjeta determinista contra el simulador de backend. */
+  pagarCheckout(checkoutId: string, input: ProcesarPagoInput, idempotencyKey?: string): Promise<ResultadoPago>;
 }

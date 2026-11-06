@@ -1,5 +1,6 @@
 import { AppShell } from "@/adapters/inbound/pages/AppShell";
 import { OrderHistoryPage } from "@/adapters/inbound/pages/OrderHistoryPage";
+import { AuthGuard } from "@/adapters/inbound/components/AuthGuard";
 
 const TABS = ["proceso", "entregados", "reembolso", "reclamos"] as const;
 type Tab = (typeof TABS)[number];
@@ -14,7 +15,9 @@ export default async function PedidosTabRoute({
   const initialTab: Tab = (TABS as readonly string[]).includes(tab) ? (tab as Tab) : "proceso";
   return (
     <AppShell initialScreen="pedidos">
-      <OrderHistoryPage initialTab={initialTab} />
+      <AuthGuard>
+        <OrderHistoryPage initialTab={initialTab} />
+      </AuthGuard>
     </AppShell>
   );
 }

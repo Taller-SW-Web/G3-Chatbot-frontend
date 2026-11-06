@@ -72,8 +72,9 @@ function esBloqueError(b: Bloque): b is BloqueError {
 
 /**
  * Renderiza un bloque por tipo con los componentes existentes. Las acciones de los
- * bloques (agregar, ver detalle, elegir variante) salen por `onQuickAction`; el reenvío de
- * correo sigue inerte. Los tipos sin forma definida en `Bloque` no se pintan.
+ * bloques (agregar, ver detalle, elegir variante) salen por `onQuickAction`; el reenvío del
+ * correo de confirmación llama al BFF desde el propio bloque. Los tipos sin forma definida en
+ * `Bloque` no se pintan.
  */
 export function renderBloque(
   bloque: Bloque,
@@ -173,10 +174,11 @@ export function renderBloque(
     }
     case "CONFIRMACION_PEDIDO": {
       const b = bloque as BloqueConfirmacion;
+      const pedidoId = b.datos?.pedidoId ?? b.pedidoId ?? "";
+      const correoEnmascarado = b.datos?.correoEnmascarado ?? b.correoEnmascarado ?? "";
       return (
-        // Inerte: reenviar la confirmación no está disponible desde el chat todavía.
-        <div key={clave} data-testid="bloque-confirmacion-pedido" className="mt-2" inert>
-          <ConfirmacionPedido pedidoId={b.pedidoId} correoEnmascarado={b.correoEnmascarado} />
+        <div key={clave} data-testid="bloque-confirmacion-pedido" className="mt-2">
+          <ConfirmacionPedido pedidoId={pedidoId} correoEnmascarado={correoEnmascarado} />
         </div>
       );
     }

@@ -9,7 +9,14 @@ import type {
   BuscarProductosInput,
   CarritoBackend,
   ChatbotApiPort,
+  CheckoutSesionData,
+  CrearCheckoutInput,
+  ProcesarPagoInput,
+  ResultadoCupon,
+  ResultadoPago,
   ConversacionResumen,
+  CotizacionEnvio,
+  CotizarEnvioInput,
   DisponibilidadPuntual,
   MfaChallenge,
   PaginaCatalogo,
@@ -17,6 +24,7 @@ import type {
   PoliticaContrasena,
   RegistroClienteInput,
   RegistroResultado,
+  ReenvioConfirmacion,
   SessionOpened,
 } from "@/ports/outbound/ChatbotApiPort";
 import {
@@ -254,6 +262,33 @@ export const chatbotApi: ChatbotApiPort = {
     });
     return data as { mensaje: string };
   },
+  // Cotización de envío con Despacho (SPEC-12): el costo y el plazo los decide
+  // el backend; la UI nunca inventa un envío. Requiere sesión de cliente.
+  async cotizarEnvio(input: CotizarEnvioInput): Promise<CotizacionEnvio> {
+    const { data } = await http.post(`/envio/cotizar`, input, {
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return data as CotizacionEnvio;
+  },
+  // Cupones (SPEC-13): el backend valida contra Productos sin consumirlos y
+  // devuelve el carrito recalculado. Requieren sesión de cliente.
+  async aplicarCupon(
+    codigo: string,
+    confirmarReemplazo = false
+  ): Promise<ResultadoCupon> {
+    const { data } = await http.post(
+      `/carrito/cupon`,
+      { codigo, confirmarReemplazo },
+      { timeout: apiConfig.timeouts.catalogo }
+    );
+    return data as ResultadoCupon;
+  },
+  async quitarCupon(): Promise<ResultadoCupon> {
+    const { data } = await http.delete(`/carrito/cupon`, {
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return data as ResultadoCupon;
+  },
   // Catálogo con datos reales, sin fallback a mocks (SPEC-06, SPEC-09,
   // SPEC-10). Los errores problem+json los ramifica la UI por `code`.
   async buscarProductos(input: BuscarProductosInput): Promise<PaginaCatalogo> {
@@ -311,10 +346,32 @@ export const chatbotApi: ChatbotApiPort = {
       return data as { pedidoId: string };
     }, { pedidoId: "#A-1043" });
   },
-  async reenviarConfirmacion(pedidoId) {
-    return conFallback(async () => {
-      await http.post(`/pedidos/${encodeURIComponent(pedidoId)}/reenviar`);
-      return { ok: true as const };
-    }, { ok: true as const });
+  // Real backend, no fallback: a fake "ok" would tell the customer the e-mail was resent.
+  async reenviarConfirmacion(pedidoId, idempotencyKey) {
+    const { data } = await http.post(
+      `/pedidos/${encodeURIComponent(pedidoId)}/reenviar-confirmacion`,
+      null,
+      { headers: { "Idempotency-Key": idempotencyKey } }
+    );
+    return data as ReenvioConfirmacion;
+  },
+  async iniciarCheckout(input: CrearCheckoutInput): Promise<CheckoutSesionData> {
+    const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `chk-${Date.now()}`;
+    const { data } = await http.post("/checkout", input, {
+      headers: { "Idempotency-Key": idempotencyKey },
+    });
+    return data as CheckoutSesionData;
+  },
+  async obtenerCheckout(checkoutId: string): Promise<CheckoutSesionData> {
+    const { data } = await http.get(`/checkout/${encodeURIComponent(checkoutId)}`);
+    return data as CheckoutSesionData;
+  },
+  async pagarCheckout(checkoutId: string, input: ProcesarPagoInput, idempotencyKey?: string): Promise<ResultadoPago> {
+    const key = idempotencyKey || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pay-${Date.now()}`);
+    const { data } = await http.post(`/checkout/${encodeURIComponent(checkoutId)}/pago`, input, {
+      headers: { "Idempotency-Key": key },
+      timeout: apiConfig.timeouts.pago,
+    });
+    return data as ResultadoPago;
   },
 };
