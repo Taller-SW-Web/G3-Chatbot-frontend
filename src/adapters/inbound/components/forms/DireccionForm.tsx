@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { direccionSchema, type DireccionInput } from "@/domain/schemas/direccion.schema";
-import { DISTRITOS } from "@/adapters/outbound/mockData";
+import { DISTRITOS_LIMA } from "@/domain/entities/ubicaciones";
 
 /** SPEC-12,14 documento A14 */
 export function DireccionForm({ onValid }: { onValid: (d: DireccionInput) => void }) {
@@ -20,7 +20,7 @@ export function DireccionForm({ onValid }: { onValid: (d: DireccionInput) => voi
       <input {...register("direccion")} placeholder="Dirección exacta" aria-label="Dirección exacta" className="wf-input px-3 py-2.5 text-sm outline-none" />
       <select {...register("distrito")} aria-label="Distrito de entrega" className="wf-input px-2 py-2.5 text-sm">
         <option value="">Distrito</option>
-        {DISTRITOS.map((d) => <option key={d} value={d}>{d}</option>)}
+        {DISTRITOS_LIMA.map((d) => <option key={d} value={d}>{d}</option>)}
       </select>
       {errors.distrito && <span className="text-[12px] text-error-default">{errors.distrito.message}</span>}
       <input {...register("referencia")} placeholder="Referencia (Opcional)" aria-label="Referencia opcional" className="wf-input px-3 py-2.5 text-sm outline-none" />

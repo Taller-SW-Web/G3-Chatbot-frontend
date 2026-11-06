@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { createElement } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CheckoutPage } from "@/adapters/inbound/pages/CheckoutPage";
 import { useChatStore } from "@/application/state/chatStore";
 
@@ -20,6 +21,8 @@ vi.mock("next/navigation", () => ({
 const mockApi = {
   iniciarCheckout: vi.fn(),
   pagarCheckout: vi.fn(),
+  // SPEC-12: la dirección se cotiza contra Despacho antes de confirmar.
+  cotizarEnvio: vi.fn(),
 };
 
 vi.mock("@/infrastructure/di/container", () => ({
@@ -27,6 +30,7 @@ vi.mock("@/infrastructure/di/container", () => ({
     api: {
       iniciarCheckout: (...args: unknown[]) => mockApi.iniciarCheckout(...args),
       pagarCheckout: (...args: unknown[]) => mockApi.pagarCheckout(...args),
+      cotizarEnvio: (...args: unknown[]) => mockApi.cotizarEnvio(...args),
     },
   },
 }));
@@ -65,6 +69,14 @@ function resetStore() {
   navMock.replace.mockClear();
   mockApi.iniciarCheckout.mockReset();
   mockApi.pagarCheckout.mockReset();
+  mockApi.cotizarEnvio.mockReset();
+  mockApi.cotizarEnvio.mockResolvedValue({
+    coberturaDisponible: true,
+    costoEnvio: 12.5,
+    moneda: "PEN",
+    plazoEstimadoDias: 1,
+    distrito: "Miraflores",
+  });
 }
 
 function llenarDireccionValida() {
@@ -82,12 +94,26 @@ function llenarDireccionValida() {
   });
 }
 
+/** El checkout cotiza el envío con React Query (SPEC-12): necesita su provider. */
+function renderCheckout() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(CheckoutPage)
+    )
+  );
+}
+
 describe("CheckoutPage (SPEC-14, H4-F3)", () => {
   beforeEach(resetStore);
   afterEach(cleanup);
 
   it("renderiza paso 1 de dirección y calcula el total", () => {
-    render(createElement(CheckoutPage));
+    renderCheckout();
 
     expect(screen.getByText("Paso 1 de 2")).toBeDefined();
     expect(screen.getByText("Total a pagar:")).toBeDefined();
@@ -105,7 +131,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
       summary: {},
     });
 
-    render(createElement(CheckoutPage));
+    renderCheckout();
 
     llenarDireccionValida();
 
@@ -145,7 +171,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
       idTransaccion: "SIM-12345",
     });
 
-    render(createElement(CheckoutPage));
+    renderCheckout();
 
     // Avanzar a paso 2
     llenarDireccionValida();
@@ -215,7 +241,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
     };
     mockApi.pagarCheckout.mockRejectedValueOnce(rejectedError);
 
-    render(createElement(CheckoutPage));
+    renderCheckout();
 
     // Paso 1 -> 2
     llenarDireccionValida();
@@ -260,7 +286,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
       },
     });
 
-    render(createElement(CheckoutPage));
+    renderCheckout();
 
     llenarDireccionValida();
 
