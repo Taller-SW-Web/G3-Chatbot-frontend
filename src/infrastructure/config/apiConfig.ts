@@ -1,5 +1,5 @@
 /**
- * URL base backend + timeouts (catálogo 4s, pago 1s). ADR-0017, RNFs.
+ * URL base backend + timeouts (catálogo 4s, pago 10s para cubrir simulación con latencia de 5s). ADR-0017, RNFs.
  * Mismo origen por defecto: `next.config.ts` reenvía /api/* al backend (ADR-0023).
  */
 export const apiConfig = {
@@ -7,6 +7,6 @@ export const apiConfig = {
   timeouts: {
     catalogo: 4000,
     defecto: 8000,
-    pago: 1000,
+    pago: 10000,
   },
 } as const;
