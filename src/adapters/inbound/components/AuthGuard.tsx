@@ -36,10 +36,13 @@ export function AuthGuard({
   );
 
   const accessToken = useChatStore((s) => s.accessToken);
+  const expiraEn = useChatStore((s) => s.expiraEn);
   const setAccionPendiente = useChatStore((s) => s.setAccionPendiente);
   const setAuthOpen = useChatStore((s) => s.setAuthOpen);
 
-  const isAuthenticated = Boolean(accessToken);
+  // Comprueba tanto presencia como vigencia real del token (H4-S5)
+  const isExpired = Boolean(accessToken && expiraEn && Date.now() >= expiraEn);
+  const isAuthenticated = Boolean(accessToken) && !isExpired;
 
   useEffect(() => {
     if (!mounted) return;

@@ -176,12 +176,16 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
     fireEvent.click(pagarBtn);
 
     await waitFor(() => {
-      expect(mockApi.pagarCheckout).toHaveBeenCalledWith("chk-uuid-1", expect.objectContaining({
-        numeroTarjeta: "4111111111111111",
-        titular: "Diego Comprador",
-        vencimiento: "12/28",
-        cvv: "123",
-      }));
+      expect(mockApi.pagarCheckout).toHaveBeenCalledWith(
+        "chk-uuid-1",
+        expect.objectContaining({
+          numeroTarjeta: "4111111111111111",
+          titular: "Diego Comprador",
+          vencimiento: "12/28",
+          cvv: "123",
+        }),
+        expect.any(String)
+      );
       expect(navMock.push).toHaveBeenCalledWith("/exito");
       expect(useChatStore.getState().ultimoPedido).not.toBeNull();
     });
@@ -245,6 +249,33 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
       expect(screen.getByRole("alert")).toBeDefined();
       expect(screen.getByText(/fondos insuficientes/i)).toBeDefined();
       expect(screen.getByText(/Intentos 2\/3/i)).toBeDefined();
+    });
+  });
+
+  it("bloquea el avance y muestra error si iniciarCheckout falla en el servidor (PR #33 crítico 1)", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({
+      response: {
+        status: 500,
+        data: { detail: "Error interno al crear sesión de checkout" },
+      },
+    });
+
+    render(createElement(CheckoutPage));
+
+    llenarDireccionValida();
+
+    const confirmarBtn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    await waitFor(() => expect(confirmarBtn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(confirmarBtn);
+
+    await waitFor(() => {
+      // Debe mantenerse en Paso 1 de 2
+      expect(screen.getByText("Paso 1 de 2")).toBeDefined();
+      // Debe mostrar el error en pantalla
+      expect(screen.getByRole("alert")).toBeDefined();
+      expect(screen.getByText(/Error interno al crear sesión de checkout/i)).toBeDefined();
+      // No debe avanzar a paso 2
+      expect(screen.queryByText("Paso 2 de 2")).toBeNull();
     });
   });
 });

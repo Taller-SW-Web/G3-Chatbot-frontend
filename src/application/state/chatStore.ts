@@ -49,11 +49,15 @@ const carritoVacio: CarritoUI = { lineas: [], subtotal: 0, count: 0 };
 
 /** Resumen del último pedido confirmado (pantalla /exito). */
 export type UltimoPedido = {
+  orderId?: string;
+  total?: number;
   subtotal: number;
+  costoEnvio?: number;
   lineas: { nombre: string; cantidad: number; precio: number }[];
   direccion: string;
   distrito: string;
   nombre: string;
+  tarjetaMarca?: string;
   tarjetaLast4: string;
 } | null;
 

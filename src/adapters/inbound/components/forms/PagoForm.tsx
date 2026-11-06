@@ -3,17 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { pagoSchema, type PagoInput } from "@/domain/schemas/pago.schema";
-
-function detectarMarca(numero: string): string | null {
-  const clean = numero.replace(/\D/g, "");
-  if (clean.startsWith("4")) return "VISA";
-  if (clean.startsWith("34") || clean.startsWith("37")) return "AMEX";
-  const p2 = parseInt(clean.slice(0, 2), 10);
-  const p4 = parseInt(clean.slice(0, 4), 10);
-  if ((p2 >= 51 && p2 <= 55) || (p4 >= 2221 && p4 <= 2720)) return "MASTERCARD";
-  return null;
-}
+import { detectarMarcaTarjeta, pagoSchema, type PagoInput } from "@/domain/schemas/pago.schema";
 
 /** SPEC-14: Captura segura de tarjeta (solo en memoria local, sin persistir PAN ni CVV). */
 export function PagoForm({
@@ -38,7 +28,7 @@ export function PagoForm({
   const numeroVal = watch("tarjetaNum") ?? "";
 
   useEffect(() => {
-    setMarca(detectarMarca(numeroVal));
+    setMarca(detectarMarcaTarjeta(numeroVal));
   }, [numeroVal]);
 
   // Limpiar campos sensibles al desmontar

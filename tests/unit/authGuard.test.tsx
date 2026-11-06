@@ -111,4 +111,26 @@ describe("AuthGuard (H4-S5)", () => {
     useChatStore.getState().logout();
     expect(document.cookie).not.toContain(`${SESION_COOKIE_NAME}=1`);
   });
+
+  it("bloquea el acceso y redirige si el token ya venció (PR #33 alto 5)", async () => {
+    // Token vencido hace 5 segundos
+    useChatStore.setState({
+      accessToken: "token-expirado",
+      expiraEn: Date.now() - 5000,
+    });
+    navMock.pathname = "/cuenta";
+
+    render(
+      createElement(
+        AuthGuard,
+        null,
+        createElement("div", { "data-testid": "contenido-privado" }, "No debe verse")
+      )
+    );
+
+    expect(screen.queryByTestId("contenido-privado")).toBeNull();
+    await waitFor(() => {
+      expect(navMock.replace).toHaveBeenCalledWith("/?abrirLogin=1");
+    });
+  });
 });

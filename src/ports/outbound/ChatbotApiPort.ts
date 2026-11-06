@@ -165,6 +165,7 @@ export type CrearCheckoutInput = {
 export type CheckoutSesionData = {
   id: string;
   cartId: string;
+  orderId?: string;
   status: string;
   total: number;
   expiresAt: string;
@@ -182,6 +183,7 @@ export type ProcesarPagoInput = {
 export type ResultadoPago = {
   id: string;
   checkoutId: string;
+  orderId?: string;
   resultado: string;
   marca: string;
   ultimos4: string;
@@ -240,5 +242,5 @@ export interface ChatbotApiPort {
   /** SPEC-14: Consulta estado del checkout e intentos restantes. */
   obtenerCheckout(checkoutId: string): Promise<CheckoutSesionData>;
   /** SPEC-14: Simula el pago con tarjeta determinista contra el simulador de backend. */
-  pagarCheckout(checkoutId: string, input: ProcesarPagoInput): Promise<ResultadoPago>;
+  pagarCheckout(checkoutId: string, input: ProcesarPagoInput, idempotencyKey?: string): Promise<ResultadoPago>;
 }

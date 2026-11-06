@@ -331,10 +331,10 @@ export const chatbotApi: ChatbotApiPort = {
     const { data } = await http.get(`/checkout/${encodeURIComponent(checkoutId)}`);
     return data as CheckoutSesionData;
   },
-  async pagarCheckout(checkoutId: string, input: ProcesarPagoInput): Promise<ResultadoPago> {
-    const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pay-${Date.now()}`;
+  async pagarCheckout(checkoutId: string, input: ProcesarPagoInput, idempotencyKey?: string): Promise<ResultadoPago> {
+    const key = idempotencyKey || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pay-${Date.now()}`);
     const { data } = await http.post(`/checkout/${encodeURIComponent(checkoutId)}/pago`, input, {
-      headers: { "Idempotency-Key": idempotencyKey },
+      headers: { "Idempotency-Key": key },
       timeout: apiConfig.timeouts.pago,
     });
     return data as ResultadoPago;

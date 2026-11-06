@@ -41,9 +41,18 @@ export function CheckoutPage() {
   const [segundosRestantes, setSegundosRestantes] = useState<number>(15 * 60);
   const [expirado, setExpirado] = useState(false);
 
+  // Clave de idempotencia única por intento de pago (conservada en reintentos del mismo intento)
+  const [idempotencyKeyPago, setIdempotencyKeyPago] = useState<string>(() =>
+    typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pay-${Date.now()}`
+  );
+
   const { total } = totalesCarrito(carrito);
   const envio = dir?.distrito ? 12.5 : 0;
-  const totalPagar = total + envio;
+  const totalEstimado = total + envio;
+
+  // Importes calculados y confirmados por el backend en la sesión de checkout
+  const totalServidor = checkoutSesion?.total ?? totalEstimado;
+  const costoEnvioServidor = Number(checkoutSesion?.summary?.costoEnvio ?? envio);
 
   // Temporizador regresivo de 15 minutos
   useEffect(() => {
@@ -93,7 +102,7 @@ export function CheckoutPage() {
         subtotal: total,
         costoEnvio: envio,
         descuento: 0,
-        total: totalPagar,
+        total: totalEstimado,
       });
 
       setCheckoutSesion(sesion);
@@ -103,33 +112,46 @@ export function CheckoutPage() {
         setSegundosRestantes(diffSegundos || 15 * 60);
       }
       setPaso(2);
-    } catch {
-      // Si el backend no responde o hay modo interino, permitir continuar al paso 2
-      setPaso(2);
+    } catch (err: unknown) {
+      // Bloquear avance al paso 2 y mostrar el error visible
+      const errorAxios = err as AxiosError<ProblemShape>;
+      const status = errorAxios?.response?.status;
+      const data = errorAxios?.response?.data;
+
+      if (status === 409) {
+        setErrorPago("Los importes del carrito cambiaron en el servidor. Revisa los datos y confirma nuevamente.");
+      } else {
+        setErrorPago(data?.detail ?? "No se pudo iniciar el checkout en el servidor. Inténtalo de nuevo.");
+      }
+      setCheckoutSesion(null);
     } finally {
       setCreandoCheckout(false);
     }
   }
 
   async function pagar() {
-    if (!dir || !pago || pagando || expirado || intentosRestantes <= 0) return;
+    if (!dir || !pago || !checkoutSesion?.id || pagando || expirado || intentosRestantes <= 0) return;
     setPagando(true);
     setErrorPago(null);
 
     try {
-      const checkoutId = checkoutSesion?.id ?? "chk-mock";
-
-      if (checkoutSesion?.id) {
-        await container.api.pagarCheckout(checkoutId, {
+      const checkoutId = checkoutSesion.id;
+      const res = await container.api.pagarCheckout(
+        checkoutId,
+        {
           numeroTarjeta: pago.tarjetaNum,
           titular: pago.titular || (cliente?.nombreCompleto || "Cliente"),
           vencimiento: pago.vencimiento,
           cvv: pago.cvv,
-        });
-      }
+        },
+        idempotencyKeyPago
+      );
 
       setUltimoPedido({
+        orderId: res.orderId || checkoutSesion.orderId || "PED-2026-00891",
+        total: res.monto || totalServidor,
         subtotal: total,
+        costoEnvio: costoEnvioServidor,
         lineas: carrito.lineas.map((l) => ({
           nombre: l.producto.nombre,
           cantidad: l.cantidad,
@@ -138,7 +160,8 @@ export function CheckoutPage() {
         direccion: dir.direccion,
         distrito: dir.distrito,
         nombre: dir.nombre,
-        tarjetaLast4: pago.tarjetaNum.replace(/\D/g, "").slice(-4) || "••••",
+        tarjetaMarca: res.marca || "Visa",
+        tarjetaLast4: res.ultimos4 || pago.tarjetaNum.replace(/\D/g, "").slice(-4) || "••••",
       });
 
       router.push("/exito");
@@ -148,6 +171,10 @@ export function CheckoutPage() {
       const data = errorAxios?.response?.data;
 
       if (status === 402) {
+        // En caso de rechazo de tarjeta, generar nueva clave para el siguiente intento con otra tarjeta
+        setIdempotencyKeyPago(
+          typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pay-${Date.now()}`
+        );
         const restantes = typeof data?.intentosRestantes === "number" ? data.intentosRestantes : intentosRestantes - 1;
         setIntentosRestantes(restantes);
         setErrorPago(
@@ -161,6 +188,11 @@ export function CheckoutPage() {
         setErrorPago("El checkout ha vencido hace más de 15 minutos. Tu carrito sigue guardado.");
       } else if (status === 400) {
         setErrorPago(data?.detail ?? "Datos de tarjeta inválidos. Revisa e inténtalo de nuevo.");
+      } else if (status === 401) {
+        setErrorPago("Tu sesión ya no es válida. Por favor inicia sesión nuevamente.");
+      } else if (status === 503) {
+        // En caso de timeout o indisponibilidad temporal, conservar la misma clave de idempotencia
+        setErrorPago("El servicio de pagos no responde. Puedes reintentar la operación.");
       } else {
         setErrorPago("Ocurrió un error al procesar el pago. Por favor intenta de nuevo.");
       }
@@ -180,11 +212,19 @@ export function CheckoutPage() {
 
       <div className="rounded-md bg-surface-ink text-text-inverse px-4 py-3 flex justify-between items-center">
         <span className="text-[14px] font-semibold">Total a pagar:</span>
-        <span className="font-heading text-[20px]">S/ {totalPagar.toFixed(2)}</span>
+        <span className="font-heading text-[20px]">S/ {(paso === 2 ? totalServidor : totalEstimado).toFixed(2)}</span>
       </div>
 
       {paso === 1 ? (
         <>
+          {errorPago && (
+            <div
+              role="alert"
+              className="rounded-md bg-action-primary-soft text-ember-deep border border-border-default p-3 text-[13px] font-medium"
+            >
+              {errorPago}
+            </div>
+          )}
           <DireccionForm onValid={setDir} />
           <p className="text-[12px] text-text-secondary">
             {dir?.distrito
@@ -199,14 +239,14 @@ export function CheckoutPage() {
             disabled={!dir || creandoCheckout}
             className="wf-btn py-3.5 text-sm font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-45"
           >
-            {creandoCheckout ? "CONFIRMANDO RESUMEN…" : `CONFIRMAR Y PAGAR S/ ${totalPagar.toFixed(2)}`}
+            {creandoCheckout ? "CONFIRMANDO RESUMEN…" : `CONFIRMAR Y PAGAR S/ ${totalEstimado.toFixed(2)}`}
           </button>
         </>
       ) : (
         <>
           <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
             <p className="font-heading text-[15px] tracking-[0.06em] uppercase text-text-primary">
-              Tarjeta · Total a pagar: S/ {totalPagar.toFixed(2)}
+              Tarjeta · Total a pagar: S/ {totalServidor.toFixed(2)}
             </p>
             <p className="text-[12px] rounded-md bg-warning-background text-warning-default p-2 font-medium">
               Pago simulado – entorno académico. No uses tarjetas reales.
@@ -241,10 +281,10 @@ export function CheckoutPage() {
             </button>
             <button
               onClick={pagar}
-              disabled={!pago || pagando || expirado || intentosRestantes <= 0}
+              disabled={!pago || !checkoutSesion?.id || pagando || expirado || intentosRestantes <= 0}
               className="wf-btn py-3 text-[12px] font-bold bg-action-primary text-surface-ink disabled:opacity-45"
             >
-              {pagando ? "PROCESANDO…" : `PAGAR S/ ${totalPagar.toFixed(2)}`}
+              {pagando ? "PROCESANDO…" : `PAGAR S/ ${totalServidor.toFixed(2)}`}
             </button>
           </div>
         </>
