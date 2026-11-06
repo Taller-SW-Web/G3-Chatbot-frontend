@@ -13,6 +13,7 @@ import {
   type PoliticaContrasena,
 } from "@/domain/utils/passwordPolicy";
 import { PasswordPolicyChecklist } from "./PasswordPolicyChecklist";
+import { PasswordVisibilityButton } from "./PasswordVisibilityButton";
 
 /**
  * SPEC-01 Req. 1/2: formulario seguro (RHF + Zod), nunca pasa por el LLM.
@@ -56,6 +57,7 @@ export function RegistroForm({
     },
   });
   const [verContrasena, setVerContrasena] = useState(false);
+  const [verConfirmacion, setVerConfirmacion] = useState(false);
   const contrasena = watch("contrasena") ?? "";
 
   // After a failed submit keep the entered values but clear both passwords (SPEC-01 Req. 4).
@@ -151,15 +153,9 @@ export function RegistroForm({
           autoComplete="new-password"
           aria-invalid={!!errors.contrasena}
           aria-describedby="reg-politica"
-          className={`${campoTexto} w-full pr-16`}
+          className={`${campoTexto} w-full pr-12`}
         />
-        <button
-          type="button"
-          onClick={() => setVerContrasena((v) => !v)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold underline text-text-secondary"
-        >
-          {verContrasena ? "Ocultar" : "Ver"}
-        </button>
+        <PasswordVisibilityButton visible={verContrasena} onToggle={() => setVerContrasena((v) => !v)} />
       </div>
       {errors.contrasena && <span className="text-[12px] text-error-default">{errors.contrasena.message}</span>}
       <PasswordPolicyChecklist politica={politica ?? POLITICA_POR_DEFECTO} valor={contrasena} id="reg-politica" />
@@ -167,14 +163,21 @@ export function RegistroForm({
       <label htmlFor="reg-confirmar" className="text-[12px] font-semibold text-text-primary">
         Confirmar contraseña
       </label>
-      <input
-        id="reg-confirmar"
-        type="password"
-        {...register("confirmar")}
-        autoComplete="new-password"
-        aria-invalid={!!errors.confirmar}
-        className={campoTexto}
-      />
+      <div className="relative">
+        <input
+          id="reg-confirmar"
+          type={verConfirmacion ? "text" : "password"}
+          {...register("confirmar")}
+          autoComplete="new-password"
+          aria-invalid={!!errors.confirmar}
+          className={`${campoTexto} w-full pr-12`}
+        />
+        <PasswordVisibilityButton
+          visible={verConfirmacion}
+          onToggle={() => setVerConfirmacion((v) => !v)}
+          fieldLabel="confirmación de contraseña"
+        />
+      </div>
       {errors.confirmar && <span className="text-[12px] text-error-default">{errors.confirmar.message}</span>}
 
       <label htmlFor="reg-terminos" className="flex items-start gap-2 text-[12px] text-text-secondary">

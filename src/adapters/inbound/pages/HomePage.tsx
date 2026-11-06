@@ -133,91 +133,93 @@ export function HomePage() {
   }
 
   return (
-    <div className="p-4 flex flex-col gap-4 pb-24">
-      {aviso && (
-        <p role="alert" aria-live="assertive" className="rounded-md bg-error-soft border border-error-default px-3 py-2.5 text-[13px]">
-          {aviso}
-        </p>
-      )}
-      {agregado && (
-        <p role="status" aria-live="polite" className="rounded-md bg-white border border-border-default px-3 py-2.5 text-[13px]">
-          {agregado}
-        </p>
-      )}
-      <button onClick={() => irChat("Ver ofertas")} disabled={creando}
-        className="relative overflow-hidden rounded-lg w-full text-left bg-surface-ink text-text-inverse px-4 pt-5 pb-6"
-        aria-label="Ver ofertas Inka Athletics">
-        <span aria-hidden className="absolute inset-0 opacity-60" style={{
-          background: "repeating-linear-gradient(115deg, transparent 0 40px, rgba(247,103,7,.14) 40px 42px, transparent 42px 90px, rgba(195,229,4,.10) 90px 92px)",
-        }} />
-        <span className="relative flex flex-col gap-2">
-          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-accent-volt-soft px-2.5 py-1 text-[11px] font-bold text-accent-volt-ink">
-            <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-current" />OFERTAS DE LA SEMANA
-          </span>
-          <span className="font-heading text-[28px] leading-[32px]">ENCUENTRA TU<br /><span className="text-action-primary">PRÓXIMA META</span></span>
-          <span className="inka-energy-bar" aria-hidden />
-          <span className="text-[14px] text-text-inverse-soft">Equípate para dar tu mejor paso. Stock verificado.</span>
-          <span className="mt-1 inline-flex w-fit items-center gap-2 rounded-sm bg-action-primary px-4 py-2.5 text-[13px] font-bold tracking-wide text-surface-ink">VER OFERTAS →</span>
-        </span>
-        <span className="absolute bottom-2 right-2 rounded-full bg-surface-ink-soft border border-border-inverse px-2 py-0.5 text-[11px] font-bold text-text-inverse">{banner + 1} / 4</span>
-      </button>
-      <div className="flex justify-center gap-1.5 -mt-2">
-        {[0, 1, 2, 3].map((i) => (
-          <button key={i} aria-label={`Banner ${i + 1}`} onClick={() => setBanner(i)}
-            className={`h-2 rounded-full transition-all ${i === banner ? "w-6 bg-surface-ink" : "w-2 bg-border-default"}`} />
-        ))}
-      </div>
-
-      <div className="flex items-end justify-between">
-        <h2 className="font-heading text-[24px] leading-[32px]">PRODUCTOS EN OFERTA</h2>
-        <button className="text-[12px] font-semibold underline text-text-secondary" disabled={creando} onClick={() => irChat("Ver todo en oferta")}>Ver todo</button>
-      </div>
-
-      {catalogo.isPending && <p className="text-[13px] text-text-secondary">Cargando productos…</p>}
-      {catalogo.isError && (
-        <div className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
-          <p>
-            {isUnavailable(catalogo.error)
-              ? "El catálogo no está disponible ahora (servicio o red). Revisa tu conexión e intenta de nuevo."
-              : "No pudimos cargar el catálogo."}
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto no-scrollbar p-4">
+        {aviso && (
+          <p role="alert" aria-live="assertive" className="rounded-md bg-error-soft border border-error-default px-3 py-2.5 text-[13px]">
+            {aviso}
           </p>
-          <button
-            onClick={() => void catalogo.refetch()}
-            className="wf-chip w-fit px-3 py-1.5 text-[12px] font-semibold text-text-primary"
-          >
-            Reintentar
-          </button>
-        </div>
-      )}
-      {!catalogo.isPending && !catalogo.isError && productos.length === 0 && (
-        <p className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3">
-          No hay productos para mostrar ahora mismo.
-        </p>
-      )}
-
-      <div className="grid grid-cols-2 gap-3">
-        {productos.map((p) => (
-          <ProductCard key={p.product_id} producto={p} onDetalle={(item) => setDetalleId(item.product_id)} />
-        ))}
-      </div>
-
-      <p className="text-[12px] text-text-secondary rounded-md bg-white border border-border-default p-3">
-        Conversas con un asistente virtual con IA. No compartas contraseñas ni datos de tarjeta en el chat. <span className="underline">Política de privacidad</span>
-      </p>
-
-      <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
-        <p className="font-heading text-[15px] tracking-[0.06em] uppercase text-text-primary">Acciones rápidas</p>
-        <p className="text-[14px] text-text-secondary">Todo listo para seguir avanzando.</p>
-        <div className="flex flex-wrap gap-2">
-          {["Ver ofertas", "Rastrear pedido", "Ayuda con devolución"].map((q) => (
-            <button key={q} onClick={() => irChat(q)} disabled={creando} className="wf-chip px-3 py-1.5 text-[12px] font-semibold text-text-primary hover:border-accent-signal disabled:opacity-60">{q}</button>
+        )}
+        {agregado && (
+          <p role="status" aria-live="polite" className="rounded-md bg-white border border-border-default px-3 py-2.5 text-[13px]">
+            {agregado}
+          </p>
+        )}
+        <button onClick={() => irChat("Ver ofertas")} disabled={creando}
+          className="relative overflow-hidden rounded-lg w-full text-left bg-surface-ink text-text-inverse px-4 pt-5 pb-6"
+          aria-label="Ver ofertas Inka Athletics">
+          <span aria-hidden className="absolute inset-0 opacity-60" style={{
+            background: "repeating-linear-gradient(115deg, transparent 0 40px, rgba(247,103,7,.14) 40px 42px, transparent 42px 90px, rgba(195,229,4,.10) 90px 92px)",
+          }} />
+          <span className="relative flex flex-col gap-2">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-accent-volt-soft px-2.5 py-1 text-[11px] font-bold text-accent-volt-ink">
+              <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-current" />OFERTAS DE LA SEMANA
+            </span>
+            <span className="font-heading text-[28px] leading-[32px]">ENCUENTRA TU<br /><span className="text-action-primary">PRÓXIMA META</span></span>
+            <span className="inka-energy-bar" aria-hidden />
+            <span className="text-[14px] text-text-inverse-soft">Equípate para dar tu mejor paso. Stock verificado.</span>
+            <span className="mt-1 inline-flex w-fit items-center gap-2 rounded-sm bg-action-primary px-4 py-2.5 text-[13px] font-bold tracking-wide text-surface-ink">VER OFERTAS →</span>
+          </span>
+          <span className="absolute bottom-2 right-2 rounded-full bg-surface-ink-soft border border-border-inverse px-2 py-0.5 text-[11px] font-bold text-text-inverse">{banner + 1} / 4</span>
+        </button>
+        <div className="flex justify-center gap-1.5 -mt-2">
+          {[0, 1, 2, 3].map((i) => (
+            <button key={i} aria-label={`Banner ${i + 1}`} onClick={() => setBanner(i)}
+              className={`h-2 rounded-full transition-all ${i === banner ? "w-6 bg-surface-ink" : "w-2 bg-border-default"}`} />
           ))}
         </div>
+
+        <div className="flex items-end justify-between">
+          <h2 className="font-heading text-[24px] leading-[32px]">PRODUCTOS EN OFERTA</h2>
+          <button className="text-[12px] font-semibold underline text-text-secondary" disabled={creando} onClick={() => irChat("Ver todo en oferta")}>Ver todo</button>
+        </div>
+
+        {catalogo.isPending && <p className="text-[13px] text-text-secondary">Cargando productos…</p>}
+        {catalogo.isError && (
+          <div className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
+            <p>
+              {isUnavailable(catalogo.error)
+                ? "El catálogo no está disponible ahora (servicio o red). Revisa tu conexión e intenta de nuevo."
+                : "No pudimos cargar el catálogo."}
+            </p>
+            <button
+              onClick={() => void catalogo.refetch()}
+              className="wf-chip w-fit px-3 py-1.5 text-[12px] font-semibold text-text-primary"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+        {!catalogo.isPending && !catalogo.isError && productos.length === 0 && (
+          <p className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3">
+            No hay productos para mostrar ahora mismo.
+          </p>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          {productos.map((p) => (
+            <ProductCard key={p.product_id} producto={p} onDetalle={(item) => setDetalleId(item.product_id)} />
+          ))}
+        </div>
+
+        <p className="text-[12px] text-text-secondary rounded-md bg-white border border-border-default p-3">
+          Conversas con un asistente virtual con IA. No compartas contraseñas ni datos de tarjeta en el chat. <span className="underline">Política de privacidad</span>
+        </p>
+
+        <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
+          <p className="font-heading text-[15px] tracking-[0.06em] uppercase text-text-primary">Acciones rápidas</p>
+          <p className="text-[14px] text-text-secondary">Todo listo para seguir avanzando.</p>
+          <div className="flex flex-wrap gap-2">
+            {["Ver ofertas", "Rastrear pedido", "Ayuda con devolución"].map((q) => (
+              <button key={q} onClick={() => irChat(q)} disabled={creando} className="wf-chip px-3 py-1.5 text-[12px] font-semibold text-text-primary hover:border-accent-signal disabled:opacity-60">{q}</button>
+            ))}
+          </div>
+        </div>
+        <p className="text-[12px] text-text-secondary">Toca + para elegir talla y color antes de agregar.</p>
       </div>
-      <p className="text-[12px] text-text-secondary">Toca + para elegir talla y color antes de agregar.</p>
 
       {(creando || fallido !== null) && (
-        <div className="fixed bottom-[64px] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-3 pb-2">
+        <div className="px-3 pt-2">
           {creando ? (
             <p role="status" className="rounded-md bg-white border border-border-default p-3 text-[13px] text-text-secondary">
               Creando conversación…
@@ -232,7 +234,7 @@ export function HomePage() {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] border-t border-border-default bg-surface-cloud px-3 py-3 flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2 border-t border-border-default bg-surface-cloud px-3 py-3">
         <button aria-label="Agregar imagen (próximamente)" title="Próximamente" disabled
           className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse disabled:opacity-45 disabled:cursor-not-allowed"><PhotoIcon size={20} /></button>
         <input value={composer} maxLength={MENSAJE_MAX_CARACTERES} disabled={creando} aria-label="Mensaje"

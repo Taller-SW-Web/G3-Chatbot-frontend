@@ -123,7 +123,7 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 bg-surface-cloud overflow-y-auto no-scrollbar">
+      <main className={`flex-1 min-h-0 bg-surface-cloud ${initialScreen === "home" ? "overflow-hidden" : "overflow-y-auto no-scrollbar"}`}>
         {children}
       </main>
 

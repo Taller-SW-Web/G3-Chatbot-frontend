@@ -17,6 +17,24 @@ function llenar(contrasena: string) {
 }
 
 describe("RegistroForm", () => {
+  it("muestra y oculta cada contraseña con su botón de ojo", () => {
+    render(createElement(RegistroForm, { onOk: vi.fn() }));
+    const contrasena = screen.getByLabelText("Contraseña") as HTMLInputElement;
+    const confirmacion = screen.getByLabelText("Confirmar contraseña") as HTMLInputElement;
+
+    expect(contrasena.type).toBe("password");
+    expect(confirmacion.type).toBe("password");
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar contraseña" }));
+    expect(contrasena.type).toBe("text");
+    expect(confirmacion.type).toBe("password");
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar confirmación de contraseña" }));
+    expect(confirmacion.type).toBe("text");
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar contraseña" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar confirmación de contraseña" }));
+    expect(contrasena.type).toBe("password");
+    expect(confirmacion.type).toBe("password");
+  });
+
   it("bloquea el envío si la contraseña no cumple la política cargada", async () => {
     const onOk = vi.fn();
     render(createElement(RegistroForm, { onOk, politica: { minLength: 8, requireSymbol: true } }));
