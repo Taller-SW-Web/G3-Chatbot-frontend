@@ -22,7 +22,7 @@ const h = vi.hoisted(() => {
       },
     ],
     subtotal: 100,
-    descuentos: [],
+    descuentos: [] as { nombre: string; monto: number }[],
     costoEnvio: null,
     total: 100,
     avisos: [],
@@ -36,6 +36,8 @@ const h = vi.hoisted(() => {
     quitar: vi.fn(),
     vaciar: vi.fn(),
     agregar: vi.fn(),
+    aplicarCupon: vi.fn(),
+    quitarCupon: vi.fn(),
   };
 });
 
@@ -50,6 +52,12 @@ vi.mock("@/application/use_cases/vaciarCarritoUseCase", () => ({
 }));
 vi.mock("@/application/use_cases/agregarProductoAlCarritoUseCase", () => ({
   agregarProductoAlCarritoUseCase: h.agregar,
+}));
+vi.mock("@/application/use_cases/aplicarCuponUseCase", () => ({
+  aplicarCuponUseCase: h.aplicarCupon,
+}));
+vi.mock("@/application/use_cases/quitarCuponUseCase", () => ({
+  quitarCuponUseCase: h.quitarCupon,
 }));
 vi.mock("@/infrastructure/di/container", () => ({ container: { api: {} } }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -128,5 +136,120 @@ describe("CartPage: mutaciones del carrito anónimo (SPEC-11)", () => {
         conversacionId: h.CONV_PROP,
       })
     );
+  });
+});
+
+describe("CartPage: cupón (SPEC-13)", () => {
+  const CLIENTE = {
+    id: "cli-1",
+    nombreCompleto: "Ana Díaz",
+    correo: "ana@test.pe",
+    celularVerificado: true,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.CARRITO.descuentos = [];
+    h.CARRITO.total = 100;
+    useChatStore.setState({ cliente: CLIENTE, ultimaConversacionId: null });
+  });
+
+  afterEach(() => cleanup());
+
+  function aplicar(codigo: string) {
+    fireEvent.change(screen.getByLabelText("Código de cupón"), {
+      target: { value: codigo },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /APLICAR/ }));
+  }
+
+  it("aplica el cupón y muestra el ahorro del servidor", async () => {
+    h.aplicarCupon.mockResolvedValue({
+      mensaje: "Cupón SPORT10 aplicado.",
+      cupon: { codigo: "SPORT10", descuento: 10, moneda: "PEN" },
+      carrito: {
+        ...h.CARRITO,
+        descuentos: [{ nombre: "Cupón SPORT10", monto: 10 }],
+        total: 90,
+      },
+    });
+
+    renderCart();
+    aplicar("sport10");
+
+    await waitFor(() =>
+      expect(h.aplicarCupon).toHaveBeenCalledWith(expect.anything(), "sport10", false)
+    );
+  });
+
+  it("muestra el motivo cuando Productos rechaza el cupón", async () => {
+    h.aplicarCupon.mockRejectedValue({
+      response: { status: 422, data: { code: "CUPON_INVALIDO", motivo: "EXPIRADO" } },
+    });
+
+    renderCart();
+    aplicar("VIEJO10");
+
+    expect(await screen.findByText("El cupón venció.")).toBeDefined();
+  });
+
+  it("pide confirmación antes de reemplazar otro cupón", async () => {
+    h.aplicarCupon
+      .mockRejectedValueOnce({
+        response: {
+          status: 409,
+          data: { code: "REQUIERE_CONFIRMACION_REEMPLAZO", cuponActual: "SPORT10" },
+        },
+      })
+      .mockResolvedValueOnce({
+        mensaje: "Cupón RUN10 aplicado.",
+        cupon: { codigo: "RUN10", descuento: 12, moneda: "PEN" },
+        carrito: {
+          ...h.CARRITO,
+          descuentos: [{ nombre: "Cupón RUN10", monto: 12 }],
+          total: 88,
+        },
+      });
+
+    renderCart();
+    aplicar("RUN10");
+
+    expect(
+      await screen.findByText(/Ya tienes el cupón SPORT10/i)
+    ).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: /REEMPLAZAR/ }));
+
+    await waitFor(() =>
+      expect(h.aplicarCupon).toHaveBeenLastCalledWith(
+        expect.anything(),
+        "RUN10",
+        true
+      )
+    );
+  });
+
+  it("quita el cupón cuando el carrito trae el descuento", async () => {
+    h.CARRITO.descuentos = [{ nombre: "Cupón SPORT10", monto: 10 }];
+    h.CARRITO.total = 90;
+    h.quitarCupon.mockResolvedValue({
+      mensaje: "Quitamos el cupón.",
+      cupon: null,
+      carrito: { ...h.CARRITO, descuentos: [], total: 100 },
+    });
+
+    renderCart();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Quitar cupón/i }));
+
+    await waitFor(() => expect(h.quitarCupon).toHaveBeenCalled());
+  });
+
+  it("no muestra el cupón a un visitante anónimo", () => {
+    useChatStore.setState({ cliente: null });
+
+    renderCart();
+
+    expect(screen.queryByTestId("cupon-carrito")).toBeNull();
   });
 });

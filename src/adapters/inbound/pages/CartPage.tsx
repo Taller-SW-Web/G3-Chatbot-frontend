@@ -10,12 +10,15 @@ import { useChatStore } from "@/application/state/chatStore";
 import { useCarrito } from "@/application/hooks/useCarrito";
 import { conversacionParaCarrito } from "@/domain/utils/carrito";
 import { container } from "@/infrastructure/di/container";
-import { problemCode } from "@/domain/utils/httpError";
+import { problemCode, problemField } from "@/domain/utils/httpError";
 import { mensajeCarrito } from "@/application/errors/carritoMensajes";
+import { mensajeCupon } from "@/application/errors/cuponMensajes";
 import { actualizarCantidadCarritoUseCase } from "@/application/use_cases/actualizarCantidadCarritoUseCase";
 import { quitarDelCarritoUseCase } from "@/application/use_cases/quitarDelCarritoUseCase";
 import { vaciarCarritoUseCase } from "@/application/use_cases/vaciarCarritoUseCase";
 import { agregarProductoAlCarritoUseCase } from "@/application/use_cases/agregarProductoAlCarritoUseCase";
+import { aplicarCuponUseCase } from "@/application/use_cases/aplicarCuponUseCase";
+import { quitarCuponUseCase } from "@/application/use_cases/quitarCuponUseCase";
 import type { CarritoBackend } from "@/ports/outbound/ChatbotApiPort";
 import { sanitize } from "@/domain/utils/sanitize";
 
@@ -39,6 +42,9 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   const [avisoCelular, setAvisoCelular] = useState(false);
   const [deshacer, setDeshacer] = useState<{ sku: string; cantidad: number; nombre: string } | null>(null);
   const [confirmarVaciar, setConfirmarVaciar] = useState(false);
+  const [codigoCupon, setCodigoCupon] = useState("");
+  const [avisoCupon, setAvisoCupon] = useState<string | null>(null);
+  const [reemplazo, setReemplazo] = useState<{ codigo: string; actual: string } | null>(null);
 
   const carrito: CarritoBackend | undefined = carritoQuery.data;
 
@@ -100,6 +106,41 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
     },
   });
 
+  const aplicarCupon = useMutation({
+    mutationFn: (input: { codigo: string; confirmarReemplazo?: boolean }) =>
+      aplicarCuponUseCase(container.api, input.codigo, input.confirmarReemplazo ?? false),
+    onSuccess: (data) => {
+      // La respuesta ya trae el carrito recalculado con el descuento.
+      queryClient.setQueryData(queryKey, data.carrito);
+      invalidar();
+      setCodigoCupon("");
+      setAvisoCupon(null);
+      setReemplazo(null);
+    },
+    onError: (error, input) => {
+      if (problemCode(error) === "REQUIERE_CONFIRMACION_REEMPLAZO") {
+        setReemplazo({
+          codigo: input.codigo,
+          actual: problemField(error, "cuponActual") ?? "otro",
+        });
+        setAvisoCupon(null);
+        return;
+      }
+      setAvisoCupon(mensajeCupon(error));
+    },
+  });
+
+  const quitarCupon = useMutation({
+    mutationFn: () => quitarCuponUseCase(container.api),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKey, data.carrito);
+      invalidar();
+      setAvisoCupon(null);
+      setReemplazo(null);
+    },
+    onError: (error) => setAvisoCupon(mensajeCupon(error)),
+  });
+
   function irAPagar() {
     if (!cliente) {
       setAccionPendiente("/checkout");
@@ -153,6 +194,9 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
 
   const lineas = carrito?.lineas ?? [];
   const pendientes = cambiarCantidad.isPending || quitar.isPending || vaciar.isPending || reagregar.isPending;
+  const cuponAplicado = (carrito?.descuentos ?? []).find((d) =>
+    d.nombre.startsWith("Cupón ")
+  );
 
   return (
     <div className="flex flex-col min-h-full" data-testid="cart-page">
@@ -239,6 +283,91 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
           <p className="text-sm text-text-secondary text-center py-8">
             Tu carrito está vacío. Prueba con Ver ofertas o Buscar productos.
           </p>
+        )}
+        {cliente && lineas.length > 0 && (
+          <div
+            className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2"
+            data-testid="cupon-carrito"
+          >
+            <p className="font-heading text-[15px] uppercase">Cupón de descuento</p>
+            {cuponAplicado ? (
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[13px] text-text-secondary">
+                  Aplicado · ahorras S/ {cuponAplicado.monto.toFixed(2)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => quitarCupon.mutate()}
+                  disabled={quitarCupon.isPending || pendientes}
+                  className="text-[12px] font-semibold underline disabled:opacity-60"
+                >
+                  {quitarCupon.isPending ? "Quitando…" : "Quitar cupón"}
+                </button>
+              </div>
+            ) : reemplazo ? (
+              <div
+                role="alertdialog"
+                aria-label="Confirmar reemplazo de cupón"
+                className="flex flex-col gap-2"
+              >
+                <p className="text-[13px]">
+                  Ya tienes el cupón {reemplazo.actual}. ¿Reemplazarlo por {reemplazo.codigo}?
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setReemplazo(null)}
+                    className="wf-btn py-2 text-[12px] font-bold bg-white border border-border-default"
+                  >
+                    CANCELAR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      aplicarCupon.mutate({
+                        codigo: reemplazo.codigo,
+                        confirmarReemplazo: true,
+                      })
+                    }
+                    disabled={aplicarCupon.isPending}
+                    className="wf-btn py-2 text-[12px] font-bold bg-action-primary text-surface-ink disabled:opacity-60"
+                  >
+                    {aplicarCupon.isPending ? "REEMPLAZANDO…" : "REEMPLAZAR"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const codigo = codigoCupon.trim();
+                  if (codigo) aplicarCupon.mutate({ codigo });
+                }}
+                className="flex gap-2"
+              >
+                <input
+                  value={codigoCupon}
+                  onChange={(e) => setCodigoCupon(e.target.value)}
+                  maxLength={40}
+                  aria-label="Código de cupón"
+                  placeholder="Código de cupón"
+                  className="flex-1 wf-input px-3 py-2.5 text-sm uppercase outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={aplicarCupon.isPending || !codigoCupon.trim()}
+                  className="wf-btn px-4 py-2.5 text-[12px] font-bold bg-surface-ink text-text-inverse disabled:opacity-60"
+                >
+                  {aplicarCupon.isPending ? "APLICANDO…" : "APLICAR"}
+                </button>
+              </form>
+            )}
+            {avisoCupon && (
+              <p role="alert" className="text-[12px] text-error-default">
+                {avisoCupon}
+              </p>
+            )}
+          </div>
         )}
         {lineas.length > 0 && !confirmarVaciar && (
           <button
