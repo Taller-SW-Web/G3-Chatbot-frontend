@@ -118,10 +118,32 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
 
     await waitFor(() => {
       expect(mockApi.iniciarCheckout).toHaveBeenCalled();
+      expect(mockApi.iniciarCheckout).toHaveBeenCalledWith(expect.objectContaining({
+        contacto: expect.objectContaining({ email: "diego@test.pe" }),
+      }));
       expect(screen.getByText("Paso 2 de 2")).toBeDefined();
       expect(screen.getByText(/Pago simulado – entorno académico/i)).toBeDefined();
       expect(screen.getByText(/Intentos 3\/3/i)).toBeDefined();
     });
+  });
+
+  it("omite contacto.email cuando el correo del cliente está vacío", async () => {
+    useChatStore.setState((state) => ({ cliente: { ...state.cliente!, correo: "  " } }));
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-uuid-1",
+      total: 132.5,
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    render(createElement(CheckoutPage));
+    llenarDireccionValida();
+    const submitBtn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    await waitFor(() => expect(submitBtn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => expect(mockApi.iniciarCheckout).toHaveBeenCalled());
+    expect(mockApi.iniciarCheckout.mock.calls[0][0].contacto).not.toHaveProperty("email");
   });
 
   it("completa pago aprobado con tarjeta de prueba y redirige a /exito", async () => {

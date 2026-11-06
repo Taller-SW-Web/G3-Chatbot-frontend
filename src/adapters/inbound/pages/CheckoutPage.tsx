@@ -82,6 +82,7 @@ export function CheckoutPage() {
     setErrorPago(null);
 
     try {
+      const customerEmail = typeof cliente?.correo === "string" ? cliente.correo.trim() : "";
       const sesion = await container.api.iniciarCheckout({
         direccion: {
           direccionExacta: dir.direccion,
@@ -92,6 +93,7 @@ export function CheckoutPage() {
           nombreCompleto: dir.nombre,
           tipoDocumento: dir.docTipo,
           numeroDocumento: dir.docNum,
+          ...(customerEmail ? { email: customerEmail } : {}),
         },
         lineas: carrito.lineas.map((l) => ({
           sku: l.producto.sku,
