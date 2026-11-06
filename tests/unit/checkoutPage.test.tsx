@@ -144,9 +144,19 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
 
     await waitFor(() => {
       expect(mockApi.iniciarCheckout).toHaveBeenCalled();
-      expect(mockApi.iniciarCheckout).toHaveBeenCalledWith(expect.objectContaining({
-        contacto: expect.objectContaining({ email: "diego@test.pe" }),
-      }));
+      expect(mockApi.iniciarCheckout).toHaveBeenCalledWith(
+        expect.objectContaining({
+          direccion: expect.objectContaining({ distrito: "Miraflores" }),
+          contacto: expect.objectContaining({ email: "diego@test.pe" }),
+        }),
+        expect.any(String)
+      );
+      // The server computes lines and amounts: none of them may be sent.
+      const body = mockApi.iniciarCheckout.mock.calls[0][0];
+      expect(Object.keys(body).sort()).toEqual(["contacto", "direccion"]);
+      for (const k of ["lineas", "subtotal", "costoEnvio", "descuento", "total"]) {
+        expect(body).not.toHaveProperty(k);
+      }
       expect(screen.getByText("Paso 2 de 2")).toBeDefined();
       expect(screen.getByText(/Pago simulado – entorno académico/i)).toBeDefined();
       expect(screen.getByText(/Intentos 3\/3/i)).toBeDefined();
@@ -325,5 +335,74 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
       // No debe avanzar a paso 2
       expect(screen.queryByText("Paso 2 de 2")).toBeNull();
     });
+  });
+
+  it("muestra el summary del 409 CARRITO_DESACTUALIZADO y pide confirmar de nuevo", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({
+      response: {
+        status: 409,
+        data: {
+          code: "CARRITO_DESACTUALIZADO",
+          summary: {
+            lineas: [{ sku: "SKU-ZAP-1", cantidad: 1, precioUnitario: 110 }],
+            subtotal: 110,
+            descuento: 10,
+            costoEnvio: 12.5,
+            total: 112.5,
+          },
+        },
+      },
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("resumen-actualizado")).toBeDefined();
+      expect(screen.getByText("Total: S/ 112.50")).toBeDefined();
+      expect(screen.getByText(/confirma nuevamente/i)).toBeDefined();
+      expect(screen.getByText("Paso 1 de 2")).toBeDefined();
+    });
+  });
+
+  it("muestra mensaje ante 422 SIN_COBERTURA", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({
+      response: { status: 422, data: { code: "SIN_COBERTURA" } },
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    await waitFor(() => expect(screen.getByText(/cobertura de envío/i)).toBeDefined());
+  });
+
+  it("reutiliza la Idempotency-Key al reintentar el mismo envío", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({ response: { status: 503, data: {} } });
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-uuid-1",
+      total: 132.5,
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+
+    fireEvent.click(screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i }));
+    await waitFor(() => expect(mockApi.iniciarCheckout).toHaveBeenCalledTimes(2));
+
+    const [first, second] = mockApi.iniciarCheckout.mock.calls;
+    expect(first[1]).toEqual(expect.any(String));
+    expect(second[1]).toBe(first[1]);
   });
 });

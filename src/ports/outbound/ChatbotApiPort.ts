@@ -174,15 +174,11 @@ export type ReenvioConfirmacion = {
   correoEnmascarado: string;
 };
 
+/** Body of `POST /checkout`: the server computes lines and amounts (contratos-integracion §2.8). */
 export type CrearCheckoutInput = {
   cartId?: string;
   direccion?: Record<string, unknown>;
   contacto?: Record<string, unknown>;
-  lineas?: Array<{ sku: string; nombre: string; cantidad: number; precio: number }>;
-  subtotal?: number;
-  costoEnvio?: number;
-  descuento?: number;
-  total: number;
 };
 
 export type CheckoutSesionData = {
@@ -290,7 +286,7 @@ export interface ChatbotApiPort {
   /** SPEC-16 Req. 3: reenvía el correo de confirmación (máx. 2). Propaga 429 LIMITE_REENVIOS_EXCEDIDO. */
   reenviarConfirmacion(pedidoId: string, idempotencyKey: string): Promise<ReenvioConfirmacion>;
   /** SPEC-14: Inicia sesión de checkout en backend con vigencia de 15 min. */
-  iniciarCheckout(input: CrearCheckoutInput): Promise<CheckoutSesionData>;
+  iniciarCheckout(input: CrearCheckoutInput, idempotencyKey?: string): Promise<CheckoutSesionData>;
   /** SPEC-14: Consulta estado del checkout e intentos restantes. */
   obtenerCheckout(checkoutId: string): Promise<CheckoutSesionData>;
   /** SPEC-14: Simula el pago con tarjeta determinista contra el simulador de backend. */
