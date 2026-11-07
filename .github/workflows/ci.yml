@@ -121,6 +121,85 @@ jobs:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
 
+  # E2E contra el stack real: Next + backend + PostgreSQL, con los módulos
+  # externos en modo `fake` (ADR-0022), que es el modo con el que se demuestra el
+  # producto. Sin LLM: los flujos del chat real viven en `e2e-real.yml` (nocturno).
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: chatbot_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_BACKEND_REF: development
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/chatbot_e2e
+      API_PROXY_TARGET: http://127.0.0.1:8000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # El backend es público: se clona la rama acordada, sin token extra.
+      - name: Clone backend
+        run: git clone --depth 1 --branch "$E2E_BACKEND_REF" https://github.com/Taller-SW-Web/G3-Chatbot-backend.git ../backend
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend dependencies
+        working-directory: ../backend
+        run: pip install -r requirements.txt
+      - name: Migrate database
+        working-directory: ../backend
+        run: alembic upgrade head
+      - name: Start backend (módulos fake)
+        working-directory: ../backend
+        env:
+          MODULES_MODE: fake
+          APP_ENV: development
+          FRONTEND_BASE_URL: http://localhost:3000
+        run: |
+          nohup uvicorn src.infrastructure.main:app --host 127.0.0.1 --port 8000 > /tmp/backend.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8000/health > /dev/null && exit 0
+            sleep 2
+          done
+          echo "::error::el backend no respondió en 120 s"
+          cat /tmp/backend.log
+          exit 1
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run E2E
+        run: pnpm exec playwright test
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
   # Análisis de SonarCloud con la cobertura del job de unitarias. El proyecto espera
   # el Quality Gate (`sonar.qualitygate.wait`), así que un gate rojo tumba el job.
   sonar:
@@ -150,7 +229,7 @@ jobs:
     name: check
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [lint, test, build, security, dependency-review, sonar]
+    needs: [lint, test, build, security, dependency-review, sonar, e2e]
     if: always()
     steps:
       - name: Require every job to succeed

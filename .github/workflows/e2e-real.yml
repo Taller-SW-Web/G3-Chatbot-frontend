@@ -1,0 +1,55 @@
+name: E2E (LLM real)
+
+# Los flujos E2E-03, E2E-06 y E2E-07 pasan por el asistente: dependen del LLM real
+# y no son deterministas, así que no pueden bloquear un PR. Este workflow los
+# ejecuta contra el entorno desplegado (frontend + backend + LLM de producción).
+# Ojo: crea conversaciones y carritos anónimos en ese entorno, como cualquier visita.
+on:
+  schedule:
+    # Todos los días 09:00 UTC (04:00 en Lima), fuera del horario de clase.
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-real
+  cancel-in-progress: true
+
+env:
+  # Se puede apuntar a otro entorno con la variable de repositorio E2E_REAL_BASE_URL.
+  E2E_BASE_URL: ${{ vars.E2E_REAL_BASE_URL || 'https://g3-chatbot-frontend.vercel.app' }}
+  E2E_REAL: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  real:
+    name: Chat real
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run real-LLM flows
+        run: pnpm exec playwright test tests/e2e/chat.real.spec.ts
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-real-artifacts
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
