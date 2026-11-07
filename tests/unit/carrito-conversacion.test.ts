@@ -7,6 +7,7 @@ describe("carrito: id de conversación anónimo (SPEC-11)", () => {
     const uuid = "0f9a1c2e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
     expect(conversacionParaCarrito(uuid)).toBe(uuid);
     expect(conversacionParaCarrito(uuid.toUpperCase())).toBe(uuid.toUpperCase());
+    expect(conversacionParaCarrito(uuid, true)).toBeUndefined();
     expect(conversacionParaCarrito("talla-42")).toBeUndefined();
     expect(conversacionParaCarrito("")).toBeUndefined();
     expect(conversacionParaCarrito(null)).toBeUndefined();

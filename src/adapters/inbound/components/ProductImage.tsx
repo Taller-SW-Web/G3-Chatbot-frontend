@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { safeImageUrl } from "@/domain/entities/CatalogoUI";
 import { sanitize } from "@/domain/utils/sanitize";
 
@@ -17,8 +18,9 @@ export function ProductImage({
 }) {
   const safe = safeImageUrl(src);
   const label = sanitize(alt);
+  const [imagenFallida, setImagenFallida] = useState<string | null>(null);
 
-  if (safe) {
+  if (safe && imagenFallida !== safe) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -26,6 +28,7 @@ export function ProductImage({
         alt={label}
         loading="lazy"
         decoding="async"
+        onError={() => setImagenFallida(safe)}
         className={`object-cover rounded-md ${className}`}
       />
     );

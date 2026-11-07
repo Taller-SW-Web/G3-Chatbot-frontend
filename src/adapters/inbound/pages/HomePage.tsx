@@ -26,6 +26,7 @@ import { buscarProductosUseCase } from "@/application/use_cases/buscarProductosU
 import { verDetalleProductoUseCase } from "@/application/use_cases/verDetalleProductoUseCase";
 import { consultarDisponibilidadUseCase } from "@/application/use_cases/consultarDisponibilidadUseCase";
 import { agregarProductoAlCarritoUseCase } from "@/application/use_cases/agregarProductoAlCarritoUseCase";
+import { agregarCarritoAnonimoUseCase } from "@/application/use_cases/agregarCarritoAnonimoUseCase";
 import { crearConversacionUseCase } from "@/application/use_cases/crearConversacionUseCase";
 import { MENSAJE_MAX_CARACTERES } from "@/application/use_cases/enviarMensajeUseCase";
 import { container } from "@/infrastructure/di/container";
@@ -82,23 +83,34 @@ export function HomePage() {
     }) => {
       const { item, sel } = input;
       if (sel.sku == null) throw new Error("sku requerido");
-      let conversacion =
-        conversacionParaCarrito(ultimaConversacionId) ??
-        convCreadaRef.current ??
-        undefined;
-      if (!cliente && !conversacion) {
+      const sku = sel.sku;
+      const crearConversacion = async () => {
         const { conversacionId } = await crearConversacionUseCase(container.api);
         convCreadaRef.current = conversacionId;
-        conversacion = conversacionId;
+        return conversacionId;
+      };
+      const agregarEnConversacion = async (conversacionId?: string) => {
+        await agregarProductoAlCarritoUseCase(container.api, {
+          sku,
+          cantidad: 1,
+          product_id: item.product_id,
+          talla: sel.talla ?? undefined,
+          color: sel.color ?? undefined,
+          conversacionId,
+        });
+      };
+      let conversacion: string | undefined;
+      if (cliente) {
+        await agregarEnConversacion();
+      } else {
+        conversacion = await agregarCarritoAnonimoUseCase({
+          conversacionGuardada: conversacionParaCarrito(ultimaConversacionId),
+          conversacionCreada: convCreadaRef.current,
+          crearConversacion,
+          limpiarConversacion: () => setUltimaConversacionId(null),
+          agregar: agregarEnConversacion,
+        });
       }
-      await agregarProductoAlCarritoUseCase(container.api, {
-        sku: sel.sku,
-        cantidad: 1,
-        product_id: item.product_id,
-        talla: sel.talla ?? undefined,
-        color: sel.color ?? undefined,
-        conversacionId: conversacion,
-      });
       return { item, conversacion };
     },
     onSuccess: ({ item, conversacion }) => {
