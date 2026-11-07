@@ -53,6 +53,12 @@ describe("mensajePorCodigo", () => {
   it("recurre al status cuando el code no se conoce", () => {
     expect(mensajePorCodigo("XYZ", 404)).toBe("No encontramos esta conversación.");
     expect(mensajePorCodigo("XYZ", 400)).toContain("no es válido");
+    expect(mensajePorCodigo("XYZ", 401)).toBe(
+      "Tu sesión expiró. Inicia sesión de nuevo para continuar."
+    );
+    expect(mensajePorCodigo("TOKEN_INVALIDO", 401)).toBe(
+      "Tu sesión expiró. Inicia sesión de nuevo para continuar."
+    );
   });
 
   it("el code conocido gana sobre el status", () => {

@@ -30,6 +30,8 @@ export function mensajePorCodigo(code: string, status?: number): string {
   switch (code) {
     case "REQUIERE_SESION":
       return "Inicia sesión para continuar.";
+    case "TOKEN_INVALIDO":
+      return "Tu sesión expiró. Inicia sesión de nuevo para continuar.";
     case "STOCK_INSUFICIENTE":
       return "No hay stock suficiente para esa cantidad.";
     case "CARRITO_DESACTUALIZADO":
@@ -51,6 +53,7 @@ export function mensajePorCodigo(code: string, status?: number): string {
   }
   if (status === 404) return "No encontramos esta conversación.";
   if (status === 400) return "El mensaje no es válido. Revísalo e inténtalo de nuevo.";
+  if (status === 401) return "Tu sesión expiró. Inicia sesión de nuevo para continuar.";
   return MENSAJE_GENERICO;
 }
 
