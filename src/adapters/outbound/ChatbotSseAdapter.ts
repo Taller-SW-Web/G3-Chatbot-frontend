@@ -1,5 +1,6 @@
 import { apiConfig } from "@/infrastructure/config/apiConfig";
 import { useChatStore } from "@/application/state/chatStore";
+import { chatbotApi } from "./ChatbotApiAxiosAdapter";
 import type { Bloque } from "@/domain/entities/Bloque";
 import {
   ChatStreamError,
@@ -93,24 +94,33 @@ async function leerError(response: Response): Promise<ChatStreamError> {
  */
 export const chatbotSse: ChatStreamPort = {
   async enviarMensajeStream(conversacionId, texto, onEvento, signal) {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "text/event-stream",
-    };
-    // Mismo origen del token que el interceptor JWT del adaptador REST.
-    const token = useChatStore.getState().accessToken;
-    if (token) headers.Authorization = `Bearer ${token}`;
-
-    const response = await fetch(
+    const request = (token: string | null) => fetch(
       `${apiConfig.baseUrl}/chat/conversaciones/${encodeURIComponent(conversacionId)}/mensajes`,
       {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         credentials: "include",
         body: JSON.stringify({ texto }),
         signal,
       }
     );
+    const token = useChatStore.getState().accessToken;
+    let response = await request(token);
+
+    if (response.status === 401 && token) {
+      try {
+        const opened = await chatbotApi.refreshSession();
+        useChatStore.getState().applySession(opened.accessToken, opened.expiresIn);
+      } catch {
+        useChatStore.getState().logout();
+        throw new ChatStreamError(401, "TOKEN_INVALIDO");
+      }
+      response = await request(useChatStore.getState().accessToken);
+    }
 
     if (!response.ok) throw await leerError(response);
     if (!response.body) {

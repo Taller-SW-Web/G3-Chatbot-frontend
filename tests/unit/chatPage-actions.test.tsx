@@ -13,14 +13,16 @@ vi.mock("@/adapters/inbound/hooks/useChat", () => ({
     mensajes: [{ id: "fixture-bot", conversacionId: "fixture", rol: "bot", texto: "", creadoEn: "2026-11-05T00:00:00Z", bloques: [{ tipo: "ACCIONES_RAPIDAS", acciones: [
       { id: "RECOMENDAR_PRODUCTOS", etiqueta: "Asfalto", payload: { actividad: "running", superficie: "asfalto" } },
       { id: "VER_OFERTAS", etiqueta: "Consultar ofertas", payload: {} },
+      { id: "VACIAR_CARRITO", etiqueta: "Sí, vaciar", payload: { confirmado: true } },
+      { id: "VER_CARRITO", etiqueta: "Cancelar", payload: {} },
     ] }] }],
     borrador: null, estado: "listo", error: null, incompleto: false, historialCargado: true,
     ultimoTexto: "", enviar: h.send, reintentar: vi.fn(), recargar: vi.fn(), recargarSilencioso: h.reload,
   }),
 }));
 
-function openChat() {
-  return render(<QueryClientProvider client={new QueryClient()}><ChatPage conversationId="fixture" /></QueryClientProvider>);
+function openChat(queryClient = new QueryClient()) {
+  return render(<QueryClientProvider client={queryClient}><ChatPage conversationId="fixture" /></QueryClientProvider>);
 }
 beforeEach(() => { vi.clearAllMocks(); h.reload.mockResolvedValue(undefined); });
 afterEach(cleanup);
@@ -70,4 +72,21 @@ it("does not infer recommendation intent from another action or natural-language
   fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
   expect(h.send).toHaveBeenCalledWith("Recomiéndame zapatillas");
   expect(screen.queryByText("Buscando opciones para ti…")).toBeNull();
+});
+
+it("refreshes the cart after confirmed clear but not after cancel", async () => {
+  h.execute.mockResolvedValue(undefined);
+  const queryClient = new QueryClient();
+  const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+  openChat(queryClient);
+
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Cancelar" })); });
+  expect(invalidate).not.toHaveBeenCalled();
+
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Sí, vaciar" })); });
+  expect(h.execute).toHaveBeenLastCalledWith(expect.anything(), {
+    conversacionId: "fixture",
+    accion: { tipo: "VACIAR_CARRITO", payload: { confirmado: true } },
+  });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ["carrito"] });
 });
