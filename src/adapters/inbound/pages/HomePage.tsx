@@ -146,7 +146,7 @@ export function HomePage() {
           </p>
         )}
         <button onClick={() => irChat("Ver ofertas")} disabled={creando}
-          className="relative overflow-hidden rounded-lg w-full text-left bg-surface-ink text-text-inverse px-4 pt-5 pb-6"
+          className="relative shrink-0 overflow-hidden rounded-lg w-full text-left bg-surface-ink text-text-inverse px-4 pt-5 pb-6"
           aria-label="Ver ofertas Inka Athletics">
           <span aria-hidden className="absolute inset-0 opacity-60" style={{
             background: "repeating-linear-gradient(115deg, transparent 0 40px, rgba(247,103,7,.14) 40px 42px, transparent 42px 90px, rgba(195,229,4,.10) 90px 92px)",
