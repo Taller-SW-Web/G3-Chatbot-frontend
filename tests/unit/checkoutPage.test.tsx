@@ -19,6 +19,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const mockApi = {
+  listarCarrito: vi.fn(),
   iniciarCheckout: vi.fn(),
   pagarCheckout: vi.fn(),
   // SPEC-12: la dirección se cotiza contra Despacho antes de confirmar.
@@ -28,6 +29,7 @@ const mockApi = {
 vi.mock("@/infrastructure/di/container", () => ({
   container: {
     api: {
+      listarCarrito: (...args: unknown[]) => mockApi.listarCarrito(...args),
       iniciarCheckout: (...args: unknown[]) => mockApi.iniciarCheckout(...args),
       pagarCheckout: (...args: unknown[]) => mockApi.pagarCheckout(...args),
       cotizarEnvio: (...args: unknown[]) => mockApi.cotizarEnvio(...args),
@@ -68,6 +70,14 @@ function resetStore() {
   navMock.push.mockClear();
   navMock.replace.mockClear();
   mockApi.iniciarCheckout.mockReset();
+  mockApi.listarCarrito.mockReset();
+  mockApi.listarCarrito.mockResolvedValue({
+    lineas: [{ item_id: "linea-1", sku: "SKU-ZAP-1", nombre: "Zapatilla Runner", variante: "42 / Negro", cantidad: 1, precio: 120, disponible: true }],
+    subtotal: 120,
+    descuentos: [],
+    total: 120,
+    avisos: [],
+  });
   mockApi.pagarCheckout.mockReset();
   mockApi.cotizarEnvio.mockReset();
   mockApi.cotizarEnvio.mockResolvedValue({
@@ -80,16 +90,16 @@ function resetStore() {
 }
 
 function llenarDireccionValida() {
-  fireEvent.change(screen.getByPlaceholderText("Nombre completo"), {
+  fireEvent.change(screen.getByLabelText("Nombre completo"), {
     target: { value: "Diego Comprador" },
   });
-  fireEvent.change(screen.getByPlaceholderText("Dirección exacta"), {
+  fireEvent.change(screen.getByLabelText("Dirección exacta"), {
     target: { value: "Av. Las Palmeras 123" },
   });
   fireEvent.change(screen.getByLabelText("Distrito de entrega"), {
     target: { value: "Miraflores" },
   });
-  fireEvent.change(screen.getByPlaceholderText("8 dígitos"), {
+  fireEvent.change(screen.getByLabelText("Número de documento"), {
     target: { value: "12345678" },
   });
 }
@@ -112,12 +122,49 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
   beforeEach(resetStore);
   afterEach(cleanup);
 
-  it("renderiza paso 1 de dirección y calcula el total", () => {
+  it("renderiza paso 1 con el total del servidor", async () => {
     renderCheckout();
 
     expect(screen.getByText("Paso 1 de 2")).toBeDefined();
     expect(screen.getByText("Total a pagar:")).toBeDefined();
-    expect(screen.getByText("CONFIRMAR Y PAGAR S/ 120.00")).toBeDefined();
+    expect(await screen.findByText("Continuar al pago · S/ 120.00")).toBeDefined();
+    expect(screen.getByText("Completa la dirección y el documento para continuar.")).toBeDefined();
+  });
+
+  it("incluye el descuento del carrito del servidor y la cotización de envío", async () => {
+    mockApi.listarCarrito.mockResolvedValueOnce({
+      lineas: [{ item_id: "linea-1", sku: "SKU-ZAP-1", nombre: "Zapatilla Runner", cantidad: 1, precio: 229, disponible: true }],
+      subtotal: 229,
+      descuentos: [{ nombre: "Cupón", monto: 40 }],
+      total: 189,
+      avisos: [],
+    });
+    renderCheckout();
+    expect(await screen.findByText("Continuar al pago · S/ 189.00")).toBeDefined();
+    llenarDireccionValida();
+    expect(await screen.findByText("Continuar al pago · S/ 201.50")).toBeDefined();
+    expect(screen.getByText("S/ 201.50")).toBeDefined();
+  });
+
+  it("desactiva el avance y descarta la cotización si la dirección deja de ser válida", async () => {
+    renderCheckout();
+    llenarDireccionValida();
+    const button = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+
+    fireEvent.change(screen.getByLabelText("Dirección exacta"), { target: { value: "" } });
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(true));
+    expect(screen.getByText("Envío: se calcula al elegir la dirección")).toBeDefined();
+    expect(screen.getByText("Completa la dirección y el documento para continuar.")).toBeDefined();
+  });
+
+  it("permite reintentar si falla la consulta del total", async () => {
+    mockApi.listarCarrito.mockRejectedValueOnce(new Error("Sin conexión"));
+    renderCheckout();
+    expect(await screen.findByText("Total no disponible")).toBeDefined();
+    expect(screen.getByText(/No pudimos obtener el total del carrito/)).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+    expect(await screen.findByText("Continuar al pago · S/ 120.00")).toBeDefined();
   });
 
   it("inicia checkout en backend al confirmar dirección y avanza al paso 2", async () => {
@@ -135,7 +182,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
 
     llenarDireccionValida();
 
-    const submitBtn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    const submitBtn = screen.getByRole("button", { name: /Continuar al pago/i });
     await waitFor(() => {
       expect(submitBtn.hasAttribute("disabled")).toBe(false);
     });
@@ -174,7 +221,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
 
     renderCheckout();
     llenarDireccionValida();
-    const submitBtn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    const submitBtn = screen.getByRole("button", { name: /Continuar al pago/i });
     await waitFor(() => expect(submitBtn.hasAttribute("disabled")).toBe(false));
     fireEvent.click(submitBtn);
 
@@ -208,7 +255,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
     // Avanzar a paso 2
     llenarDireccionValida();
 
-    const confirmarBtn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    const confirmarBtn = screen.getByRole("button", { name: /Continuar al pago/i });
     await waitFor(() => expect(confirmarBtn.hasAttribute("disabled")).toBe(false));
     fireEvent.click(confirmarBtn);
 
@@ -278,7 +325,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
     // Paso 1 -> 2
     llenarDireccionValida();
 
-    const confirmarBtn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    const confirmarBtn = screen.getByRole("button", { name: /Continuar al pago/i });
     await waitFor(() => expect(confirmarBtn.hasAttribute("disabled")).toBe(false));
     fireEvent.click(confirmarBtn);
 
@@ -322,7 +369,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
 
     llenarDireccionValida();
 
-    const confirmarBtn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    const confirmarBtn = screen.getByRole("button", { name: /Continuar al pago/i });
     await waitFor(() => expect(confirmarBtn.hasAttribute("disabled")).toBe(false));
     fireEvent.click(confirmarBtn);
 
@@ -356,7 +403,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
 
     renderCheckout();
     llenarDireccionValida();
-    const btn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
     await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
     fireEvent.click(btn);
 
@@ -375,7 +422,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
 
     renderCheckout();
     llenarDireccionValida();
-    const btn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
     await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
     fireEvent.click(btn);
 
@@ -393,12 +440,12 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
 
     renderCheckout();
     llenarDireccionValida();
-    const btn = screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i });
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
     await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
     fireEvent.click(btn);
     await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
 
-    fireEvent.click(screen.getByRole("button", { name: /CONFIRMAR Y PAGAR/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Continuar al pago/i }));
     await waitFor(() => expect(mockApi.iniciarCheckout).toHaveBeenCalledTimes(2));
 
     const [first, second] = mockApi.iniciarCheckout.mock.calls;

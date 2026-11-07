@@ -15,6 +15,19 @@ describe("schemas + sanitize (contratos backend)", () => {
     expect(r.success).toBe(true);
   });
 
+  it.each([
+    ["DNI", "123", "El DNI tiene 8 dígitos"],
+    ["RUC", "12345678", "El RUC tiene 11 dígitos"],
+    ["CE", "abc", "El CE o pasaporte tiene de 6 a 20 letras o números"],
+    ["PASAPORTE", "abc!123", "El CE o pasaporte tiene de 6 a 20 letras o números"],
+  ])("explica el documento inválido de tipo %s", (docTipo, docNum, message) => {
+    const result = direccionSchema.safeParse({
+      nombre: "Cliente Demo", direccion: "Av. Arequipa 123", distrito: "Miraflores", docTipo, docNum,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues.find((issue) => issue.path[0] === "docNum")?.message).toBe(message);
+  });
+
   it("pago solo tarjeta", () => {
     const r = pagoSchema.safeParse({
       tarjetaNum: "4111111111111111",
