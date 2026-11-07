@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 // Documento A14: DNI 8 dígitos, RUC 11, CE/PASAPORTE alfanumérico
-const docPorTipo = (tipo: string, num: string) => {
-  if (tipo === "DNI") return /^\d{8}$/.test(num);
-  if (tipo === "RUC") return /^\d{11}$/.test(num);
-  return /^[A-Za-z0-9]{6,20}$/.test(num);
+const mensajeDocumento = (tipo: string, num: string) => {
+  if (tipo === "DNI") return /^\d{8}$/.test(num) ? null : "El DNI tiene 8 dígitos";
+  if (tipo === "RUC") return /^\d{11}$/.test(num) ? null : "El RUC tiene 11 dígitos";
+  return /^[A-Za-z0-9]{6,20}$/.test(num) ? null : "El CE o pasaporte tiene de 6 a 20 letras o números";
 };
 
 export const direccionSchema = z
@@ -14,11 +14,11 @@ export const direccionSchema = z
     distrito: z.string().min(1, "Elige distrito"),
     referencia: z.string().optional(),
     docTipo: z.enum(["DNI", "RUC", "CE", "PASAPORTE"]),
-    docNum: z.string().min(6, "Documento inválido"),
+    docNum: z.string(),
   })
-  .refine((d) => docPorTipo(d.docTipo, d.docNum), {
-    message: "Documento inválido para el tipo",
-    path: ["docNum"],
+  .superRefine((d, ctx) => {
+    const message = mensajeDocumento(d.docTipo, d.docNum);
+    if (message) ctx.addIssue({ code: "custom", message, path: ["docNum"] });
   });
 
 export type DireccionInput = z.infer<typeof direccionSchema>;

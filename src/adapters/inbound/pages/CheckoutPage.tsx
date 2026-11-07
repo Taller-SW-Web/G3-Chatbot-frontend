@@ -9,8 +9,8 @@ import { DireccionForm } from "../components/forms/DireccionForm";
 import { PagoForm } from "../components/forms/PagoForm";
 import type { DireccionInput } from "@/domain/schemas/direccion.schema";
 import type { PagoInput } from "@/domain/schemas/pago.schema";
-import { totalesCarrito } from "@/domain/entities/CarritoUI";
 import type { CheckoutSesionData } from "@/ports/outbound/ChatbotApiPort";
+import { useCarrito } from "@/application/hooks/useCarrito";
 import { useCotizacionEnvio } from "@/application/hooks/useCotizacionEnvio";
 import { mensajeCotizacion } from "@/application/errors/cotizacionMensajes";
 
@@ -65,7 +65,9 @@ export function CheckoutPage() {
   // Idempotency-Key of the checkout attempt: reused while the submitted body is unchanged.
   const checkoutKeyRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
-  const { total } = totalesCarrito(carrito);
+  const { query: carritoQuery } = useCarrito();
+  const total = carritoQuery.data?.total ?? 0;
+  const totalDisponible = resumenActualizado?.total != null || carritoQuery.data?.total != null;
   // El envío sale de Despacho (SPEC-12); sin cotización no se puede confirmar.
   const { cotizacion, cotizando, error: errorCotizacion, reintentar } = useCotizacionEnvio(dir);
   const envio = cotizacion?.costoEnvio ?? 0;
@@ -179,7 +181,7 @@ export function CheckoutPage() {
       setUltimoPedido({
         orderId: res.orderId || checkoutSesion.orderId || "PED-2026-00891",
         total: res.monto || totalServidor,
-        subtotal: Number(checkoutSesion.summary?.subtotal ?? total),
+        subtotal: Number(checkoutSesion.summary?.subtotal ?? carrito.subtotal),
         costoEnvio: costoEnvioServidor,
         lineas: carrito.lineas.map((l) => ({
           nombre: l.producto.nombre,
@@ -241,7 +243,7 @@ export function CheckoutPage() {
 
       <div className="rounded-md bg-surface-ink text-text-inverse px-4 py-3 flex justify-between items-center">
         <span className="text-[14px] font-semibold">Total a pagar:</span>
-        <span className="font-heading text-[20px]">S/ {(paso === 2 ? totalServidor : totalEstimado).toFixed(2)}</span>
+        <span className="font-heading text-[20px]">{paso === 1 && !totalDisponible ? carritoQuery.isError ? "Total no disponible" : "Calculando total…" : `S/ ${(paso === 2 ? totalServidor : totalEstimado).toFixed(2)}`}</span>
       </div>
 
       {paso === 1 ? (
@@ -253,6 +255,11 @@ export function CheckoutPage() {
             >
               {errorPago}
             </div>
+          )}
+          {!totalDisponible && carritoQuery.isError && (
+            <p role="alert" className="text-[12px] text-error-default">
+              No pudimos obtener el total del carrito. <button type="button" onClick={() => void carritoQuery.refetch()} className="underline font-semibold">Reintentar</button>
+            </p>
           )}
           {resumenActualizado && (
             <div className="rounded-md bg-white border border-border-default p-3 text-[13px] flex flex-col gap-1" data-testid="resumen-actualizado">
@@ -295,11 +302,12 @@ export function CheckoutPage() {
           </p>
           <button
             onClick={confirmarDireccion}
-            disabled={!dir || !cotizacion || creandoCheckout}
+            disabled={!dir || !cotizacion || !totalDisponible || creandoCheckout}
             className="wf-btn py-3.5 text-sm font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-45"
           >
-            {creandoCheckout ? "CONFIRMANDO RESUMEN…" : `CONFIRMAR Y PAGAR S/ ${totalEstimado.toFixed(2)}`}
+            {creandoCheckout ? "Confirmando resumen…" : totalDisponible ? `Continuar al pago · S/ ${totalEstimado.toFixed(2)}` : carritoQuery.isError ? "Continuar al pago · Total no disponible" : "Continuar al pago · Calculando total…"}
           </button>
+          {!dir && <p className="text-[12px] text-text-secondary">Completa la dirección y el documento para continuar.</p>}
         </>
       ) : (
         <>

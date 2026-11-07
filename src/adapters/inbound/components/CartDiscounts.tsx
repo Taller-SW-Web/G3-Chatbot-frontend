@@ -10,7 +10,7 @@ export function CartDiscounts({ value }: { value: unknown }) {
       {discounts.items.map((discount, index) => (
         <div key={index} className="flex justify-between gap-2 text-[13px]">
           <span className="text-text-secondary">{sanitize(discount.name)}</span>
-          <span className="font-semibold text-success-default">- <PriceTag price={discount.amount} /></span>
+          <span className="inline-flex shrink-0 items-baseline gap-1 whitespace-nowrap font-semibold text-success-default">- <PriceTag price={discount.amount} /></span>
         </div>
       ))}
       {discounts.unavailable && (
