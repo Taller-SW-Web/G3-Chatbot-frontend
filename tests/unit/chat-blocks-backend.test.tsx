@@ -186,6 +186,27 @@ describe("chat blocks with the backend contract", () => {
     expect(onAction).toHaveBeenCalledTimes(1);
   });
 
+  it("seeds SELECTOR_VARIANTE with the known talla and only asks for the color", async () => {
+    h.detalle.mockResolvedValue(mapProductDetail(PRODUCTO));
+    const onAction = vi.fn();
+    const selector = {
+      id: "s2",
+      tipo: "SELECTOR_VARIANTE",
+      datos: { product_id: "prod-001", faltantes: ["color"], seleccion: { talla: "42" } },
+    } as unknown as Bloque;
+    bubble([selector], onAction);
+    await waitFor(() => expect(screen.getByRole("button", { name: "negro" })).toBeTruthy());
+    expect(screen.queryByRole("group", { name: "Talla" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "negro" }));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "AGREGAR_AL_CARRITO",
+        payload: { product_id: "prod-001", talla: "42", color: "negro" },
+      })
+    );
+  });
+
   it("opens the sign-up tab from FORMULARIO REGISTRO", () => {
     const formulario = { id: "f1", tipo: "FORMULARIO", formulario: "REGISTRO" } as unknown as Bloque;
     bubble([formulario]);
