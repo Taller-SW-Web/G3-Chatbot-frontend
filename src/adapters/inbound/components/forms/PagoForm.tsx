@@ -1,9 +1,22 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { detectarMarcaTarjeta, pagoSchema, type PagoInput } from "@/domain/schemas/pago.schema";
+
+/** Keeps only 4 digits and inserts the slash: "1228" -> "12/28". A first digit above 1 becomes "0X". */
+function formatearVencimiento(valor: string): string {
+  let digitos = valor.replace(/\D/g, "");
+  if (digitos[0] > "1") digitos = `0${digitos}`;
+  digitos = digitos.slice(0, 4);
+  return digitos.length > 2 ? `${digitos.slice(0, 2)}/${digitos.slice(2)}` : digitos;
+}
+
+/** Keeps only 16 digits, grouped by 4: "4111111111111111" -> "4111 1111 1111 1111". */
+function formatearTarjeta(valor: string): string {
+  return valor.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
+}
 
 /** SPEC-14: Captura segura de tarjeta (solo en memoria local, sin persistir PAN ni CVV). */
 export function PagoForm({
@@ -15,21 +28,26 @@ export function PagoForm({
 }) {
   const {
     register,
-    handleSubmit,
-    watch,
+    control,
     reset,
-    formState: { errors },
+    formState: { errors, touchedFields },
   } = useForm<PagoInput>({
     resolver: zodResolver(pagoSchema),
-    mode: "onChange",
+    // A field only shows its error once the user has touched it, never while it is still untouched.
+    mode: "onTouched",
   });
 
-  const [marca, setMarca] = useState<string | null>(null);
-  const numeroVal = watch("tarjetaNum") ?? "";
+  const vencimientoField = register("vencimiento");
+  const tarjetaField = register("tarjetaNum");
+  const cvvField = register("cvv");
+  const values = useWatch({ control });
+  const marca = detectarMarcaTarjeta(values.tarjetaNum ?? "");
 
+  // The parent only needs to know whether the whole card is valid; it does not drive field errors.
   useEffect(() => {
-    setMarca(detectarMarcaTarjeta(numeroVal));
-  }, [numeroVal]);
+    const parsed = pagoSchema.safeParse(values);
+    onValid(parsed.success ? parsed.data : null);
+  }, [values, onValid]);
 
   // Limpiar campos sensibles al desmontar
   useEffect(() => {
@@ -40,10 +58,6 @@ export function PagoForm({
 
   return (
     <form
-      onChange={handleSubmit(
-        (data) => onValid(data),
-        () => onValid(null)
-      )}
       onSubmit={(e) => e.preventDefault()}
       className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2.5"
     >
@@ -65,22 +79,27 @@ export function PagoForm({
           aria-label="Titular de la tarjeta"
           className="wf-input w-full px-3 py-2.5 text-sm outline-none border border-border-default rounded"
         />
-        {errors.titular && (
+        {touchedFields.titular && errors.titular && (
           <span className="text-[12px] text-error-default mt-0.5 block">{errors.titular.message}</span>
         )}
       </div>
 
       <div>
         <input
-          {...register("tarjetaNum")}
+          {...tarjetaField}
+          onChange={(e) => {
+            e.target.value = formatearTarjeta(e.target.value);
+            return tarjetaField.onChange(e);
+          }}
           disabled={disabled}
           autoComplete="cc-number"
           inputMode="numeric"
+          maxLength={19}
           placeholder="Número de tarjeta (ej. 4111 1111 1111 1111)"
           aria-label="Número de tarjeta"
           className="wf-input w-full px-3 py-2.5 text-sm outline-none border border-border-default rounded"
         />
-        {errors.tarjetaNum && (
+        {touchedFields.tarjetaNum && errors.tarjetaNum && (
           <span className="text-[12px] text-error-default mt-0.5 block">{errors.tarjetaNum.message}</span>
         )}
       </div>
@@ -88,28 +107,39 @@ export function PagoForm({
       <div className="grid grid-cols-2 gap-2">
         <div>
           <input
-            {...register("vencimiento")}
+            {...vencimientoField}
+            onChange={(e) => {
+              e.target.value = formatearVencimiento(e.target.value);
+              return vencimientoField.onChange(e);
+            }}
             disabled={disabled}
             autoComplete="cc-exp"
+            inputMode="numeric"
+            maxLength={5}
             placeholder="MM/AA"
             aria-label="Vencimiento MM/AA"
             className="wf-input w-full px-3 py-2.5 text-sm outline-none border border-border-default rounded"
           />
-          {errors.vencimiento && (
+          {touchedFields.vencimiento && errors.vencimiento && (
             <span className="text-[12px] text-error-default mt-0.5 block">{errors.vencimiento.message}</span>
           )}
         </div>
         <div>
           <input
-            {...register("cvv")}
+            {...cvvField}
+            onChange={(e) => {
+              e.target.value = e.target.value.replace(/\D/g, "").slice(0, marca === "AMEX" ? 4 : 3);
+              return cvvField.onChange(e);
+            }}
             disabled={disabled}
             autoComplete="cc-csc"
             inputMode="numeric"
+            maxLength={4}
             placeholder={marca === "AMEX" ? "CVV (4 dígitos)" : "CVV (3 dígitos)"}
             aria-label="CVV"
             className="wf-input w-full px-3 py-2.5 text-sm outline-none border border-border-default rounded"
           />
-          {errors.cvv && (
+          {touchedFields.cvv && errors.cvv && (
             <span className="text-[12px] text-error-default mt-0.5 block">{errors.cvv.message}</span>
           )}
         </div>
