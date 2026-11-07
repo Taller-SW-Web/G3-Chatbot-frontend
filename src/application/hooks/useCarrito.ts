@@ -6,6 +6,7 @@ import { useChatStore } from "@/application/state/chatStore";
 import { container } from "@/infrastructure/di/container";
 import { listarCarritoUseCase } from "@/application/use_cases/listarCarritoUseCase";
 import { conversacionParaCarrito } from "@/domain/utils/carrito";
+import { problemCode } from "@/domain/utils/httpError";
 
 /** Clave única en caché: dueño (cliente o anónimo) + conversación. */
 export function carritoQueryKey(dueno: string, conversacion?: string) {
@@ -21,13 +22,26 @@ export function useCarrito() {
   const cliente = useChatStore((s) => s.cliente);
   const ultimaConversacionId = useChatStore((s) => s.ultimaConversacionId);
   const setCarrito = useChatStore((s) => s.setCarrito);
-  const conversacion = conversacionParaCarrito(ultimaConversacionId);
+  const setUltimaConversacionId = useChatStore((s) => s.setUltimaConversacionId);
+  const conversacion = conversacionParaCarrito(ultimaConversacionId, Boolean(cliente));
   const dueno = cliente?.correo ?? "anonimo";
   const queryKey = carritoQueryKey(dueno, conversacion);
 
   const query = useQuery({
     queryKey,
-    queryFn: () => listarCarritoUseCase(container.api, conversacion),
+    queryFn: async () => {
+      try {
+        return await listarCarritoUseCase(container.api, conversacion);
+      } catch (error) {
+        if (!cliente && conversacion && problemCode(error) === "RECURSO_NO_ENCONTRADO" &&
+          useChatStore.getState().ultimaConversacionId === conversacion &&
+          !useChatStore.getState().cliente) {
+          setUltimaConversacionId(null);
+          setCarrito({ lineas: [], subtotal: 0, count: 0 });
+        }
+        throw error;
+      }
+    },
   });
 
   const data = query.data;

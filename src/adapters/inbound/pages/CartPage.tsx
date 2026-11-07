@@ -9,6 +9,7 @@ import { BloqueError } from "../components/blocks/BloqueError";
 import { useChatStore } from "@/application/state/chatStore";
 import { useCarrito } from "@/application/hooks/useCarrito";
 import { conversacionParaCarrito } from "@/domain/utils/carrito";
+import { ProductImage } from "../components/ProductImage";
 import { container } from "@/infrastructure/di/container";
 import { problemCode, problemField } from "@/domain/utils/httpError";
 import { mensajeCarrito } from "@/application/errors/carritoMensajes";
@@ -41,7 +42,8 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   // La conversación la resuelve `useCarrito` (store); la prop es solo un override
   // opcional. Las mutaciones usan la MISMA conversación que el GET.
   const { query: carritoQuery, queryKey, conversacion } = useCarrito();
-  const conv = conversacionParaCarrito(conversacionId) ?? conversacion;
+  const conv = conversacionParaCarrito(conversacionId, Boolean(cliente)) ??
+    conversacionParaCarrito(conversacion, Boolean(cliente));
 
   const [avisoCelular, setAvisoCelular] = useState(false);
   const [deshacer, setDeshacer] = useState<{ sku: string; cantidad: number; nombre: string } | null>(null);
@@ -219,15 +221,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
             data-testid="linea-carrito"
             className="rounded-md bg-white border border-border-default p-3 flex gap-3 wf-card"
           >
-            <div
-              className="relative overflow-hidden w-20 h-20 shrink-0 rounded-md flex items-center justify-center text-[32px]"
-              style={{ background: "linear-gradient(135deg, var(--color-surface-ink-soft), var(--color-accent-signal-soft), var(--color-surface-ink))" }}
-              role="img"
-              aria-label={it.nombre}
-            >
-              <span aria-hidden className="absolute top-0 right-0 w-10 h-10 bg-accent-volt" style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }} />
-              <span aria-hidden>👟</span>
-            </div>
+            <ProductImage src={it.imagen} alt={it.nombre} className="w-20 h-20 shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
