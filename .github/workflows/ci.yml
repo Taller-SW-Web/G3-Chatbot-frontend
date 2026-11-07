@@ -6,10 +6,20 @@ on:
   pull_request:
     branches: [development, main]
 
+# Least privilege: the workflow only reads the repository.
+permissions:
+  contents: read
+
+# A newer push on the same ref cancels the previous run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint and type check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       # The pnpm version is read from the "packageManager" field in package.json.
@@ -28,6 +38,7 @@ jobs:
   test:
     name: Unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -37,12 +48,19 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Unit tests
-        run: pnpm run test
+      - name: Unit tests with coverage
+        run: pnpm run test:coverage
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-frontend
+          path: coverage/
+          if-no-files-found: error
 
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -60,6 +78,7 @@ jobs:
   check:
     name: check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [lint, test, build]
     if: always()
     steps:

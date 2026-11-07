@@ -6,3 +6,5 @@ dist/
 .next/
 test-results/
 *.tsbuildinfo
+# Coverage (CI uploads it as an artifact)
+coverage/
