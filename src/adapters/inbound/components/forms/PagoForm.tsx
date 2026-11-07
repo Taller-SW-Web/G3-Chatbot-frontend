@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { detectarMarcaTarjeta, pagoSchema, type PagoInput } from "@/domain/schemas/pago.schema";
@@ -28,26 +28,31 @@ export function PagoForm({
 }) {
   const {
     register,
-    handleSubmit,
-    watch,
+    control,
     reset,
-    formState: { errors },
+    formState: { errors, touchedFields },
   } = useForm<PagoInput>({
     resolver: zodResolver(pagoSchema),
-    mode: "onChange",
-    // handleSubmit runs on every keystroke; without this it focuses the first invalid field mid-typing.
-    shouldFocusError: false,
+    // A field only shows its error once the user has touched it, never while it is still untouched.
+    mode: "onTouched",
   });
 
   const vencimientoField = register("vencimiento");
   const tarjetaField = register("tarjetaNum");
   const cvvField = register("cvv");
   const [marca, setMarca] = useState<string | null>(null);
-  const numeroVal = watch("tarjetaNum") ?? "";
+  const values = useWatch({ control });
+  const numeroVal = values.tarjetaNum ?? "";
 
   useEffect(() => {
     setMarca(detectarMarcaTarjeta(numeroVal));
   }, [numeroVal]);
+
+  // The parent only needs to know whether the whole card is valid; it does not drive field errors.
+  useEffect(() => {
+    const parsed = pagoSchema.safeParse(values);
+    onValid(parsed.success ? parsed.data : null);
+  }, [values, onValid]);
 
   // Limpiar campos sensibles al desmontar
   useEffect(() => {
@@ -58,10 +63,6 @@ export function PagoForm({
 
   return (
     <form
-      onChange={handleSubmit(
-        (data) => onValid(data),
-        () => onValid(null)
-      )}
       onSubmit={(e) => e.preventDefault()}
       className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2.5"
     >
@@ -83,7 +84,7 @@ export function PagoForm({
           aria-label="Titular de la tarjeta"
           className="wf-input w-full px-3 py-2.5 text-sm outline-none border border-border-default rounded"
         />
-        {errors.titular && (
+        {touchedFields.titular && errors.titular && (
           <span className="text-[12px] text-error-default mt-0.5 block">{errors.titular.message}</span>
         )}
       </div>
@@ -103,7 +104,7 @@ export function PagoForm({
           aria-label="Número de tarjeta"
           className="wf-input w-full px-3 py-2.5 text-sm outline-none border border-border-default rounded"
         />
-        {errors.tarjetaNum && (
+        {touchedFields.tarjetaNum && errors.tarjetaNum && (
           <span className="text-[12px] text-error-default mt-0.5 block">{errors.tarjetaNum.message}</span>
         )}
       </div>
@@ -124,7 +125,7 @@ export function PagoForm({
             aria-label="Vencimiento MM/AA"
             className="wf-input w-full px-3 py-2.5 text-sm outline-none border border-border-default rounded"
           />
-          {errors.vencimiento && (
+          {touchedFields.vencimiento && errors.vencimiento && (
             <span className="text-[12px] text-error-default mt-0.5 block">{errors.vencimiento.message}</span>
           )}
         </div>
@@ -143,7 +144,7 @@ export function PagoForm({
             aria-label="CVV"
             className="wf-input w-full px-3 py-2.5 text-sm outline-none border border-border-default rounded"
           />
-          {errors.cvv && (
+          {touchedFields.cvv && errors.cvv && (
             <span className="text-[12px] text-error-default mt-0.5 block">{errors.cvv.message}</span>
           )}
         </div>
