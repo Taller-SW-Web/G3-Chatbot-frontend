@@ -77,6 +77,7 @@ export function datosDeCarrito(bloque: BloqueCarritoResumen): DatosCarritoBloque
 export function faltantesDeSelector(bloque: BloqueSelectorVariante): {
   productId: string;
   faltantes: string[];
+  seleccion: Record<string, string>;
 } | null {
   const datos = bloque.datos;
   if (!esObjeto(datos) || typeof datos.product_id !== "string") return null;
@@ -84,7 +85,15 @@ export function faltantesDeSelector(bloque: BloqueSelectorVariante): {
     ? datos.faltantes.filter((f): f is string => typeof f === "string")
     : [];
   if (faltantes.length === 0) return null;
-  return { productId: datos.product_id, faltantes };
+  const seleccion: Record<string, string> = {};
+  const conocida: unknown = datos.seleccion;
+  if (esObjeto(conocida)) {
+    for (const atributo of ["talla", "color"]) {
+      const valor = conocida[atributo];
+      if (typeof valor === "string" && valor.trim() !== "") seleccion[atributo] = valor.trim();
+    }
+  }
+  return { productId: datos.product_id, faltantes, seleccion };
 }
 
 export function esFormularioRegistro(bloque: BloqueFormulario): boolean {
@@ -126,8 +135,9 @@ export function opcionesDeAtributo(
   seleccion: Record<string, string>
 ): string[] {
   const otro = atributo === "talla" ? "color" : "talla";
+  const igual = (a: unknown, b: string) => typeof a === "string" && a.trim().toLowerCase() === b.trim().toLowerCase();
   const valores = detalle.variants
-    .filter((v) => !seleccion[otro] || v[otro as "talla" | "color"] === seleccion[otro])
+    .filter((v) => !seleccion[otro] || igual(v[otro as "talla" | "color"], seleccion[otro]))
     .map((v) => v[atributo as "talla" | "color"])
     .filter((v): v is string => typeof v === "string" && v !== "");
   return [...new Set(valores)];
