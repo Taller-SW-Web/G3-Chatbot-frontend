@@ -171,6 +171,7 @@ export function renderBloque(
           <SelectorVarianteChat
             productId={pedido.productId}
             faltantes={pedido.faltantes}
+            seleccionInicial={pedido.seleccion}
             onAccion={onQuickAction}
           />
         </div>

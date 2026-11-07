@@ -48,13 +48,16 @@ const ETIQUETA_ATRIBUTO: Record<string, string> = { talla: "Talla", color: "Colo
 export function SelectorVarianteChat({
   productId,
   faltantes,
+  seleccionInicial,
   onAccion,
 }: {
   productId: string;
   faltantes: string[];
+  /** Attributes the customer already gave (e.g. talla 42); never asked again. */
+  seleccionInicial?: Record<string, string>;
   onAccion?: (accion: AccionDirecta) => void;
 }) {
-  const [seleccion, setSeleccion] = useState<Record<string, string>>({});
+  const [seleccion, setSeleccion] = useState<Record<string, string>>(seleccionInicial ?? {});
   const [enviado, setEnviado] = useState(false);
   const detalle = useQuery({
     queryKey: ["catalogo", "detalle", productId],
