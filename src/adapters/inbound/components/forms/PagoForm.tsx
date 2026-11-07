@@ -2,7 +2,7 @@
 
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { detectarMarcaTarjeta, pagoSchema, type PagoInput } from "@/domain/schemas/pago.schema";
 
 /** Keeps only 4 digits and inserts the slash: "1228" -> "12/28". A first digit above 1 becomes "0X". */
@@ -40,13 +40,8 @@ export function PagoForm({
   const vencimientoField = register("vencimiento");
   const tarjetaField = register("tarjetaNum");
   const cvvField = register("cvv");
-  const [marca, setMarca] = useState<string | null>(null);
   const values = useWatch({ control });
-  const numeroVal = values.tarjetaNum ?? "";
-
-  useEffect(() => {
-    setMarca(detectarMarcaTarjeta(numeroVal));
-  }, [numeroVal]);
+  const marca = detectarMarcaTarjeta(values.tarjetaNum ?? "");
 
   // The parent only needs to know whether the whole card is valid; it does not drive field errors.
   useEffect(() => {
