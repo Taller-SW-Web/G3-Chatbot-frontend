@@ -128,4 +128,33 @@ describe("401 refresh interceptor (SPEC-03 Req. 5)", () => {
 
     expect(countOf("/sesion/refresh")).toBe(0);
   });
+
+  const catalogReads = [
+    { url: "/catalogo/productos", read: () => chatbotApi.buscarProductos({}) },
+    { url: "/catalogo/productos/prod-001", read: () => chatbotApi.verDetalleProducto("prod-001") },
+    { url: "/catalogo/disponibilidad", read: () => chatbotApi.consultarDisponibilidad("SKU-UNICO") },
+  ];
+
+  it.each(catalogReads)("keeps the customer session on a service 401 from $url", async ({ url, read }) => {
+    handler = (config) => reply(config, 401, invalidToken);
+
+    await expect(read()).rejects.toMatchObject({
+      response: { status: 401, data: invalidToken },
+    });
+
+    expect(calls).toEqual([{ url, auth: undefined }]);
+    expect(useChatStore.getState().accessToken).toBe("old-token");
+  });
+
+  it("does not refresh an anonymous catalog request on a service 401", async () => {
+    useChatStore.getState().logout();
+    handler = (config) => reply(config, 401, invalidToken);
+
+    await expect(chatbotApi.buscarProductos({ soloOfertas: true })).rejects.toMatchObject({
+      response: { status: 401, data: invalidToken },
+    });
+
+    expect(calls).toEqual([{ url: "/catalogo/productos", auth: undefined }]);
+    expect(useChatStore.getState().accessToken).toBeNull();
+  });
 });

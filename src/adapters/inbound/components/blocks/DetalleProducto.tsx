@@ -8,10 +8,10 @@ import { ProductImage } from "../ProductImage";
 import {
   availabilityMeta,
   findVariantSku,
-  formatPrice,
   type AvailabilityState,
   type CatalogDetail,
 } from "@/domain/entities/CatalogoUI";
+import { PriceTag } from "../PriceTag";
 import { sanitize } from "@/domain/utils/sanitize";
 
 export type { CatalogDetail };
@@ -125,7 +125,7 @@ export function DetalleProducto({ p }: { p: CatalogDetail }) {
       {p.shortDescription && (
         <p className="text-[13px] text-text-secondary">{sanitize(p.shortDescription)}</p>
       )}
-      <p className="text-[14px] font-semibold text-text-secondary">{formatPrice(p)}</p>
+      <div className="text-[14px] text-text-secondary"><PriceTag {...p} /></div>
     </div>
   );
 }
@@ -166,7 +166,7 @@ export function ProductDetailModal({
 
   const skuState: AvailabilityState | undefined = disponibilidad.data;
   const skuAgotado = skuState === "AGOTADO";
-  const puedeAgregar = varianteCompleta && haySku && !skuAgotado;
+  const puedeAgregar = varianteCompleta && haySku && !skuAgotado && p.price !== null && p.availability !== "AGOTADO";
 
   return (
     <ModalShell title="Detalle de producto" onClose={onClose}>

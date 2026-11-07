@@ -4,6 +4,7 @@
  * Sin React, sin fetch (regla hexagonal domain/).
  */
 import type { BloqueTipo } from "../types/BloqueTipo";
+import type { PromotionSummary } from "./PromocionesUI";
 import type { BackendCarouselItem, BackendProductDetail } from "./CatalogoUI";
 
 /** Base de todo bloque visual que manda el backend. */
@@ -20,7 +21,12 @@ export type BloqueTexto = BloqueBase & {
 /** Backend wraps catalog payloads in `datos`; there is no top-level `titulo`. */
 export type BloqueCarrusel = BloqueBase & {
   tipo: "CARRUSEL_PRODUCTOS";
-  datos: { productos: BackendCarouselItem[] };
+  datos: { productos: BackendCarouselItem[]; variant?: "recomendacion" | "cross_sell" | "ofertas"; titulo?: string };
+};
+
+export type PromotionsBlock = BloqueBase & {
+  tipo: "LISTA_PROMOCIONES";
+  datos: { promociones: PromotionSummary[] };
 };
 
 export type BloqueDetalle = BloqueBase & {
@@ -108,6 +114,7 @@ export type BloqueError = BloqueBase & {
 /** Unión de bloques. Los 19 tipos del enum caen aquí; los no listados usan payload genérico. */
 export type Bloque =
   | BloqueTexto
+  | PromotionsBlock
   | BloqueCarrusel
   | BloqueDetalle
   | BloqueSelectorVariante

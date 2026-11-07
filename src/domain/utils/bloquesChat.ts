@@ -23,8 +23,31 @@ export type AccionDirecta = {
   payload: Record<string, unknown>;
 };
 
-function esObjeto(v: unknown): v is Record<string, unknown> {
+export function esObjeto(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/** Validate public actions without interpreting recommendation or offer policy. */
+export function parseQuickActions(value: unknown): { pregunta?: string; acciones: AccionDirecta[] } | null {
+  if (!esObjeto(value) || !Array.isArray(value.acciones)) return null;
+  const acciones: AccionDirecta[] = [];
+  for (const action of value.acciones) {
+    if (
+      !esObjeto(action) || typeof action.id !== "string" ||
+      typeof action.etiqueta !== "string" ||
+      (action.payload != null && !esObjeto(action.payload))
+    ) continue;
+    acciones.push({ id: action.id, etiqueta: action.etiqueta, payload: action.payload ?? {} });
+  }
+  return { pregunta: typeof value.pregunta === "string" ? value.pregunta : undefined, acciones };
+}
+
+export function carouselMetadata(bloque: BloqueCarrusel): { titulo?: string; variant?: "recomendacion" | "cross_sell" | "ofertas" } {
+  const data = bloque.datos;
+  return {
+    titulo: typeof data?.titulo === "string" ? data.titulo : undefined,
+    variant: data?.variant === "recomendacion" || data?.variant === "cross_sell" || data?.variant === "ofertas" ? data.variant : undefined,
+  };
 }
 
 /** Carousel rows, or null when the payload does not carry a product list. */
@@ -68,12 +91,12 @@ export function esFormularioRegistro(bloque: BloqueFormulario): boolean {
   return bloque.formulario === "REGISTRO";
 }
 
-/** Card "add": a single-SKU product goes by sku; otherwise by product_id (backend asks for the variant). */
+/** Card "add": preserve product context for single-SKU cross-sell; otherwise ask for the variant. */
 export function accionAgregarDeTarjeta(p: CatalogCardItem): AccionDirecta {
   return {
     id: "AGREGAR_AL_CARRITO",
     etiqueta: "Agregar",
-    payload: p.sku ? { sku: p.sku } : { product_id: p.product_id },
+    payload: p.sku ? { sku: p.sku, product_id: p.product_id } : { product_id: p.product_id },
   };
 }
 

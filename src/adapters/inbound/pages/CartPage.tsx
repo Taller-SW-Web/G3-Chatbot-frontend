@@ -20,6 +20,10 @@ import { agregarProductoAlCarritoUseCase } from "@/application/use_cases/agregar
 import { aplicarCuponUseCase } from "@/application/use_cases/aplicarCuponUseCase";
 import { quitarCuponUseCase } from "@/application/use_cases/quitarCuponUseCase";
 import type { CarritoBackend } from "@/ports/outbound/ChatbotApiPort";
+import { CartDiscounts } from "../components/CartDiscounts";
+import { PriceTag } from "../components/PriceTag";
+import { parseAmount } from "@/domain/entities/PromocionesUI";
+import { parseCartDiscounts } from "@/domain/utils/cartDiscounts";
 import { sanitize } from "@/domain/utils/sanitize";
 
 /**
@@ -194,8 +198,8 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
 
   const lineas = carrito?.lineas ?? [];
   const pendientes = cambiarCantidad.isPending || quitar.isPending || vaciar.isPending || reagregar.isPending;
-  const cuponAplicado = (carrito?.descuentos ?? []).find((d) =>
-    d.nombre.startsWith("Cupón ")
+  const cuponAplicado = parseCartDiscounts(carrito?.descuentos).items.find((d) =>
+    d.name.startsWith("Cupón ")
   );
 
   return (
@@ -231,7 +235,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
                     {sanitize(it.nombre)}
                   </p>
                   {it.variante && <p className="text-[12px] text-text-secondary">{sanitize(it.variante)}</p>}
-                  <p className="text-[13px] font-semibold text-text-secondary mt-1">S/ {it.precio.toFixed(2)}</p>
+                  <div className="text-[13px] text-text-secondary mt-1"><PriceTag price={parseAmount(it.precio)} /></div>
                   {!it.disponible && (
                     <p data-testid="linea-no-disponible" className="text-[12px] font-bold text-error-default">
                       Ya no disponible
@@ -293,7 +297,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
             {cuponAplicado ? (
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[13px] text-text-secondary">
-                  Aplicado · ahorras S/ {cuponAplicado.monto.toFixed(2)}
+                  Aplicado · ahorras S/ {cuponAplicado.amount.toFixed(2)}
                 </p>
                 <button
                   type="button"
@@ -423,17 +427,12 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
       <div className="border-t border-border-default p-4 flex flex-col gap-2 bg-white sticky bottom-0">
         <div className="flex justify-between items-center text-sm">
           <span className="text-text-secondary">Subtotal</span>
-          <span className="font-semibold text-text-primary">S/ {(carrito?.subtotal ?? 0).toFixed(2)}</span>
+          <span className="font-semibold text-text-primary"><PriceTag price={parseAmount(carrito?.subtotal)} /></span>
         </div>
-        {(carrito?.descuentos ?? []).map((d, i) => (
-          <div key={i} className="flex justify-between items-center text-sm">
-            <span className="text-text-secondary">{sanitize(d.nombre)}</span>
-            <span className="font-bold text-success-default">- S/ {d.monto.toFixed(2)}</span>
-          </div>
-        ))}
+        <CartDiscounts value={carrito?.descuentos} />
         <div className="flex justify-between items-center text-sm">
           <span className="text-text-secondary">Total</span>
-          <span className="font-heading text-[20px] text-text-primary">S/ {(carrito?.total ?? 0).toFixed(2)}</span>
+          <span className="font-heading text-[20px] text-text-primary"><PriceTag price={parseAmount(carrito?.total)} /></span>
         </div>
         <button
           onClick={irAPagar}
