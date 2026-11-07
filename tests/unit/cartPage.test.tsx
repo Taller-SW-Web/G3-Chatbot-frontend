@@ -139,6 +139,22 @@ describe("CartPage: mutaciones del carrito anónimo (SPEC-11)", () => {
       })
     );
   });
+
+  it("muestra la imagen real y vuelve al placeholder si falla", () => {
+    h.cartData = { ...h.CARRITO, lineas: [{ ...h.CARRITO.lineas[0], imagen: "https://cdn.example.com/zapatilla.jpg" }] };
+    renderCart();
+    const imagen = screen.getByRole("img", { name: "Zapatilla" }) as HTMLImageElement;
+    expect(imagen.src).toBe("https://cdn.example.com/zapatilla.jpg");
+    expect(imagen.className).toContain("object-cover");
+    fireEvent.error(imagen);
+    expect(screen.getByRole("img", { name: "Zapatilla" }).tagName).toBe("DIV");
+  });
+
+  it("muestra el placeholder sin imagen", () => {
+    h.cartData = { ...h.CARRITO, lineas: [{ ...h.CARRITO.lineas[0], imagen: null }] };
+    renderCart();
+    expect(screen.getByRole("img", { name: "Zapatilla" }).tagName).toBe("DIV");
+  });
 });
 
 
@@ -172,6 +188,7 @@ describe("CartPage: cupón (SPEC-13)", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    h.cartData = undefined;
     h.CARRITO.descuentos = [];
     h.CARRITO.total = 100;
     useChatStore.setState({ cliente: CLIENTE, ultimaConversacionId: null });
@@ -185,6 +202,26 @@ describe("CartPage: cupón (SPEC-13)", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /APLICAR/ }));
   }
+
+  it("omite la conversación guardada en las mutaciones de un cliente", async () => {
+    h.actualizar.mockResolvedValue(h.CARRITO);
+    h.quitar.mockResolvedValue({ mensaje: "ok" });
+    h.vaciar.mockResolvedValue({ mensaje: "ok" });
+    h.agregar.mockResolvedValue({ ok: true });
+    renderCart({ conversacionId: h.CONV_PROP });
+    fireEvent.click(screen.getByRole("button", { name: /Aumentar cantidad de Zapatilla/i }));
+    await waitFor(() => expect(h.actualizar).toHaveBeenCalledWith(expect.anything(), {
+      itemId: "l1", cantidad: 2, conversacionId: undefined,
+    }));
+    fireEvent.click(screen.getByRole("button", { name: /Quitar Zapatilla/i }));
+    await waitFor(() => expect(h.quitar).toHaveBeenCalledWith(expect.anything(), {
+      itemId: "l1", conversacionId: undefined,
+    }));
+    fireEvent.click(await screen.findByTestId("btn-deshacer"));
+    await waitFor(() => expect(h.agregar).toHaveBeenCalledWith(expect.anything(), {
+      sku: "SKU-1", cantidad: 1, conversacionId: undefined,
+    }));
+  });
 
   it("aplica el cupón y muestra el ahorro del servidor", async () => {
     h.aplicarCupon.mockResolvedValue({

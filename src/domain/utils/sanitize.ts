@@ -23,8 +23,8 @@ export function maskEmail(correo: string): string {
 export function maskCelular(celular: string): string {
   const digits = celular.replace(/\D/g, "");
   const last3 = digits.slice(-3);
-  const prefix = celular.trim().startsWith("+")
-    ? `${celular.trim().split(" ")[0]} `
+  const prefix = celular.trim().startsWith("+") && digits.length > 9
+    ? `+${digits.slice(0, -9)} `
     : "";
   return `${prefix}*****${last3}`;
 }
