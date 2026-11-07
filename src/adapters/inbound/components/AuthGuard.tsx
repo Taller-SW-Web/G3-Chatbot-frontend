@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useChatStore } from "@/application/state/chatStore";
+import { container } from "@/infrastructure/di/container";
 
 export type AuthGuardProps = {
   children: ReactNode;
@@ -40,34 +41,48 @@ export function AuthGuard({
   const setAccionPendiente = useChatStore((s) => s.setAccionPendiente);
   const setAuthOpen = useChatStore((s) => s.setAuthOpen);
 
-  // Comprueba tanto presencia como vigencia real del token (H4-S5).
+  // Comprueba presencia y vigencia real del token (H4-S5). Si no hay un token
+  // vigente (p. ej. tras recargar, o al vencer los 15 min) se intenta UNA renovación
+  // silenciosa con la cookie httpOnly de refresh; solo se redirige si falla.
   // `Date.now()` no puede llamarse en el render y el efecto tampoco debe hacer
-  // `setState` síncrono (reglas del React Compiler): la primera comprobación se
-  // agenda en un timeout y luego se refresca cada 30 s. `lista` evita redirigir
-  // antes de haber evaluado la vigencia.
-  const [vigencia, setVigencia] = useState({ lista: false, expirado: true });
+  // `setState` síncrono (reglas del React Compiler): la comprobación se agenda en
+  // un timeout y luego se repite cada 30 s. `verificando` evita redirigir antes de
+  // haber evaluado la vigencia.
+  const [estado, setEstado] = useState<"verificando" | "ok" | "fallo">("verificando");
 
   useEffect(() => {
-    const revisar = () =>
-      setVigencia({
-        lista: true,
-        expirado: !accessToken || !expiraEn || Date.now() >= expiraEn,
-      });
+    let cancelado = false;
+    const revisar = () => {
+      if (accessToken && expiraEn && Date.now() < expiraEn) {
+        setEstado("ok");
+        return;
+      }
+      // El helper comparte un único vuelo (single-flight) con el interceptor de la API.
+      container.api
+        .refreshSession()
+        .then((opened) => {
+          // Al actualizar el store este efecto se reevalúa con el token nuevo.
+          useChatStore.getState().applySession(opened.accessToken, opened.expiresIn);
+        })
+        .catch(() => {
+          if (!cancelado) setEstado("fallo");
+        });
+    };
     const inicial = window.setTimeout(revisar, 0);
     const periodo = window.setInterval(revisar, 30_000);
     return () => {
+      cancelado = true;
       window.clearTimeout(inicial);
       window.clearInterval(periodo);
     };
   }, [accessToken, expiraEn]);
 
-  const isAuthenticated =
-    Boolean(accessToken) && vigencia.lista && !vigencia.expirado;
+  const isAuthenticated = estado === "ok";
 
   useEffect(() => {
-    if (!mounted || !vigencia.lista) return;
+    if (!mounted) return;
 
-    if (!isAuthenticated) {
+    if (estado === "fallo") {
       const search = typeof window !== "undefined" ? window.location.search : "";
       const fullPath = pathname ? `${pathname}${search}` : "/";
 
@@ -75,9 +90,9 @@ export function AuthGuard({
       setAuthOpen(true);
       router.replace(redirectTo);
     }
-  }, [mounted, vigencia.lista, isAuthenticated, pathname, redirectTo, router, setAccionPendiente, setAuthOpen]);
+  }, [mounted, estado, pathname, redirectTo, router, setAccionPendiente, setAuthOpen]);
 
-  if (!mounted || !vigencia.lista || !isAuthenticated) {
+  if (!mounted || !isAuthenticated) {
     return (
       fallback ?? (
         <div

@@ -12,6 +12,10 @@ const navMock = vi.hoisted(() => ({
   pathname: "/cuenta",
 }));
 
+const apiMock = vi.hoisted(() => ({ refreshSession: vi.fn() }));
+
+vi.mock("@/infrastructure/di/container", () => ({ container: { api: apiMock } }));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     replace: navMock.replace,
@@ -28,6 +32,8 @@ function resetStore() {
     accionPendiente: null,
     authOpen: false,
   });
+  apiMock.refreshSession.mockReset();
+  apiMock.refreshSession.mockRejectedValue(new Error("sin refresh"));
   navMock.replace.mockClear();
   navMock.push.mockClear();
   navMock.pathname = "/cuenta";
@@ -58,6 +64,7 @@ describe("AuthGuard (H4-S5)", () => {
     expect(screen.getByText("Pantalla privada")).toBeDefined();
     expect(navMock.replace).not.toHaveBeenCalled();
     expect(useChatStore.getState().authOpen).toBe(false);
+    expect(apiMock.refreshSession).not.toHaveBeenCalled();
   });
 
   it("bloquea el contenido y redirige al login si no hay token de sesión", async () => {
@@ -112,8 +119,7 @@ describe("AuthGuard (H4-S5)", () => {
     expect(document.cookie).not.toContain(`${SESION_COOKIE_NAME}=1`);
   });
 
-  it("bloquea el acceso y redirige si el token ya venció (PR #33 alto 5)", async () => {
-    // Token vencido hace 5 segundos
+  it("bloquea el acceso y redirige si el token venció y la renovación falla", async () => {
     useChatStore.setState({
       accessToken: "token-expirado",
       expiraEn: Date.now() - 5000,
@@ -132,5 +138,42 @@ describe("AuthGuard (H4-S5)", () => {
     await waitFor(() => {
       expect(navMock.replace).toHaveBeenCalledWith("/?abrirLogin=1");
     });
+    expect(apiMock.refreshSession).toHaveBeenCalledTimes(1);
+    expect(useChatStore.getState().accionPendiente).toBe("/cuenta");
+  });
+
+  it("renueva la sesión en silencio si el token rehidratado no trae expiraEn", async () => {
+    useChatStore.setState({ accessToken: "token-rehidratado", expiraEn: null });
+    apiMock.refreshSession.mockResolvedValue({ accessToken: "token-nuevo", expiresIn: 900 });
+
+    render(
+      createElement(
+        AuthGuard,
+        null,
+        createElement("div", { "data-testid": "contenido-privado" }, "Privado")
+      )
+    );
+
+    expect(await screen.findByTestId("contenido-privado")).toBeDefined();
+    expect(apiMock.refreshSession).toHaveBeenCalledTimes(1);
+    expect(useChatStore.getState().accessToken).toBe("token-nuevo");
+    expect(navMock.replace).not.toHaveBeenCalled();
+  });
+
+  it("renueva la sesión en silencio si el token venció", async () => {
+    useChatStore.setState({ accessToken: "token-expirado", expiraEn: Date.now() - 5000 });
+    apiMock.refreshSession.mockResolvedValue({ accessToken: "token-nuevo", expiresIn: 900 });
+
+    render(
+      createElement(
+        AuthGuard,
+        null,
+        createElement("div", { "data-testid": "contenido-privado" }, "Privado")
+      )
+    );
+
+    expect(await screen.findByTestId("contenido-privado")).toBeDefined();
+    expect(apiMock.refreshSession).toHaveBeenCalledTimes(1);
+    expect(navMock.replace).not.toHaveBeenCalled();
   });
 });

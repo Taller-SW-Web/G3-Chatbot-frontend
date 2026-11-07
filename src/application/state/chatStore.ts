@@ -135,6 +135,7 @@ export const useChatStore = create<ChatState>()(
       },
       partialize: (s) => ({
         accessToken: s.accessToken,
+        expiraEn: s.expiraEn,
         chatSid: s.chatSid,
         cliente: s.cliente,
         carrito: s.carrito,
