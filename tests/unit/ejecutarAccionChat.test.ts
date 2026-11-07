@@ -70,7 +70,8 @@ describe("acciones rápidas de chat", () => {
 
     expect(postMock).toHaveBeenCalledWith(
       "/chat/conversaciones/conv%2F1/mensajes",
-      { accion: { tipo: "VER_CARRITO", payload: { origen: "chat" } } }
+      { accion: { tipo: "VER_CARRITO", payload: { origen: "chat" } } },
+      { timeout: 8000 }
     );
   });
 
@@ -80,5 +81,24 @@ describe("acciones rápidas de chat", () => {
     await expect(
       chatbotApi.ejecutarAccion("conv-1", { tipo: "VER_CARRITO", payload: {} })
     ).rejects.toThrow("network unavailable");
+  });
+
+  it("reserva el presupuesto agregado solo para acciones de catálogo", async () => {
+    postMock.mockResolvedValue({ data: { texto: "Sin ofertas", bloques: [] } });
+    await chatbotApi.ejecutarAccion("conv-1", { tipo: "VER_OFERTAS", payload: {} });
+    expect(postMock).toHaveBeenLastCalledWith(
+      "/chat/conversaciones/conv-1/mensajes",
+      { accion: { tipo: "VER_OFERTAS", payload: {} } },
+      { timeout: 12000 }
+    );
+  });
+
+  it("permite que el agregado complete evaluación y cross-sell sin duplicar la mutación", async () => {
+    postMock.mockResolvedValue({ data: { texto: "Agregado", bloques: [] } });
+    const accion = { tipo: "AGREGAR_AL_CARRITO", payload: { sku: "s", product_id: "p" } };
+    await chatbotApi.ejecutarAccion("conv-1", accion);
+    expect(postMock).toHaveBeenLastCalledWith(
+      "/chat/conversaciones/conv-1/mensajes", { accion }, { timeout: 12000 }
+    );
   });
 });

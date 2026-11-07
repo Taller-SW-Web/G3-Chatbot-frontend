@@ -83,6 +83,7 @@ export const CONVERSACIONES_POR_PAGINA = 20;
 
 /** Filtros de `GET /catalogo/productos` (SPEC-06, nombres reales del contrato). */
 export type BuscarProductosInput = {
+  soloOfertas?: boolean;
   q?: string;
   categoria?: string;
   marca?: string;

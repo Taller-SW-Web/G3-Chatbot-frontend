@@ -63,9 +63,16 @@ function isPublic(path: string | undefined): boolean {
   return !!path && PUBLIC_PATHS.some((p) => path.includes(p));
 }
 
+function isPublicRequest(config: InternalAxiosRequestConfig): boolean {
+  // Catalog reads use service credentials upstream, never the customer's session.
+  // Propagate their failures without refreshing or clearing customer credentials.
+  return isPublic(config.url) ||
+    (config.method === "get" && !!config.url?.startsWith("/catalogo/"));
+}
+
 http.interceptors.request.use((cfg) => {
   const token = useChatStore.getState().accessToken;
-  if (token && !isPublic(cfg.url)) cfg.headers.Authorization = `Bearer ${token}`;
+  if (token && !isPublicRequest(cfg)) cfg.headers.Authorization = `Bearer ${token}`;
   return cfg;
 });
 
@@ -91,7 +98,7 @@ http.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const config = error.config as ReintentableConfig | undefined;
-    if (!config || config._retry || isPublic(config.url) || !isInvalidToken(error)) {
+    if (!config || config._retry || isPublicRequest(config) || !isInvalidToken(error)) {
       return Promise.reject(error);
     }
     try {
@@ -181,9 +188,12 @@ export const chatbotApi: ChatbotApiPort = {
     return mapearHistorial(data);
   },
   async ejecutarAccion(conversacionId, accion) {
+    // Add also aggregates stock, pricing, evaluation and optional cross-sell.
+    const agregaComercio = ["VER_OFERTAS", "RECOMENDAR_PRODUCTOS", "BUSCAR_PRODUCTOS", "BUSCAR_POR_CATEGORIA", "BUSCAR_PAGINA", "AGREGAR_AL_CARRITO"].includes(accion.tipo);
     const { data } = await http.post(
       `/chat/conversaciones/${encodeURIComponent(conversacionId)}/mensajes`,
-      { accion }
+      { accion },
+      { timeout: agregaComercio ? apiConfig.timeouts.listadoCatalogo : apiConfig.timeouts.defecto }
     );
     return {
       texto: data.texto as string,
@@ -294,6 +304,7 @@ export const chatbotApi: ChatbotApiPort = {
   async buscarProductos(input: BuscarProductosInput): Promise<PaginaCatalogo> {
     const { data } = await http.get(`/catalogo/productos`, {
       params: {
+        soloOfertas: input.soloOfertas,
         q: input.q,
         categoria: input.categoria,
         marca: input.marca,
@@ -303,7 +314,7 @@ export const chatbotApi: ChatbotApiPort = {
         pagina: input.pagina ?? 1,
         tamanio: input.tamanio ?? 10,
       },
-      timeout: apiConfig.timeouts.catalogo,
+      timeout: apiConfig.timeouts.listadoCatalogo,
     });
     return data as PaginaCatalogo;
   },

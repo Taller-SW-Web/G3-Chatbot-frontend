@@ -9,8 +9,8 @@ import {
 const TONE_CLASS: Record<AvailabilityTone, string> = {
   ok: "bg-accent-volt-soft text-accent-volt-ink",
   low: "bg-accent-signal-soft text-text-primary",
-  out: "bg-surface-ink-soft text-text-secondary",
-  unknown: "bg-surface-ink-soft text-text-secondary",
+  out: "bg-surface-ink-soft text-text-inverse-soft",
+  unknown: "bg-surface-ink-soft text-text-inverse-soft",
 };
 
 const TONE_TESTID: Record<AvailabilityTone, string> = {

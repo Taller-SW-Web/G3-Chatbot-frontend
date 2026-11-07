@@ -49,7 +49,8 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
 
   const [composer, setComposer] = useState("");
   const [errorVisto, setErrorVisto] = useState(error);
-  const [accionOcupada, setAccionOcupada] = useState(false);
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const accionOcupada = pendingActionId !== null;
   const [eligeCategoria, setEligeCategoria] = useState(false);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const accionOcupadaRef = useRef(false);
@@ -99,7 +100,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
     }
 
     accionOcupadaRef.current = true;
-    setAccionOcupada(true);
+    setPendingActionId(accion.id);
     setErrorAccion(null);
     try {
       await ejecutarAccionChatUseCase(container.api, {
@@ -120,7 +121,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
       setErrorAccion("No se pudo completar la acción. Inténtalo de nuevo.");
     } finally {
       accionOcupadaRef.current = false;
-      setAccionOcupada(false);
+      setPendingActionId(null);
     }
   }
 
@@ -162,6 +163,8 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
           <ChatWindow
             items={construirItemsChat(mensajes, borrador)}
             typing={mostrarEscribiendo(estado, borrador)}
+            pendingActionId={pendingActionId}
+            actionsBusy={bloqueado}
             aviso={aviso}
             onReintentar={() => void reintentar()}
             onQuickAction={bloqueado ? undefined : ejecutarAccionRapida}
@@ -176,6 +179,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
                 etiqueta: categoria,
                 payload: { categoria },
               }))}
+              busy={bloqueado}
               onAccion={bloqueado ? undefined : ejecutarAccionRapida}
             />
           </div>

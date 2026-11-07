@@ -2,7 +2,6 @@
 import type { ReactNode } from "react";
 import type {
   Bloque,
-  BloqueAcciones,
   BloqueCarritoResumen,
   BloqueCarrusel,
   BloqueConfirmacion,
@@ -12,6 +11,7 @@ import type {
   BloqueResumenCheckout,
   BloqueSelectorVariante,
   BloqueTexto,
+  PromotionsBlock,
 } from "@/domain/entities/Bloque";
 import {
   accionAgregarDeTarjeta,
@@ -21,8 +21,12 @@ import {
   esFormularioRegistro,
   faltantesDeSelector,
   productosDeCarrusel,
+  carouselMetadata,
+  parseQuickActions,
 } from "@/domain/utils/bloquesChat";
 import { sanitize } from "@/domain/utils/sanitize";
+import { parsePromotions } from "@/domain/entities/PromocionesUI";
+import { ListaPromociones } from "./blocks/ListaPromociones";
 import { AccionesRapidas } from "./blocks/AccionesRapidas";
 import { AvisoDegradado } from "./blocks/AvisoDegradado";
 import { BloqueError as BloqueErrorView } from "./blocks/BloqueError";
@@ -47,6 +51,7 @@ type Props = {
   isFirstAssistant?: boolean;
   degradado?: boolean;
   motivoDegradado?: string;
+  actionsBusy?: boolean;
   onQuickAction?: (accion: AccionRapidaChat) => void;
 };
 
@@ -79,7 +84,8 @@ function esBloqueError(b: Bloque): b is BloqueError {
 export function renderBloque(
   bloque: Bloque,
   clave: number,
-  onQuickAction?: (accion: AccionRapidaChat) => void
+  onQuickAction?: (accion: AccionRapidaChat) => void,
+  actionsBusy = false
 ): ReactNode {
   if (esBloqueTexto(bloque)) {
     return <p key={clave} data-testid="bloque-texto">{renderChatText(bloque.texto)}</p>;
@@ -95,17 +101,22 @@ export function renderBloque(
   }
   switch (bloque.tipo) {
     case "ACCIONES_RAPIDAS": {
-      const b = bloque as BloqueAcciones;
-      if (!Array.isArray(b.acciones) || b.acciones.length === 0) return null;
+      const b = parseQuickActions(bloque);
+      if (!b || b.acciones.length === 0) return null;
       return (
         <div key={clave} data-testid="bloque-acciones-rapidas" className="mt-2">
           <AccionesRapidas
             pregunta={b.pregunta}
             acciones={b.acciones}
             onAccion={onQuickAction}
+            busy={actionsBusy}
           />
         </div>
       );
+    }
+    case "LISTA_PROMOCIONES": {
+      const items = parsePromotions((bloque as PromotionsBlock).datos?.promociones);
+      return <div key={clave} className="mt-2"><ListaPromociones promos={items} /></div>;
     }
     case "DETALLE_PRODUCTO": {
       const detalle = detalleDeBloque(bloque as BloqueDetalle);
@@ -135,6 +146,7 @@ export function renderBloque(
         // Inerte mientras otra acción está en curso (`onQuickAction` ausente).
         <div key={clave} data-testid="bloque-carrusel-productos" className="mt-2" inert={!onQuickAction}>
           <CarruselProductos
+            {...carouselMetadata(bloque as BloqueCarrusel)}
             productos={productos}
             onAdd={(p) => onQuickAction?.(accionAgregarDeTarjeta(p))}
             onDetalle={(p) => onQuickAction?.(accionVerDetalle(p))}
@@ -197,6 +209,7 @@ export function MessageBubble({
   degradado = false,
   motivoDegradado,
   onQuickAction,
+  actionsBusy = false,
 }: Props) {
   if (rol === "user") {
     return (
@@ -224,7 +237,7 @@ export function MessageBubble({
       )}
       {degradado && <AvisoDegradado motivo={motivoDegradado} />}
       {texto && <TextoMarkdown texto={sanitize(texto)} />}
-      {bloques.map((bloque, i) => renderBloque(bloque, i, onQuickAction))}
+      {bloques.map((bloque, i) => renderBloque(bloque, i, onQuickAction, actionsBusy))}
       {streaming && <span data-testid="typing-indicator" aria-label="escribiendo" />}
     </div>
   );

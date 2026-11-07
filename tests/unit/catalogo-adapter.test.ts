@@ -33,17 +33,18 @@ describe("adapter Axios de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {
 
   it("búsqueda usa nombres reales y timeout de catálogo", async () => {
     peticiones.get.mockResolvedValueOnce({ data: { items: [], total: 0 } });
-    await chatbotApi.buscarProductos({ q: "Nike", precioMin: 100, tamanio: 5 });
+    await chatbotApi.buscarProductos({ q: "Nike", precioMin: 100, tamanio: 5, soloOfertas: true });
     expect(peticiones.get).toHaveBeenCalledWith(
       "/catalogo/productos",
       expect.objectContaining({
         params: expect.objectContaining({
           q: "Nike",
+          soloOfertas: true,
           precioMin: 100,
           tamanio: 5,
           pagina: 1,
         }),
-        timeout: 4000,
+        timeout: 12000,
       })
     );
   });

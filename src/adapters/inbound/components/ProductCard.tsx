@@ -2,9 +2,9 @@
 
 import { PlusIcon } from "./icons";
 import {
-  formatPrice,
   type CatalogCardItem,
 } from "@/domain/entities/CatalogoUI";
+import { PriceTag } from "./PriceTag";
 import { sanitize } from "@/domain/utils/sanitize";
 import { AvailabilityBadge } from "./AvailabilityBadge";
 import { ProductImage } from "./ProductImage";
@@ -43,15 +43,15 @@ export function ProductCard({
           <span className="block text-[12px] text-text-secondary">{sanitize(producto.shortDescription)}</span>
         )}
         <span data-testid="product-precio" className="block text-[14px] font-semibold text-text-primary">
-          {formatPrice(producto)}
+          <PriceTag {...producto} />
         </span>
-        <AvailabilityBadge state={producto.availability} />
+        <AvailabilityBadge state={producto.availability} className="self-start" />
       </button>
       <button
         data-testid="btn-agregar"
         aria-label={`Elegir talla y color de ${nombre}`}
         title={agotado ? "Agotado" : "Elegir talla y color"}
-        disabled={agotado}
+        disabled={agotado || producto.price === null}
         onClick={() => onDetalle(producto)}
         className="absolute top-3 right-3 w-9 h-9 wf-btn flex items-center justify-center bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-40 disabled:cursor-not-allowed"
       >
