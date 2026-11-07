@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { chatbotSse } from "@/adapters/outbound/ChatbotSseAdapter";
+import { chatbotApi } from "@/adapters/outbound/ChatbotApiAxiosAdapter";
+import { mensajePorCodigo } from "@/adapters/inbound/components/chatPresentacion";
 import { useChatStore } from "@/application/state/chatStore";
 import {
   ChatStreamError,
@@ -50,6 +52,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -183,6 +186,60 @@ describe("chatbotSse.enviarMensajeStream", () => {
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(init.headers).toMatchObject({ Authorization: "Bearer jwt-123" });
+  });
+
+  it("refreshes on any authenticated 401 and retries the same request once", async () => {
+    useChatStore.getState().applySession("expired-token", 900);
+    const refresh = vi.spyOn(chatbotApi, "refreshSession").mockResolvedValue({
+      accessToken: "new-token",
+      expiresIn: 900,
+    });
+    fetchMock
+      .mockResolvedValueOnce(problema(401, { code: "OTHER_401" }))
+      .mockResolvedValueOnce(respuestaSse([frame("fin", { mensajeId: "m-2" })]));
+
+    expect(await enviar()).toEqual([{ tipo: "fin", mensajeId: "m-2" }]);
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [firstUrl, firstInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [retryUrl, retryInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(retryUrl).toBe(firstUrl);
+    expect(retryInit.body).toBe(firstInit.body);
+    expect(firstInit.headers).toMatchObject({ Authorization: "Bearer expired-token" });
+    expect(retryInit.headers).toMatchObject({ Authorization: "Bearer new-token" });
+    expect(useChatStore.getState().accessToken).toBe("new-token");
+  });
+
+  it("clears the session and reports 401 when refresh fails", async () => {
+    useChatStore.getState().applySession("expired-token", 900);
+    const refresh = vi.spyOn(chatbotApi, "refreshSession").mockRejectedValue(new Error("refresh failed"));
+    fetchMock.mockResolvedValue(problema(401, { code: "TOKEN_INVALIDO" }));
+
+    const error = await enviar().catch((failure: unknown) => failure as ChatStreamError);
+
+    expect(error).toMatchObject({ status: 401, code: "TOKEN_INVALIDO" });
+    expect(mensajePorCodigo(error.code, error.status)).toBe(
+      "Tu sesión expiró. Inicia sesión de nuevo para continuar."
+    );
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(useChatStore.getState().accessToken).toBeNull();
+    expect(useChatStore.getState().expiraEn).toBeNull();
+  });
+
+  it("keeps anonymous cookie requests unchanged on 401", async () => {
+    const refresh = vi.spyOn(chatbotApi, "refreshSession");
+    fetchMock.mockResolvedValue(problema(401, { code: "REQUIERE_SESION" }));
+
+    await expect(enviar()).rejects.toMatchObject({ status: 401, code: "REQUIERE_SESION" });
+
+    expect(refresh).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.credentials).toBe("include");
+    expect(init.headers).not.toHaveProperty("Authorization");
   });
 
   it("rechaza con ChatStreamError ante problem+json 400", async () => {

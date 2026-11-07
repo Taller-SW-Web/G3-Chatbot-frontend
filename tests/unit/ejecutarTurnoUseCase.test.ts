@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { AccionTurno } from "@/application/state/turnoChat";
+import { turnoChatReducer, turnoInicial, type AccionTurno } from "@/application/state/turnoChat";
 import { ejecutarTurnoUseCase } from "@/application/use_cases/ejecutarTurnoUseCase";
 import type { Mensaje } from "@/domain/entities/Mensaje";
 import type { ChatbotApiPort } from "@/ports/outbound/ChatbotApiPort";
@@ -101,6 +101,37 @@ describe("ejecutarTurnoUseCase", () => {
     expect(tipos(acciones)).toEqual(["usuarioAgregado", "falloPrevio"]);
     expect(acciones[1]).toMatchObject({ code, status });
     expect(cargarHistorial).not.toHaveBeenCalled();
+  });
+
+  it("accepts and displays a later message after a failed send", async () => {
+    const actions: AccionTurno[] = [];
+    let attempts = 0;
+    const stream: ChatStreamPort = {
+      enviarMensajeStream: vi.fn(async (_id, _text, onEvent) => {
+        if (attempts++ === 0) throw new ChatStreamError(401, "TOKEN_INVALIDO");
+        onEvent({ tipo: "aceptado", mensajeId: "m-2" });
+        onEvent({ tipo: "token", texto: "Respuesta" });
+        onEvent({ tipo: "fin", mensajeId: "m-3" });
+      }),
+    };
+    const input = {
+      api: {} as ChatbotApiPort,
+      stream,
+      conversacionId: "c-1",
+      dispatch: (action: AccionTurno) => actions.push(action),
+    };
+
+    await ejecutarTurnoUseCase({ ...input, texto: "first" });
+    await ejecutarTurnoUseCase({ ...input, texto: "second" });
+
+    const state = actions.reduce(turnoChatReducer, turnoInicial);
+    expect(state.estado).toBe("inactivo");
+    expect(state.error).toBeNull();
+    expect(state.mensajes.map(({ rol, texto }) => ({ rol, texto }))).toEqual([
+      { rol: "user", texto: "second" },
+      { rol: "bot", texto: "Respuesta" },
+    ]);
+    expect(stream.enviarMensajeStream).toHaveBeenCalledTimes(2);
   });
 
   it("abort: termina en silencio sin acciones de fallo", async () => {

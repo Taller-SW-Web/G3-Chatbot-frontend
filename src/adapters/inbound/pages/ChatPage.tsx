@@ -22,7 +22,7 @@ import { MENSAJE_MAX_CARACTERES } from "@/application/use_cases/enviarMensajeUse
 
 const SUGERENCIAS = ["Ver ofertas", "Rastrear pedido", "Ayuda con devolución"];
 const CATEGORIAS = ["zapatillas", "polos", "chimpunes"];
-const CAMBIAN_CARRITO = new Set(["AGREGAR_AL_CARRITO", "CAMBIAR_CANTIDAD", "QUITAR_DEL_CARRITO"]);
+const CAMBIAN_CARRITO = new Set(["AGREGAR_AL_CARRITO", "CAMBIAR_CANTIDAD", "QUITAR_DEL_CARRITO", "VACIAR_CARRITO"]);
 
 /**
  * `/chat/[id]`: historial y turno en vivo de una conversación real (ADR-0021).
