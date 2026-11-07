@@ -37,7 +37,7 @@ export type BloqueDetalle = BloqueBase & {
 /** Missing attributes the backend asks for before it can add a variant to the cart. */
 export type BloqueSelectorVariante = BloqueBase & {
   tipo: "SELECTOR_VARIANTE";
-  datos: { product_id: string; faltantes: string[] };
+  datos: { product_id: string; faltantes: string[]; seleccion?: Record<string, string> };
 };
 
 /** Form request; the backend sends only the form kind, no data. */
