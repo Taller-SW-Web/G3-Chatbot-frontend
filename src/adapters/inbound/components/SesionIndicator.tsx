@@ -38,11 +38,11 @@ export function SesionIndicator() {
       {abierto && (
         <div className="absolute right-0 mt-2 w-48 rounded-md bg-white border border-border-default shadow-lg p-1 flex flex-col">
           <button onClick={() => { setAbierto(false); router.push("/pedidos"); }}
-            className="text-left px-3 py-2 text-[13px] hover:bg-surface-cloud-subtle rounded-sm">
+            className="text-left px-3 py-2 text-[13px] text-text-primary hover:bg-surface-cloud-subtle rounded-sm">
             Mis pedidos
           </button>
           <button onClick={() => { setAbierto(false); router.push("/pedidos/reclamos"); }}
-            className="text-left px-3 py-2 text-[13px] hover:bg-surface-cloud-subtle rounded-sm">
+            className="text-left px-3 py-2 text-[13px] text-text-primary hover:bg-surface-cloud-subtle rounded-sm">
             Mis reclamos
           </button>
           <button onClick={cerrarSesion}

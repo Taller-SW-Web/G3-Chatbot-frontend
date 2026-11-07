@@ -5,6 +5,7 @@ import { persist } from "zustand/middleware";
 import type { Cliente } from "@/domain/entities/Cliente";
 import type { CarritoUI } from "@/domain/entities/CarritoUI";
 import { isTokenExpiringSoon, sincronizarCookieSesion } from "@/domain/utils/sesion";
+import { maskCelular } from "@/domain/utils/sanitize";
 
 type ChatState = {
   accessToken: string | null;
@@ -132,6 +133,14 @@ export const useChatStore = create<ChatState>()(
         delete resto.escribiendo;
         delete resto.mensajePendiente;
         return resto as unknown as ChatState;
+      },
+      // The masked phone is derived data: recompute it so a value saved by an older mask never shows.
+      merge: (persistido, actual) => {
+        const estado = { ...actual, ...(persistido as object) } as ChatState;
+        if (estado.cliente?.celular) {
+          estado.cliente = { ...estado.cliente, celularEnmascarado: maskCelular(estado.cliente.celular) };
+        }
+        return estado;
       },
       partialize: (s) => ({
         accessToken: s.accessToken,
