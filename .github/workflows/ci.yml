@@ -100,6 +100,27 @@ jobs:
           pnpm audit --audit-level=high \
             || echo "::warning::pnpm audit encontró vulnerabilidades (advisory durante la Fase 2)"
 
+  # Revisa las dependencias que el PR agrega/cambia contra el Dependency Graph.
+  # El job corre siempre (aunque en `push` no revisa nada) para no romper el
+  # chequeo de `skipped` del gate.
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Review dependencies
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
   # Análisis de SonarCloud con la cobertura del job de unitarias. El proyecto espera
   # el Quality Gate (`sonar.qualitygate.wait`), así que un gate rojo tumba el job.
   sonar:
@@ -129,7 +150,7 @@ jobs:
     name: check
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [lint, test, build, security, sonar]
+    needs: [lint, test, build, security, dependency-review, sonar]
     if: always()
     steps:
       - name: Require every job to succeed
