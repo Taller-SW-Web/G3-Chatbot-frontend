@@ -100,9 +100,8 @@ jobs:
           pnpm audit --audit-level=high \
             || echo "::warning::pnpm audit encontró vulnerabilidades (advisory durante la Fase 2)"
 
-  # Análisis de SonarCloud con la cobertura del job de unitarias. Por ahora NO está
-  # en `needs` del gate: primero se valida que el proyecto existe y que el token
-  # de la organización funciona. Después se añade al gate.
+  # Análisis de SonarCloud con la cobertura del job de unitarias. El proyecto espera
+  # el Quality Gate (`sonar.qualitygate.wait`), así que un gate rojo tumba el job.
   sonar:
     name: SonarCloud
     runs-on: ubuntu-latest
@@ -130,7 +129,7 @@ jobs:
     name: check
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [lint, test, build, security]
+    needs: [lint, test, build, security, sonar]
     if: always()
     steps:
       - name: Require every job to succeed
