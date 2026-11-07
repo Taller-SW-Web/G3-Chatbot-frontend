@@ -1,0 +1,42 @@
+name: Verify production
+
+# Runs after Vercel reports a finished deployment for a commit on main, so it never blocks the deploy.
+# It lives outside the CI workflow on purpose: Vercel waits for the commit checks before deploying,
+# so a check that waits for Vercel would never finish.
+# GitHub runs `status` workflows from the default branch (main).
+on:
+  status:
+  workflow_dispatch:
+
+env:
+  FRONTEND_URL: https://g3-chatbot-frontend.vercel.app
+
+jobs:
+  verify:
+    name: Verify production
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.context == 'Vercel' &&
+       contains(github.event.branches.*.name, 'main') &&
+       contains(fromJSON('["success", "failure", "error"]'), github.event.state))
+    steps:
+      - name: Fail when the Vercel deployment failed
+        if: github.event_name == 'status' && github.event.state != 'success'
+        run: |
+          echo "::error::Vercel deployment of ${{ github.event.sha }} ended in '${{ github.event.state }}'."
+          exit 1
+
+      - name: Home page responds
+        run: |
+          code=$(curl -sS -o home.html -w '%{http_code}' --retry 5 --retry-delay 10 --retry-all-errors --max-time 20 "$FRONTEND_URL/")
+          echo "GET / -> $code"
+          test "$code" = "200"
+          grep -q '<html lang="es"' home.html
+
+      - name: API proxy reaches the backend
+        run: |
+          code=$(curl -sS -o promos.json -w '%{http_code}' --retry 3 --retry-delay 5 --max-time 20 "$FRONTEND_URL/api/v1/catalogo/promociones")
+          echo "GET /api/v1/catalogo/promociones -> $code"
+          test "$code" = "200"
+          jq -e '.items | type == "array"' promos.json
