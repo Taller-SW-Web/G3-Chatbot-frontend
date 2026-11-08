@@ -64,6 +64,8 @@ describe("chat blocks with the backend contract", () => {
     expect(screen.getByTestId("bloque-carrusel-productos")).toBeTruthy();
     expect(screen.getByText("Nike Revolution 7")).toBeTruthy();
     expect(screen.getByText("S/ 279.90")).toBeTruthy();
+    // Nombre accesible del detalle: la tarjeta entera es un solo botón.
+    expect(screen.getByRole("button", { name: "Ver detalle de Nike Revolution 7" })).toBeTruthy();
   });
 
   it("adds a variant product by product_id and opens its detail by product_id", () => {

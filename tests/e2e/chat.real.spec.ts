@@ -48,12 +48,9 @@ test.describe("Hito 3 — chat con LLM real", () => {
     await expect(grupo).toBeVisible({ timeout: 30_000 });
     await expect(grupo.getByText(/S\/ \d+\.\d{2}/).first()).toBeVisible();
 
-    // El detalle solo aplica a productos con variantes: sin ellas la tarjeta
-    // ofrece "Agregar" directo (CP-H3-09-08) y ese camino lo cubre E2E-07.
-    const detalle = grupo.getByRole("button", { name: /^Ver detalle de / }).first();
-    test.skip((await detalle.count()) === 0, "El producto devuelto no tiene variantes: el detalle no aplica");
-    await detalle.click();
-    await expect(page.getByText(/S\/ \d+\.\d{2}/).first()).toBeVisible();
+    // El detalle se abre desde la tarjeta y llega como bloque DETALLE_PRODUCTO.
+    await grupo.getByRole("button", { name: /^Ver detalle de / }).first().click();
+    await expect(page.getByTestId("bloque-detalle-producto")).toBeVisible();
   });
 
   // E2E-07 · CP-H3-09-08 y CP-H3-11-09 (SPEC-09 Req. 2, SPEC-11 Req. 3)
