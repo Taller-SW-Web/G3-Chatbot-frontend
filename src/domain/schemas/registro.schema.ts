@@ -42,7 +42,7 @@ export function crearRegistroSchema(politica?: PoliticaContrasena) {
       .refine((v) => !politica || politicaCumplida(politica, v), POLITICA_INCUMPLIDA_MENSAJE),
     confirmar: z.string(),
     aceptaTerminos: z.literal(true, {
-      errorMap: () => ({ message: "Debes aceptar los términos y condiciones" }),
+      message: "Debes aceptar los términos y condiciones",
     }),
   })
   .refine((d) => d.contrasena === d.confirmar, {

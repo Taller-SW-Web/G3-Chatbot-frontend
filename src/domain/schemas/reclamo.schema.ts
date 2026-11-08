@@ -13,7 +13,8 @@ export const RECLAMO_MOTIVOS = [
 
 export const reclamoSchema = z.object({
   pedidoId: z.string().min(1, "Pedido requerido"),
-  tipo: z.enum(["RECLAMO", "QUEJA"]).default("RECLAMO"),
+  // `tipo` llega desde `defaultValues` del formulario (SPEC-19).
+  tipo: z.enum(["RECLAMO", "QUEJA"]),
   motivo: z.enum(RECLAMO_MOTIVOS),
   descripcion: z.string().min(20, "Describe lo ocurrido (mín 20 caracteres)").max(1000),
   documento: z.string().optional(),
