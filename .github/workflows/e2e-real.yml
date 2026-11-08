@@ -45,7 +45,7 @@ jobs:
         run: pnpm exec playwright test tests/e2e/chat.real.spec.ts
       - name: Upload Playwright artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-real-artifacts
           path: |
