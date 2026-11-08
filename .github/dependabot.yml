@@ -20,3 +20,9 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    ignore:
+      # pnpm/action-setup v6 instala pnpm 11 y el build de Next (Turbopack)
+      # falla con 10 errores. Se subira cuando pnpm quede fijado en
+      # `packageManager` y el build se valide con esa version.
+      - dependency-name: "pnpm/action-setup"
+        update-types: ["version-update:semver-major"]
