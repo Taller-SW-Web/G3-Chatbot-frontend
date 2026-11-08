@@ -154,7 +154,7 @@ jobs:
       # El backend es público: se clona la rama acordada, sin token extra.
       - name: Clone backend
         run: git clone --depth 1 --branch "$E2E_BACKEND_REF" https://github.com/Taller-SW-Web/G3-Chatbot-backend.git ../backend
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Install backend dependencies
