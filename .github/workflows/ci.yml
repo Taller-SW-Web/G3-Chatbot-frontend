@@ -6,12 +6,24 @@ on:
   pull_request:
     branches: [development, main]
 
+# Least privilege: the workflow only reads the repository.
+permissions:
+  contents: read
+
+# A newer push on the same ref cancels the previous run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint and type check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       # The pnpm version is read from the "packageManager" field in package.json.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -28,8 +40,11 @@ jobs:
   test:
     name: Unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -37,14 +52,23 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Unit tests
-        run: pnpm run test
+      - name: Unit tests with coverage
+        run: pnpm run test:coverage
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-frontend
+          path: coverage/
+          if-no-files-found: error
 
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -55,12 +79,157 @@ jobs:
       - name: Build
         run: pnpm run build
 
+  # Advisory during Fase 2: a finding is reported but does not block the gate yet.
+  security:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Audit dependencies (advisory)
+        run: |
+          pnpm audit --audit-level=high \
+            || echo "::warning::pnpm audit encontró vulnerabilidades (advisory durante la Fase 2)"
+
+  # Revisa las dependencias que el PR agrega/cambia contra el Dependency Graph.
+  # El job corre siempre (aunque en `push` no revisa nada) para no romper el
+  # chequeo de `skipped` del gate.
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Review dependencies
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  # E2E contra el stack real: Next + backend + PostgreSQL, con los módulos
+  # externos en modo `fake` (ADR-0022), que es el modo con el que se demuestra el
+  # producto. Sin LLM: los flujos del chat real viven en `e2e-real.yml` (nocturno).
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: chatbot_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_BACKEND_REF: development
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/chatbot_e2e
+      API_PROXY_TARGET: http://127.0.0.1:8000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # El backend es público: se clona la rama acordada, sin token extra.
+      - name: Clone backend
+        run: git clone --depth 1 --branch "$E2E_BACKEND_REF" https://github.com/Taller-SW-Web/G3-Chatbot-backend.git ../backend
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend dependencies
+        working-directory: ../backend
+        run: pip install -r requirements.txt
+      - name: Migrate database
+        working-directory: ../backend
+        run: alembic upgrade head
+      - name: Start backend (módulos fake)
+        working-directory: ../backend
+        env:
+          MODULES_MODE: fake
+          APP_ENV: development
+          FRONTEND_BASE_URL: http://localhost:3000
+        run: |
+          nohup uvicorn src.infrastructure.main:app --host 127.0.0.1 --port 8000 > /tmp/backend.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8000/health > /dev/null && exit 0
+            sleep 2
+          done
+          echo "::error::el backend no respondió en 120 s"
+          cat /tmp/backend.log
+          exit 1
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run E2E
+        run: pnpm exec playwright test
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # Análisis de SonarCloud con la cobertura del job de unitarias. El proyecto espera
+  # el Quality Gate (`sonar.qualitygate.wait`), así que un gate rojo tumba el job.
+  sonar:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-frontend
+          path: coverage
+      - name: SonarCloud scan
+        uses: SonarSource/sonarqube-scan-action@v8.4.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
   # `check` is the required status check of the protected branches, so it stays as the
   # single gate. It runs even when a job fails, because a skipped required check counts as passed.
   check:
     name: check
     runs-on: ubuntu-latest
-    needs: [lint, test, build]
+    timeout-minutes: 10
+    needs: [lint, test, build, security, dependency-review, sonar, e2e]
     if: always()
     steps:
       - name: Require every job to succeed
