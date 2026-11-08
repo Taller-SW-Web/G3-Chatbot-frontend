@@ -37,7 +37,7 @@ export function CarruselProductos({
         {visibles.map((p) => (
           <div key={p.product_id} className={`relative min-w-0 rounded-md p-1.5 bg-white border border-border-default ${crossSell ? "w-40 shrink-0" : ""}`}>
             {/* Una sola parada de tabulación para el detalle: imagen + textos. */}
-            <button onClick={() => onDetalle(p)} className="w-full text-left flex flex-col gap-1">
+            <button aria-label={`Ver detalle de ${sanitize(p.name)}`} onClick={() => onDetalle(p)} className="w-full text-left flex flex-col gap-1">
               <ProductImage
                 src={p.image}
                 alt={sanitize(p.name)}
