@@ -89,16 +89,16 @@ export function ModalShell({
   return (
     <div
       className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5"
-      onClick={onClose}
     >
+      <button type="button" tabIndex={-1} aria-hidden="true"
+        className="absolute inset-0 cursor-default" onClick={onClose} />
       <div
         ref={ref}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-        className="pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl p-4 flex flex-col gap-3 max-h-[85%] overflow-y-auto no-scrollbar outline-none"
+        className="relative pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl p-4 flex flex-col gap-3 max-h-[85%] overflow-y-auto no-scrollbar outline-none"
       >
         <div className="flex items-center justify-between">
           <p className="font-heading text-[15px] uppercase">{title}</p>
