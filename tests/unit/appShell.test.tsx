@@ -142,12 +142,12 @@ describe("AppShell", () => {
 
   it("abre el modal con ?abrirLogin=1 y conserva el destino pendiente", () => {
     window.history.replaceState(null, "", "/?abrirLogin=1&destino=/checkout");
-    const { container } = montar(shell("home"));
+    montar(shell("home"));
 
     expect(useChatStore.getState().authOpen).toBe(true);
     expect(useChatStore.getState().accionPendiente).toBe("/checkout");
     expect(window.location.search).toBe("");
-    expect(container.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(screen.getByText("Inicia sesión")).toBeDefined();
   });
 
   it("abre el modal sin destino y limpia el parámetro de la URL", () => {
