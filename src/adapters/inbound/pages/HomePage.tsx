@@ -157,7 +157,7 @@ export function HomePage() {
             {agregado}
           </p>
         )}
-        <button onClick={() => irChat("Ver ofertas")} disabled={creando}
+        <button onClick={() => void irChat("Ver ofertas")} disabled={creando}
           className="relative shrink-0 overflow-hidden rounded-lg w-full text-left bg-surface-ink text-text-inverse px-4 pt-5 pb-6"
           aria-label="Ver ofertas Inka Athletics">
           <span aria-hidden className="absolute inset-0 opacity-60" style={{
@@ -183,7 +183,7 @@ export function HomePage() {
 
         <div className="flex items-end justify-between">
           <h2 className="font-heading text-[24px] leading-[32px]">PRODUCTOS EN OFERTA</h2>
-          <button className="text-[12px] font-semibold underline text-text-secondary" disabled={creando} onClick={() => irChat("Ver todo en oferta")}>Ver todo</button>
+          <button className="text-[12px] font-semibold underline text-text-secondary" disabled={creando} onClick={() => void irChat("Ver todo en oferta")}>Ver todo</button>
         </div>
 
         {catalogo.isPending && <p role="status" className="text-[13px] text-text-secondary">Cargando productos…</p>}
@@ -223,7 +223,7 @@ export function HomePage() {
           <p className="text-[14px] text-text-secondary">Todo listo para seguir avanzando.</p>
           <div className="flex flex-wrap gap-2">
             {["Ver ofertas", "Rastrear pedido", "Ayuda con devolución"].map((q) => (
-              <button key={q} onClick={() => irChat(q)} disabled={creando} className="wf-chip px-3 py-1.5 text-[12px] font-semibold text-text-primary hover:border-accent-signal disabled:opacity-60">{q}</button>
+              <button key={q} onClick={() => void irChat(q)} disabled={creando} className="wf-chip px-3 py-1.5 text-[12px] font-semibold text-text-primary hover:border-accent-signal disabled:opacity-60">{q}</button>
             ))}
           </div>
         </div>
@@ -239,7 +239,7 @@ export function HomePage() {
           ) : (
             <div role="alert" className="rounded-md bg-error-background border border-error-default p-3 flex items-center justify-between gap-2">
               <p className="text-[13px] text-text-primary">No pudimos crear la conversación. Inténtalo de nuevo.</p>
-              <button onClick={() => irChat(fallido ?? "")}
+              <button onClick={() => void irChat(fallido ?? "")}
                 className="wf-btn shrink-0 px-3 py-2 text-[12px] font-bold bg-white border border-border-default">REINTENTAR</button>
             </div>
           )}
@@ -251,10 +251,10 @@ export function HomePage() {
           className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse disabled:opacity-45 disabled:cursor-not-allowed"><PhotoIcon size={20} /></button>
         <input value={composer} maxLength={MENSAJE_MAX_CARACTERES} disabled={creando} aria-label="Mensaje"
           onChange={(e) => setComposer(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") irChat(composer); }}
+          onKeyDown={(e) => { if (e.key === "Enter") void irChat(composer); }}
           placeholder="Pregunta por zapatillas, tallas, pedidos…"
           className="flex-1 wf-chip px-4 py-2.5 text-sm outline-none min-w-0 bg-white text-text-primary placeholder:text-text-secondary disabled:opacity-60" />
-        <button aria-label="Enviar" disabled={creando || !composer.trim()} onClick={() => irChat(composer)}
+        <button aria-label="Enviar" disabled={creando || !composer.trim()} onClick={() => void irChat(composer)}
           className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse disabled:opacity-45 disabled:cursor-not-allowed"><ArrowUpIcon size={20} /></button>
       </div>
 
