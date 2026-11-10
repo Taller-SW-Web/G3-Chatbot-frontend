@@ -13,13 +13,14 @@ export default defineConfig({
       reportsDirectory: "coverage",
       include: ["src/**/*.{ts,tsx}"],
       exclude: ["src/**/*.d.ts"],
-      // Baseline measured on 2026-11-07. A floor that ratchets per milestone,
-      // not a target: raise it with the team instead of jumping to a global 90 %.
+      // Baseline medido el 2026-11-09 tras cubrir AppShell, AuthModal, HomePage,
+      // Sidebar y useChat (57.6 % → 73.7 %). Es un piso que sube por hito, no un
+      // techo: se deja ~5 puntos de margen sobre lo medido.
       thresholds: {
-        statements: 55,
-        branches: 78,
-        functions: 70,
-        lines: 55,
+        statements: 68,
+        branches: 80,
+        functions: 74,
+        lines: 68,
       },
     },
   },
