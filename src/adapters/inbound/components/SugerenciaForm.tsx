@@ -76,8 +76,9 @@ export function SugerenciaForm({
       <p className="text-[12px] text-text-secondary">Al enviar aceptas que te contactemos a tu correo para dar seguimiento.</p>
 
       {gracias && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5" onClick={() => setGracias(null)}>
-          <div className="pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl max-h-[85%] overflow-y-auto no-scrollbar p-6 flex flex-col items-center gap-3 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5">
+          <button type="button" tabIndex={-1} aria-hidden="true" className="absolute inset-0 cursor-default" onClick={() => setGracias(null)} />
+          <div className="relative pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl max-h-[85%] overflow-y-auto no-scrollbar p-6 flex flex-col items-center gap-3 text-center" role="dialog" aria-modal="true">
             <div className="wf-check w-16 h-16 rounded-full flex items-center justify-center bg-success-background text-success-default"><CheckIcon size={24} /></div>
             <h3 className="font-heading text-[20px]">{tipo === "BUG" ? "¡GRACIAS POR REPORTAR EL BUG!" : "¡GRACIAS POR TU SUGERENCIA!"}</h3>
             <p className="text-[13px] text-text-secondary">Código {gracias} · Lo revisaremos y te avisaremos por correo{evidencia ? " (con tu captura adjunta)" : ""}.</p>

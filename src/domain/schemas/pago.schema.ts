@@ -7,7 +7,7 @@ export function validarLuhn(val: string): boolean {
   let sum = 0;
   let shouldDouble = false;
   for (let i = clean.length - 1; i >= 0; i--) {
-    let digit = parseInt(clean.charAt(i), 10);
+    let digit = Number.parseInt(clean.charAt(i), 10);
     if (shouldDouble) {
       digit *= 2;
       if (digit > 9) digit -= 9;
@@ -22,8 +22,8 @@ export function validarLuhn(val: string): boolean {
 export function validarVencimientoFuturo(venc: string): boolean {
   const match = venc.match(/^(0[1-9]|1[0-2])\/(\d{2})$/);
   if (!match) return false;
-  const mes = parseInt(match[1], 10);
-  const anio = 2000 + parseInt(match[2], 10);
+  const mes = Number.parseInt(match[1], 10);
+  const anio = 2000 + Number.parseInt(match[2], 10);
   const ahora = new Date();
   const anioActual = ahora.getFullYear();
   const mesActual = ahora.getMonth() + 1; // 1..12
@@ -37,8 +37,8 @@ export function detectarMarcaTarjeta(numero: string): "VISA" | "MASTERCARD" | "A
   const clean = numero.replace(/\D/g, "");
   if (clean.startsWith("4")) return "VISA";
   if (clean.startsWith("34") || clean.startsWith("37")) return "AMEX";
-  const p2 = parseInt(clean.slice(0, 2), 10);
-  const p4 = parseInt(clean.slice(0, 4), 10);
+  const p2 = Number.parseInt(clean.slice(0, 2), 10);
+  const p4 = Number.parseInt(clean.slice(0, 4), 10);
   if ((p2 >= 51 && p2 <= 55) || (p4 >= 2221 && p4 <= 2720)) return "MASTERCARD";
   return null;
 }
