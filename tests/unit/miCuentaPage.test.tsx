@@ -79,7 +79,10 @@ describe("MiCuentaPage", () => {
     fireEvent.change(screen.getByLabelText(/C.digo celular 6 d.gitos/), { target: { value: "000000" } });
     fireEvent.click(screen.getByRole("button", { name: "VERIFICAR" }));
 
-    await waitFor(() => expect(api.validarContactoCelular).toHaveBeenCalled());
+    // La respuesta se procesa cuando aparece el aviso; esperar solo la llamada
+    // dejaría pasar el test aunque el resultado nunca se aplicara.
+    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(screen.getByText(/No pudimos verificar el c.digo/)).toBeDefined();
     expect(useChatStore.getState().cliente?.celularVerificado).toBe(false);
     expect(screen.getByText("Sin verificar")).toBeDefined();
   });

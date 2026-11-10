@@ -117,7 +117,7 @@ describe("HomePage", () => {
     useChatStore.setState({ cliente: { id: "u1", correo: "ana@ejemplo.pe" } as never });
     montar();
 
-    fireEvent.click(await screen.findByTestId("btn-detalle"));
+    fireEvent.click(await screen.findByRole("button", { name: "Elegir talla y color de Zapatilla Volta" }));
     expect(screen.getByText("Cargando detalle…")).toBeDefined();
 
     expect(await screen.findByRole("button", { name: "AGREGAR AL CARRITO" })).toBeDefined();
@@ -141,7 +141,7 @@ describe("HomePage", () => {
     h.anonimo.mockResolvedValue("conv-anonima");
     montar();
 
-    fireEvent.click(await screen.findByTestId("btn-detalle"));
+    fireEvent.click(await screen.findByRole("button", { name: "Elegir talla y color de Zapatilla Volta" }));
     fireEvent.click(await screen.findByRole("button", { name: "AGREGAR AL CARRITO" }));
 
     await waitFor(() => expect(useChatStore.getState().ultimaConversacionId).toBe("conv-anonima"));
@@ -157,7 +157,7 @@ describe("HomePage", () => {
     useChatStore.setState({ cliente: { id: "u1", correo: "ana@ejemplo.pe" } as never });
     montar();
 
-    fireEvent.click(await screen.findByTestId("btn-detalle"));
+    fireEvent.click(await screen.findByRole("button", { name: "Elegir talla y color de Zapatilla Volta" }));
     fireEvent.click(await screen.findByRole("button", { name: "AGREGAR AL CARRITO" }));
 
     expect(await screen.findByText("Elige talla y color antes de agregar.")).toBeDefined();
@@ -168,7 +168,7 @@ describe("HomePage", () => {
     useChatStore.setState({ cliente: { id: "u1", correo: "ana@ejemplo.pe" } as never });
     montar();
 
-    fireEvent.click(await screen.findByTestId("btn-detalle"));
+    fireEvent.click(await screen.findByRole("button", { name: "Elegir talla y color de Zapatilla Volta" }));
     fireEvent.click(await screen.findByRole("button", { name: "AGREGAR AL CARRITO" }));
 
     expect(await screen.findByText(/No hay stock suficiente/)).toBeDefined();
@@ -180,7 +180,7 @@ describe("HomePage", () => {
       .mockResolvedValueOnce(detalle);
     montar();
 
-    fireEvent.click(await screen.findByTestId("btn-detalle"));
+    fireEvent.click(await screen.findByRole("button", { name: "Elegir talla y color de Zapatilla Volta" }));
     expect(await screen.findByTestId("detalle-error")).toBeDefined();
     expect(screen.getByText("Producto no disponible.")).toBeDefined();
 
@@ -192,7 +192,7 @@ describe("HomePage", () => {
     h.detalle.mockRejectedValue(new Error("sin red"));
     montar();
 
-    fireEvent.click(await screen.findByTestId("btn-detalle"));
+    fireEvent.click(await screen.findByRole("button", { name: "Elegir talla y color de Zapatilla Volta" }));
     expect(await screen.findByText(/No pudimos cargar el detalle\. Revisa tu conexión/)).toBeDefined();
   });
 

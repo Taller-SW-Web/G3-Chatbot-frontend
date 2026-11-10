@@ -190,8 +190,9 @@ describe("AppShell", () => {
     useChatStore.setState({ cliente: { id: "u1", nombreCompleto: "Ana", correo: "ana@ejemplo.pe" } as never });
     montar(shell("home"));
 
-    await waitFor(() => expect(useChatStore.getState().accessToken).toBeNull());
-    expect(useChatStore.getState().cliente).toBeNull();
+    // El cliente empieza con sesión: esperar el token (ya null) no probaría nada.
+    await waitFor(() => expect(useChatStore.getState().cliente).toBeNull());
+    expect(useChatStore.getState().accessToken).toBeNull();
   });
 
   it("con un token vigente no renueva contra el backend", () => {

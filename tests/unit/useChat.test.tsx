@@ -58,15 +58,16 @@ describe("useChat", () => {
     await waitFor(() => expect(result.current.historialCargado).toBe(true));
   });
 
-  it("registra el último texto y evita turnos solapados", async () => {
-    const pendiente = new Promise<void>(() => undefined);
-    h.ejecutar.mockReturnValue(pendiente);
+  it("evita turnos solapados y se recupera al cerrar el turno", async () => {
+    let resolver!: () => void;
+    const pendiente = new Promise<void>((r) => { resolver = r; });
+    h.ejecutar.mockReturnValueOnce(pendiente);
     const { result } = renderHook(() => useChat("c1"));
     await waitFor(() => expect(result.current.historialCargado).toBe(true));
 
     let primero!: Promise<void>;
     act(() => { primero = result.current.enviar("hola"); });
-    void result.current.enviar("otra vez");
+    const segundo = result.current.enviar("otra vez");
 
     expect(h.ejecutar).toHaveBeenCalledTimes(1);
     expect(result.current.ultimoTexto).toBe("hola");
@@ -74,7 +75,15 @@ describe("useChat", () => {
       conversacionId: "c1",
       texto: "hola",
     }));
-    void primero;
+
+    // Al resolverse el turno en curso, el hook vuelve a aceptar envíos.
+    await act(async () => { resolver(); await primero; await segundo; });
+    expect(h.ejecutar).toHaveBeenCalledTimes(1);
+
+    h.ejecutar.mockResolvedValueOnce(undefined);
+    await act(async () => { await result.current.enviar("tercera"); });
+    expect(h.ejecutar).toHaveBeenCalledTimes(2);
+    expect(h.ejecutar).toHaveBeenLastCalledWith(expect.objectContaining({ texto: "tercera" }));
   });
 
   it("reenvía el último texto con reintentar", async () => {
