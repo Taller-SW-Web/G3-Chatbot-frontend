@@ -3,7 +3,8 @@
  * Mismo origen por defecto: `next.config.ts` reenvía /api/* al backend (ADR-0023).
  */
 export const apiConfig = {
-  baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/v1",
+  // `||`, no `??`: una variable definida pero vacía debe caer al mismo origen.
+  baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "/api/v1",
   timeouts: {
     catalogo: 4000,
     // Catalog lists aggregate taxonomy, details and up to 8s of bounded pricing.
