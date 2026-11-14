@@ -4,7 +4,7 @@ import type {
 } from "@/ports/outbound/ChatbotApiPort";
 import {
   mapCarouselItem,
-  type BackendCarouselItem,
+  isProductRow,
   type CatalogCardItem,
 } from "@/domain/entities/CatalogoUI";
 
@@ -12,7 +12,7 @@ import {
 export async function buscarProductosUseCase(
   api: ChatbotApiPort,
   input: BuscarProductosInput
-): Promise<{ items: CatalogCardItem[]; total: number; mensaje?: string }> {
+): Promise<{ items: CatalogCardItem[]; total: number; mensaje?: string; partial: boolean }> {
   const page = await api.buscarProductos({
     soloOfertas: input.soloOfertas,
     q: input.q?.trim() || undefined,
@@ -24,11 +24,14 @@ export async function buscarProductosUseCase(
     pagina: input.pagina ?? 1,
     tamanio: Math.min(Math.max(input.tamanio ?? 10, 1), 10),
   });
-  const raw = Array.isArray(page.items) ? page.items : [];
+  if (!page || !Array.isArray(page.items)) throw new Error("Catálogo inválido");
+  const raw = page.items;
+  const valid = raw.filter(isProductRow);
   return {
-    items: raw.filter((item) => item != null && typeof item === "object" && typeof (item as BackendCarouselItem).product_id === "string").map((item, i) =>
-      mapCarouselItem(item as BackendCarouselItem, i + 1)
+    items: valid.map((item, i) =>
+      mapCarouselItem(item, i + 1)
     ),
+    partial: page.partial === true || valid.length !== raw.length,
     total: typeof page.total === "number" ? page.total : raw.length,
     mensaje: page.mensaje,
   };

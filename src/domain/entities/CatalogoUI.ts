@@ -33,7 +33,7 @@ export function availabilityMeta(state: AvailabilityState): {
   label: string;
   tone: AvailabilityTone;
 } {
-  return AVAILABILITY_META[state] ?? AVAILABILITY_META.INDETERMINADO;
+  return Object.hasOwn(AVAILABILITY_META, state) ? AVAILABILITY_META[state] : AVAILABILITY_META.INDETERMINADO;
 }
 
 /** Fila de `CARRUSEL_PRODUCTOS` tal como llega en `bloque.datos.productos`. */
@@ -57,6 +57,8 @@ export type BackendCarouselItem = {
   availability?: string;
   talla?: string;
   color?: string;
+  variants?: ProductVariant[];
+  missing_data?: string[];
 };
 
 /** Detalle tal como llega en `DETALLE_PRODUCTO` (mismo resumen que el carrusel). */
@@ -79,7 +81,11 @@ export type BackendProductDetail = {
   single_sku?: string | null;
   availability?: string;
   variants?: { sku: string; talla?: string | null; color?: string | null }[];
+  missing_data?: string[];
 };
+
+export type ProductVariant = { sku: string; talla?: string | null; color?: string | null };
+export type MissingProductData = "price" | "availability";
 
 /** Tarjeta que pintan `ProductCard` y `CarruselProductos`. */
 export type CatalogCardItem = OfferPrice & {
@@ -97,6 +103,8 @@ export type CatalogCardItem = OfferPrice & {
   recommendationReason?: string;
   hasVariants: boolean;
   availability: AvailabilityState;
+  missingData?: MissingProductData[];
+  variants?: ProductVariant[];
   /** Solo semillas mock en el chat hasta que el bucle las reemplace. */
   talla?: string;
   color?: string;
@@ -112,9 +120,12 @@ const BACKEND_STATES: Record<string, AvailabilityState> = {
 };
 
 /** Mapeo único: cualquier estado crudo desconocido cae a INDETERMINADO. */
+export function isKnownAvailability(value: unknown): value is string {
+  return typeof value === "string" && Object.hasOwn(BACKEND_STATES, value);
+}
+
 export function toAvailabilityState(value: unknown): AvailabilityState {
-  if (typeof value !== "string") return "INDETERMINADO";
-  return BACKEND_STATES[value] ?? "INDETERMINADO";
+  return isKnownAvailability(value) ? BACKEND_STATES[value] : "INDETERMINADO";
 }
 
 /** PEN amount from the server; unavailable is never represented as zero. */
@@ -152,21 +163,82 @@ function toText(value: unknown): string | undefined {
   return text === "" ? undefined : text;
 }
 
+/** Validate identities before mapping REST or SSE rows. */
+export function isProductRow(value: unknown): value is BackendProductDetail {
+  return value != null && typeof value === "object" && !Array.isArray(value) &&
+    typeof (value as BackendProductDetail).product_id === "string" &&
+    (value as BackendProductDetail).product_id.trim() !== "";
+}
+
+function productVariants(value: unknown): ProductVariant[] {
+  if (!Array.isArray(value) || !value.every((v) =>
+    v != null && typeof v === "object" && toText(v.sku) &&
+    (v.talla == null || typeof v.talla === "string") &&
+    (v.color == null || typeof v.color === "string")
+  )) return [];
+  return value.map((v) => ({ sku: v.sku.trim(), talla: toText(v.talla), color: toText(v.color) }));
+}
+
+function missingProductData(item: BackendCarouselItem): MissingProductData[] {
+  return Array.isArray(item.missing_data)
+    ? item.missing_data.filter((v): v is MissingProductData => v === "price" || v === "availability")
+    : [];
+}
+
+function availabilityFields(item: BackendCarouselItem, variants: ProductVariant[]): {
+  availability: AvailabilityState;
+  missingData: MissingProductData[];
+} {
+  const malformedVariants = item.variants != null &&
+    (!Array.isArray(item.variants) || item.variants.length !== productVariants(item.variants).length);
+  const hasVariants = item.has_variants === true || (item.has_variants == null && variants.length > 0);
+  const hasSku = hasVariants ? variants.length > 0 : Boolean(toText(item.single_sku));
+  const malformedFlags = (item.has_variants != null && typeof item.has_variants !== "boolean") ||
+    (item.missing_data != null && (!Array.isArray(item.missing_data) ||
+      item.missing_data.some((v) => v !== "price" && v !== "availability")));
+  const missingData = missingProductData(item);
+  const invalid = !isProductRow(item) || malformedVariants || malformedFlags || !hasSku || !isKnownAvailability(item.availability);
+  if (invalid && !missingData.includes("availability")) missingData.push("availability");
+  return {
+    availability: missingData.includes("availability") ? "INDETERMINADO" : toAvailabilityState(item.availability),
+    missingData,
+  };
+}
+
+/** Un INDETERMINADO contractual permite agregar con aviso; un estado inválido no. */
+export function canAddWithAvailability(state: AvailabilityState): boolean {
+  return state === "DISPONIBLE" || state === "POCAS_UNIDADES" || state === "INDETERMINADO";
+}
+
+/** A card may ask for a real variant, but never start an add with unknown data. */
+export function canAddCard(item: CatalogCardItem): boolean {
+  return Boolean(item.product_id.trim()) && parseAmount(item.price) !== null &&
+    !item.missingData?.length && canAddWithAvailability(item.availability) &&
+    (item.hasVariants ? Boolean(item.variants?.length) : Boolean(item.sku?.trim()));
+}
+
 export function mapCarouselItem(item: BackendCarouselItem, ref: number): CatalogCardItem {
+  const missingData = missingProductData(item);
+  const variants = productVariants(item.variants);
+  const singleSku = toText(item.single_sku);
+  const hasVariants = item.has_variants === true || (item.has_variants == null && variants.length > 0);
   return {
     ref: typeof item.ref === "number" && Number.isInteger(item.ref) ? item.ref : ref,
     ...offerFields(item),
     recommendationReason: toText(item.recommendation_reason),
-    product_id: item.product_id,
-    sku: toText(item.single_sku),
-    name: toText(item.name) ?? item.product_id,
+    product_id: toText(item.product_id) ?? "",
+    sku: hasVariants
+      ? (variants.length === 1 && variants[0].sku === singleSku ? singleSku : undefined)
+      : singleSku,
+    name: toText(item.name) ?? toText(item.product_id) ?? "Producto",
     brand: toText(item.brand) ?? null,
-    price: parseAmount(item.price),
+    price: missingData.includes("price") ? null : parseAmount(item.price),
     priceText: toText(item.price_text),
     image: item.image ?? undefined,
     shortDescription: toText(item.short_description),
-    hasVariants: item.has_variants === true,
-    availability: toAvailabilityState(item.availability),
+    hasVariants,
+    ...availabilityFields(item, variants),
+    variants,
     talla: item.talla,
     color: item.color,
   };
@@ -186,29 +258,31 @@ export type CatalogDetail = OfferPrice & {
   /** SKU directo cuando el producto no tiene variantes (`single_sku`). */
   singleSku?: string;
   availability: AvailabilityState;
+  missingData?: MissingProductData[];
   variants: { sku: string; talla?: string | null; color?: string | null }[];
   tallas: string[];
   colores: string[];
 };
 
 export function mapProductDetail(data: BackendProductDetail): CatalogDetail {
-  const name = toText(data.name) ?? data.product_id;
-  const variants = Array.isArray(data.variants) ? data.variants.filter((v) => v != null && typeof v.sku === "string" && (v.talla == null || typeof v.talla === "string") && (v.color == null || typeof v.color === "string")) : [];
+  const missingData = missingProductData(data);
+  const name = toText(data.name) ?? toText(data.product_id) ?? "Producto";
+  const variants = data.has_variants === false ? [] : productVariants(data.variants);
   const tallas = [...new Set(variants.map((v) => v.talla).filter(Boolean))] as string[];
   const colores = [...new Set(variants.map((v) => v.color).filter(Boolean))] as string[];
   return {
-    product_id: data.product_id,
+    product_id: toText(data.product_id) ?? "",
     ...offerFields(data),
     recommendationReason: toText(data.recommendation_reason),
     name,
     brand: toText(data.brand) ?? null,
     shortDescription: toText(data.short_description),
     image: data.image ?? undefined,
-    price: parseAmount(data.price),
+    price: missingData.includes("price") ? null : parseAmount(data.price),
     priceText: toText(data.price_text),
     hasVariants: typeof data.has_variants === "boolean" ? data.has_variants : variants.length > 0,
     singleSku: toText(data.single_sku),
-    availability: toAvailabilityState(data.availability),
+    ...availabilityFields(data, variants),
     variants,
     tallas,
     colores,
@@ -221,11 +295,12 @@ export function findVariantSku(
   talla: string | null,
   color: string | null
 ): string | null {
-  const match = detail.variants.find(
+  const matches = detail.variants.filter(
     (v) =>
       (talla == null || v.talla === talla) &&
       (color == null || v.color === color)
   );
+  const match = matches.length === 1 ? matches[0] : null;
   const complete =
     match != null &&
     (detail.tallas.length === 0 || talla != null) &&

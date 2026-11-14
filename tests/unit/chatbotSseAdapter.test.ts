@@ -3,6 +3,7 @@ import { chatbotSse } from "@/adapters/outbound/ChatbotSseAdapter";
 import { chatbotApi } from "@/adapters/outbound/ChatbotApiAxiosAdapter";
 import { mensajePorCodigo } from "@/adapters/inbound/components/chatPresentacion";
 import { useChatStore } from "@/application/state/chatStore";
+import { messiClub } from "../fixtures/messiClub";
 import {
   ChatStreamError,
   type ChatStreamEvento,
@@ -57,6 +58,24 @@ afterEach(() => {
 });
 
 describe("chatbotSse.enviarMensajeStream", () => {
+  it("conserva los bloques de catálogo, datos incompletos y acciones sin perder el SKU", async () => {
+    const bloques = [
+      ...["ofertas", "recomendacion", "cross_sell"].map((variant) => ({ tipo: "CARRUSEL_PRODUCTOS", datos: { variant, partial: true, productos: [{ ...messiClub, missing_data: ["availability"] }] } })),
+      { tipo: "DETALLE_PRODUCTO", datos: { producto: messiClub } },
+      { tipo: "SELECTOR_VARIANTE", datos: { product_id: "con-variantes", faltantes: ["color"], seleccion: { talla: "42" } } },
+      { tipo: "LISTA_PROMOCIONES", datos: { unavailable: true, promociones: [] } },
+      { tipo: "ACCIONES_RAPIDAS", acciones: [{ id: "RECOMENDAR_PRODUCTOS", etiqueta: "Asfalto", payload: { actividad: "running", superficie: "asfalto" } }, { id: "SILENCIAR_COMPLEMENTOS", etiqueta: "No gracias", payload: {} }] },
+    ];
+    fetchMock.mockResolvedValue(respuestaSse([
+      ...bloques.map((bloque) => frame("bloque", { bloque })),
+      frame("fin", { mensajeId: "final" }),
+    ]));
+    expect(await enviar()).toEqual([
+      ...bloques.map((bloque) => ({ tipo: "bloque", bloque })),
+      { tipo: "fin", mensajeId: "final" },
+    ]);
+  });
+
   it("emite aceptado, token, bloque y fin en orden", async () => {
     const bloque = { tipo: "texto", texto: "Listo" };
     fetchMock.mockResolvedValue(

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PlusIcon } from "../icons";
 import {
+  canAddCard,
   type CatalogCardItem,
 } from "@/domain/entities/CatalogoUI";
 import { PriceTag } from "../PriceTag";
@@ -17,11 +18,13 @@ export function CarruselProductos({
   titulo,
   productos,
   variant,
+  partial = false,
   onAdd,
   onDetalle,
 }: {
   titulo?: string;
   variant?: "recomendacion" | "cross_sell" | "ofertas";
+  partial?: boolean;
   productos: CatalogCardItem[];
   onAdd: (p: CatalogCardItem) => void;
   onDetalle: (p: CatalogCardItem) => void;
@@ -32,7 +35,8 @@ export function CarruselProductos({
   return (
     <div className="self-start w-full rounded-md bg-white border border-border-default p-2 flex flex-col gap-2 wf-card">
       {titulo && <p className="px-1 text-[14px] font-semibold text-text-primary">{sanitize(titulo)}</p>}
-      {productos.length === 0 && <p role="status" className="text-[13px] text-text-secondary">No hay productos para mostrar.</p>}
+      {partial && <p role="status" className="px-1 text-[13px] text-text-secondary">Mostramos parte de los resultados. No pudimos consultar todos los datos ahora.</p>}
+      {productos.length === 0 && !partial && <p role="status" className="text-[13px] text-text-secondary">No hay productos para mostrar.</p>}
       <div role="group" aria-label={titulo || "Productos"} className={crossSell ? "flex gap-2 overflow-x-auto pb-1" : "grid grid-cols-2 gap-2"}>
         {visibles.map((p) => (
           <div key={p.product_id} className={`relative min-w-0 rounded-md p-1.5 bg-white border border-border-default ${crossSell ? "w-40 shrink-0" : ""}`}>
@@ -50,9 +54,9 @@ export function CarruselProductos({
             </button>
             {p.recommendationReason && <p className="mt-1 text-[12px] text-text-secondary break-words">{sanitize(p.recommendationReason)}</p>}
             <div className="flex items-center justify-between mt-1">
-              <AvailabilityBadge state={p.availability} className="text-[11px] font-semibold" />
+              <AvailabilityBadge state={p.availability} missing={p.missingData?.includes("availability")} className="text-[11px] font-semibold" />
               <button aria-label={`Agregar ${sanitize(p.name)}`} onClick={() => onAdd(p)}
-                disabled={p.availability === "AGOTADO" || p.price === null}
+                disabled={!canAddCard(p)}
                 className="w-8 h-8 shrink-0 wf-btn flex items-center justify-center bg-action-primary text-surface-ink disabled:opacity-40 disabled:cursor-not-allowed"><PlusIcon size={16} /></button>
             </div>
           </div>

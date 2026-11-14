@@ -99,6 +99,8 @@ export type PaginaCatalogo = {
   items: unknown[];
   total: number;
   mensaje?: string;
+  partial?: boolean;
+  total_scope?: string;
 };
 
 /** Disponibilidad puntual (`GET /catalogo/disponibilidad`, SPEC-10). */
