@@ -21,12 +21,12 @@ export type BloqueTexto = BloqueBase & {
 /** Backend wraps catalog payloads in `datos`; there is no top-level `titulo`. */
 export type BloqueCarrusel = BloqueBase & {
   tipo: "CARRUSEL_PRODUCTOS";
-  datos: { productos: BackendCarouselItem[]; variant?: "recomendacion" | "cross_sell" | "ofertas"; titulo?: string };
+  datos: { productos: BackendCarouselItem[]; variant?: "recomendacion" | "cross_sell" | "ofertas"; titulo?: string; partial?: boolean };
 };
 
 export type PromotionsBlock = BloqueBase & {
   tipo: "LISTA_PROMOCIONES";
-  datos: { promociones: PromotionSummary[] };
+  datos: { promociones: PromotionSummary[]; unavailable?: boolean };
 };
 
 export type BloqueDetalle = BloqueBase & {

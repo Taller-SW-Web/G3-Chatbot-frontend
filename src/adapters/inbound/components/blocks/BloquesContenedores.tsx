@@ -10,6 +10,7 @@ import { useChatStore } from "@/application/state/chatStore";
 import { verDetalleProductoUseCase } from "@/application/use_cases/verDetalleProductoUseCase";
 import { container } from "@/infrastructure/di/container";
 import type { DatosCarritoBloque } from "@/domain/entities/Bloque";
+import { findVariantSku, canAddWithAvailability } from "@/domain/entities/CatalogoUI";
 import {
   accionAgregarVariante,
   opcionesDeAtributo,
@@ -75,13 +76,17 @@ export function SelectorVarianteChat({
     );
   }
   const producto = detalle.data;
+  if (!producto.hasVariants || producto.variants.length === 0 || producto.price === null ||
+    producto.missingData?.length || !canAddWithAvailability(producto.availability)) {
+    return <p role="status" className="text-[13px] text-text-secondary">No podemos agregar este producto ahora. Vuelve a consultar en un momento.</p>;
+  }
   const atributos = faltantes.filter((f) => f === "talla" || f === "color");
 
   function elegir(atributo: string, valor: string) {
     if (enviado || !onAccion) return;
     const siguiente = { ...seleccion, [atributo]: valor };
     setSeleccion(siguiente);
-    if (atributos.every((a) => siguiente[a])) {
+    if (atributos.every((a) => siguiente[a]) && findVariantSku(producto, siguiente.talla ?? null, siguiente.color ?? null)) {
       setEnviado(true);
       onAccion(accionAgregarVariante(productId, siguiente));
     }

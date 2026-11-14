@@ -12,6 +12,7 @@ import type {
 import {
   mapCarouselItem,
   mapProductDetail,
+  isProductRow,
   type CatalogCardItem,
   type CatalogDetail,
 } from "../entities/CatalogoUI";
@@ -33,8 +34,8 @@ export function parseQuickActions(value: unknown): { pregunta?: string; acciones
   const acciones: AccionDirecta[] = [];
   for (const action of value.acciones) {
     if (
-      !esObjeto(action) || typeof action.id !== "string" ||
-      typeof action.etiqueta !== "string" ||
+      !esObjeto(action) || typeof action.id !== "string" || !action.id.trim() ||
+      typeof action.etiqueta !== "string" || !action.etiqueta.trim() ||
       (action.payload != null && !esObjeto(action.payload))
     ) continue;
     acciones.push({ id: action.id, etiqueta: action.etiqueta, payload: action.payload ?? {} });
@@ -42,9 +43,10 @@ export function parseQuickActions(value: unknown): { pregunta?: string; acciones
   return { pregunta: typeof value.pregunta === "string" ? value.pregunta : undefined, acciones };
 }
 
-export function carouselMetadata(bloque: BloqueCarrusel): { titulo?: string; variant?: "recomendacion" | "cross_sell" | "ofertas" } {
+export function carouselMetadata(bloque: BloqueCarrusel): { titulo?: string; variant?: "recomendacion" | "cross_sell" | "ofertas"; partial: boolean } {
   const data = bloque.datos;
   return {
+    partial: data?.partial === true,
     titulo: typeof data?.titulo === "string" ? data.titulo : undefined,
     variant: data?.variant === "recomendacion" || data?.variant === "cross_sell" || data?.variant === "ofertas" ? data.variant : undefined,
   };
@@ -55,14 +57,14 @@ export function productosDeCarrusel(bloque: BloqueCarrusel): CatalogCardItem[] |
   const productos = bloque.datos?.productos;
   if (!Array.isArray(productos)) return null;
   return productos
-    .filter((p) => esObjeto(p) && typeof p.product_id === "string")
+    .filter(isProductRow)
     .map((p, i) => mapCarouselItem(p, i + 1));
 }
 
 /** Product detail, or null when the payload has no product. */
 export function detalleDeBloque(bloque: BloqueDetalle): CatalogDetail | null {
   const producto = bloque.datos?.producto;
-  if (!esObjeto(producto) || typeof producto.product_id !== "string") return null;
+  if (!isProductRow(producto)) return null;
   return mapProductDetail(producto);
 }
 
@@ -80,9 +82,9 @@ export function faltantesDeSelector(bloque: BloqueSelectorVariante): {
   seleccion: Record<string, string>;
 } | null {
   const datos = bloque.datos;
-  if (!esObjeto(datos) || typeof datos.product_id !== "string") return null;
+  if (!esObjeto(datos) || typeof datos.product_id !== "string" || !datos.product_id.trim()) return null;
   const faltantes = Array.isArray(datos.faltantes)
-    ? datos.faltantes.filter((f): f is string => typeof f === "string")
+    ? datos.faltantes.filter((f): f is string => f === "talla" || f === "color")
     : [];
   if (faltantes.length === 0) return null;
   const seleccion: Record<string, string> = {};
