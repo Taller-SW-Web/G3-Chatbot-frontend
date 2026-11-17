@@ -24,6 +24,8 @@ Object.defineProperty(globalThis, "localStorage", {
 });
 
 import { chatbotApi } from "@/adapters/outbound/ChatbotApiAxiosAdapter";
+import { agregarProductoAlCarritoUseCase } from "@/application/use_cases/agregarProductoAlCarritoUseCase";
+import { messiClub } from "../fixtures/messiClub";
 
 describe("adapter Axios de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {
   beforeEach(() => {
@@ -82,5 +84,11 @@ describe("adapter Axios de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {
       { sku: "X", cantidad: 1 },
       expect.objectContaining({ timeout: 4000 })
     );
+  });
+
+  it("envía el SKU vendible y product_id reales también en carrito anónimo", async () => {
+    peticiones.post.mockResolvedValueOnce({ data: {} });
+    await agregarProductoAlCarritoUseCase(chatbotApi, { sku: messiClub.single_sku, product_id: messiClub.product_id, cantidad: 1, conversacionId: "anonima" });
+    expect(peticiones.post).toHaveBeenCalledWith("/carrito/items", { sku: messiClub.single_sku, product_id: messiClub.product_id, cantidad: 1 }, expect.objectContaining({ params: { conversacionId: "anonima" } }));
   });
 });

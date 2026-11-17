@@ -209,6 +209,14 @@ describe("chat blocks with the backend contract", () => {
     );
   });
 
+  it("SELECTOR_VARIANTE permite agregar con un INDETERMINADO contractual válido", async () => {
+    h.detalle.mockResolvedValue(mapProductDetail({ ...PRODUCTO, availability: "INDETERMINADO" }));
+    const onAction = vi.fn();
+    bubble([{ id: "s-indeterminado", tipo: "SELECTOR_VARIANTE", datos: { product_id: "prod-001", faltantes: ["color"], seleccion: { talla: "42" } } } as Bloque], onAction);
+    fireEvent.click(await screen.findByRole("button", { name: "negro" }));
+    expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ id: "AGREGAR_AL_CARRITO", payload: { product_id: "prod-001", talla: "42", color: "negro" } }));
+  });
+
   it("opens the sign-up tab from FORMULARIO REGISTRO", () => {
     const formulario = { id: "f1", tipo: "FORMULARIO", formulario: "REGISTRO" } as unknown as Bloque;
     bubble([formulario]);
