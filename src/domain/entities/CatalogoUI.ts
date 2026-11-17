@@ -185,19 +185,26 @@ function missingProductData(item: BackendCarouselItem): MissingProductData[] {
     : [];
 }
 
-function availabilityFields(item: BackendCarouselItem, variants: ProductVariant[]): {
+/**
+ * `legacyVariants`: carousel rows from a backend that predates `variants` may omit the array;
+ * the variant selection/detail flow resolves the real SKU, so absence is not a failure.
+ * A present-but-malformed or empty array stays strict.
+ */
+function availabilityFields(item: BackendCarouselItem, variants: ProductVariant[], legacyVariants = false): {
   availability: AvailabilityState;
   missingData: MissingProductData[];
 } {
   const malformedVariants = item.variants != null &&
     (!Array.isArray(item.variants) || item.variants.length !== productVariants(item.variants).length);
   const hasVariants = item.has_variants === true || (item.has_variants == null && variants.length > 0);
-  const hasSku = hasVariants ? variants.length > 0 : Boolean(toText(item.single_sku));
+  const legacyAbsent = legacyVariants && item.variants == null;
+  const hasSku = hasVariants ? (variants.length > 0 || legacyAbsent) : Boolean(toText(item.single_sku));
   const malformedFlags = (item.has_variants != null && typeof item.has_variants !== "boolean") ||
     (item.missing_data != null && (!Array.isArray(item.missing_data) ||
       item.missing_data.some((v) => v !== "price" && v !== "availability")));
   const missingData = missingProductData(item);
-  const invalid = !isProductRow(item) || malformedVariants || malformedFlags || !hasSku || !isKnownAvailability(item.availability);
+  const invalid = !isProductRow(item) || malformedVariants || malformedFlags || !hasSku ||
+    (item.availability != null && !isKnownAvailability(item.availability));
   if (invalid && !missingData.includes("availability")) missingData.push("availability");
   return {
     availability: missingData.includes("availability") ? "INDETERMINADO" : toAvailabilityState(item.availability),
@@ -214,7 +221,8 @@ export function canAddWithAvailability(state: AvailabilityState): boolean {
 export function canAddCard(item: CatalogCardItem): boolean {
   return Boolean(item.product_id.trim()) && parseAmount(item.price) !== null &&
     !item.missingData?.length && canAddWithAvailability(item.availability) &&
-    (item.hasVariants ? Boolean(item.variants?.length) : Boolean(item.sku?.trim()));
+    // Variant cards open the selector/detail flow; missingData already blocks malformed variants.
+    (item.hasVariants || Boolean(item.sku?.trim()));
 }
 
 export function mapCarouselItem(item: BackendCarouselItem, ref: number): CatalogCardItem {
@@ -237,7 +245,7 @@ export function mapCarouselItem(item: BackendCarouselItem, ref: number): Catalog
     image: item.image ?? undefined,
     shortDescription: toText(item.short_description),
     hasVariants,
-    ...availabilityFields(item, variants),
+    ...availabilityFields(item, variants, true),
     variants,
     talla: item.talla,
     color: item.color,

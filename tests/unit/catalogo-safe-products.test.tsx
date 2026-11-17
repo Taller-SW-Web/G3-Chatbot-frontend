@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProductCard } from "@/adapters/inbound/components/ProductCard";
 import { ProductDetailModal } from "@/adapters/inbound/components/blocks/DetalleProducto";
 import { MessageBubble } from "@/adapters/inbound/components/MessageBubble";
-import { findVariantSku, mapCarouselItem, mapProductDetail } from "@/domain/entities/CatalogoUI";
+import { canAddCard, findVariantSku, mapCarouselItem, mapProductDetail } from "@/domain/entities/CatalogoUI";
 import { detalleDeBloque, productosDeCarrusel } from "@/domain/utils/bloquesChat";
 import type { Bloque, BloqueCarrusel, BloqueDetalle } from "@/domain/entities/Bloque";
 import { messiClub } from "../fixtures/messiClub";
@@ -171,7 +171,6 @@ describe("datos no obtenidos y payloads inválidos", () => {
     { availability: "DESCONOCIDA" },
     { availability: "__proto__" },
     { availability: "constructor" },
-    { availability: undefined },
     { has_variants: "false" },
     { missing_data: "availability" },
   ])("se mantiene seguro con %j", (changes) => {
@@ -197,5 +196,58 @@ describe("datos no obtenidos y payloads inválidos", () => {
   it("no elige arbitrariamente un SKU entre variantes sin atributos distinguibles", () => {
     const detail = mapProductDetail({ ...messiClub, has_variants: true, variants: [{ sku: "SKU-A" }, { sku: "SKU-B" }] });
     expect(findVariantSku(detail, null, null)).toBeNull();
+  });
+});
+
+describe("compatibilidad con un backend anterior a los campos nuevos", () => {
+  const legacyVariantRow = () => {
+    const row: Record<string, unknown> = { ...messiClub, has_variants: true, single_sku: null };
+    delete row.variants;
+    delete row.availability;
+    return row as typeof messiClub;
+  };
+
+  it("una fila con variantes sin `variants` no es un fallo y abre el flujo de selección", () => {
+    const onDetalle = vi.fn();
+    const onAdd = vi.fn();
+    const card = mapCarouselItem(legacyVariantRow(), 1);
+    expect(card.missingData).toEqual([]);
+    expect(card.availability).toBe("INDETERMINADO");
+    expect(card.sku).toBeUndefined();
+    expect(canAddCard(card)).toBe(true);
+    render(<ProductCard producto={card} onDetalle={onDetalle} onAdd={onAdd} />);
+    fireEvent.click(screen.getByRole("button", { name: /Elegir talla y color/ }));
+    expect(onDetalle).toHaveBeenCalledTimes(1);
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it("la disponibilidad reportada por el backend se conserva sin `variants`", () => {
+    const card = mapCarouselItem({ ...legacyVariantRow(), availability: "DISPONIBLE" }, 1);
+    expect(card).toMatchObject({ availability: "DISPONIBLE", missingData: [] });
+  });
+
+  it("una fila sin `availability` es INDETERMINADO sin missing_data", () => {
+    const row: Record<string, unknown> = { ...messiClub };
+    delete row.availability;
+    const card = mapCarouselItem(row as typeof messiClub, 1);
+    expect(card).toMatchObject({ availability: "INDETERMINADO", missingData: [] });
+    expect(canAddCard(card)).toBe(true);
+  });
+
+  it("sigue bloqueando variantes mal formadas o vacías, y `availability` inválida", () => {
+    for (const variants of [[{ sku: "" }], "x", []]) {
+      const card = mapCarouselItem({ ...legacyVariantRow(), variants } as never, 1);
+      expect(card.missingData).toContain("availability");
+      expect(canAddCard(card)).toBe(false);
+    }
+    expect(mapCarouselItem({ ...messiClub, availability: "WAT" } as never, 1).missingData).toContain("availability");
+  });
+
+  it("sigue bloqueando una fila sin variantes y sin single_sku, o con missing_data del backend", () => {
+    const noSku = mapCarouselItem({ ...messiClub, single_sku: null }, 1);
+    expect(noSku.missingData).toContain("availability");
+    expect(canAddCard(noSku)).toBe(false);
+    const reported = mapCarouselItem({ ...legacyVariantRow(), missing_data: ["availability"] }, 1);
+    expect(canAddCard(reported)).toBe(false);
   });
 });
