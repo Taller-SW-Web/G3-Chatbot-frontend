@@ -24,11 +24,15 @@ const TONE_TESTID: Record<AvailabilityTone, string> = {
 export function AvailabilityBadge({
   state,
   className = "",
+  missing = false,
 }: {
   state: AvailabilityState;
   className?: string;
+  missing?: boolean;
 }) {
-  const { label, tone } = availabilityMeta(state);
+  const { label, tone } = missing
+    ? { label: "No pudimos consultar la disponibilidad ahora.", tone: "unknown" as const }
+    : availabilityMeta(state);
   return (
     <span
       data-testid={TONE_TESTID[tone]}
