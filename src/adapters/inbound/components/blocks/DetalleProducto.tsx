@@ -6,8 +6,8 @@ import { XIcon } from "../icons";
 import { AvailabilityBadge } from "../AvailabilityBadge";
 import { ProductImage } from "../ProductImage";
 import {
-  availabilityMeta,
   findVariantSku,
+  canAddWithAvailability,
   type AvailabilityState,
   type CatalogDetail,
 } from "@/domain/entities/CatalogoUI";
@@ -117,7 +117,7 @@ export function ModalShell({
 }
 
 /** Cuerpo de texto del detalle (SPEC-09). */
-export function DetalleProducto({ p }: { p: CatalogDetail }) {
+export function DetalleProducto({ p, showAvailability = true }: { p: CatalogDetail; showAvailability?: boolean }) {
   return (
     <div className="flex flex-col gap-1">
       <p className="font-heading text-[20px] uppercase">{sanitize(p.name)}</p>
@@ -126,6 +126,7 @@ export function DetalleProducto({ p }: { p: CatalogDetail }) {
         <p className="text-[13px] text-text-secondary">{sanitize(p.shortDescription)}</p>
       )}
       <div className="text-[14px] text-text-secondary"><PriceTag {...p} /></div>
+      {showAvailability && <AvailabilityBadge state={p.availability} missing={p.missingData?.includes("availability")} className="w-fit" />}
     </div>
   );
 }
@@ -153,7 +154,7 @@ export function ProductDetailModal({
   const skuVariante = p.hasVariants ? findVariantSku(p, talla, color) : null;
   const sku = p.hasVariants
     ? skuVariante
-    : (p.singleSku ?? p.variants[0]?.sku ?? null);
+    : (p.singleSku ?? null);
   const haySku = sku != null;
   const varianteCompleta = p.hasVariants ? skuVariante != null : true;
 
@@ -165,8 +166,10 @@ export function ProductDetailModal({
   });
 
   const skuState: AvailabilityState | undefined = disponibilidad.data;
-  const skuAgotado = skuState === "AGOTADO";
-  const puedeAgregar = varianteCompleta && haySku && !skuAgotado && p.price !== null && p.availability !== "AGOTADO";
+  const puedeAgregar = varianteCompleta && haySku && Boolean(p.product_id.trim()) &&
+    p.price !== null && !p.missingData?.length && canAddWithAvailability(p.availability) &&
+    (!consultarDisponibilidad || (!disponibilidad.isFetching && !disponibilidad.isError &&
+      skuState != null && canAddWithAvailability(skuState)));
 
   return (
     <ModalShell title="Detalle de producto" onClose={onClose}>
@@ -176,9 +179,18 @@ export function ProductDetailModal({
         className="h-56 w-full"
         emojiClassName="text-[64px]"
       />
-      <DetalleProducto p={p} />
-      <AvailabilityBadge state={p.availability} className="w-fit" />
-      {p.colores.length > 0 && (
+      <DetalleProducto p={p} showAvailability={false} />
+      <AvailabilityBadge
+        state={consultarDisponibilidad && haySku && canAddWithAvailability(p.availability) && !p.missingData?.includes("availability")
+          ? (disponibilidad.isFetching || disponibilidad.isError ? "INDETERMINADO" : skuState ?? "INDETERMINADO")
+          : p.availability}
+        missing={p.missingData?.includes("availability") || disponibilidad.isError}
+        className="w-fit"
+      />
+      {puedeAgregar && (p.availability === "INDETERMINADO" || skuState === "INDETERMINADO") && (
+        <p role="status" className="text-[13px] text-text-secondary">No pudimos confirmar el stock en este momento; lo verificaremos antes del pago</p>
+      )}
+      {p.hasVariants && p.colores.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <p className="text-[14px]">Color: <span className="font-bold">{color ?? "Elige"}</span></p>
           <div className="flex gap-2" role="group" aria-label="Color">
@@ -190,7 +202,7 @@ export function ProductDetailModal({
           </div>
         </div>
       )}
-      {p.tallas.length > 0 && (
+      {p.hasVariants && p.tallas.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <p className="text-[14px] font-bold">Talla: <span className="font-semibold text-text-secondary">{talla ?? "Elige"}</span></p>
           <div className="flex gap-2" role="group" aria-label="Talla">
@@ -203,20 +215,18 @@ export function ProductDetailModal({
           </div>
         </div>
       )}
-      {consultarDisponibilidad && (
+      {consultarDisponibilidad && (!haySku || disponibilidad.isFetching) && (
         <p data-testid="sku-disponibilidad" className="text-[13px] text-text-secondary">
           {!haySku
-            ? "Elige talla y color para verificar la disponibilidad."
+            ? p.hasVariants && (p.tallas.length > 0 || p.colores.length > 0)
+              ? "Elige talla y color para verificar la disponibilidad."
+              : "No podemos agregar este producto ahora. Vuelve a consultar en un momento."
             : disponibilidad.isFetching
               ? "Verificando disponibilidad…"
-              : disponibilidad.isError
-                ? "No pudimos verificar la disponibilidad."
-                : skuState
-                  ? availabilityMeta(skuState).label
-                  : ""}
+              : ""}
         </p>
       )}
-      <button onClick={() => onAdd({ sku, talla, color })} disabled={!puedeAgregar}
+      <button onClick={() => { if (puedeAgregar) onAdd({ sku, talla, color }); }} disabled={!puedeAgregar}
         className="wf-btn py-3.5 text-sm font-bold tracking-wide bg-action-primary text-surface-ink disabled:opacity-40 disabled:cursor-not-allowed">AGREGAR AL CARRITO</button>
     </ModalShell>
   );

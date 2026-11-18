@@ -31,7 +31,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 900 
     expect(onlyOffers).toBe("true");
     await expect(page.getByText("S/ 299.90")).toBeVisible();
     await expect(page.getByText("Precio no disponible")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Elegir talla y color de Sin precio de prueba" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Agregar Sin precio de prueba" })).toBeDisabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`offers-${viewport.width}.png`), fullPage: true, animations: "disabled" });
   });
