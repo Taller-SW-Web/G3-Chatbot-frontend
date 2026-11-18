@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Oswald } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "./providers";
@@ -17,9 +17,19 @@ const oswald = Oswald({
 });
 
 export const metadata: Metadata = {
-  title: "Inka Athletics — Canal Chatbot",
+  title: "Inka Athletics · Canal Chatbot",
   description:
     "Frontend hexagonal del canal Chatbot: catálogo, carrito, checkout, pedidos, reclamos y devoluciones.",
+};
+
+/**
+ * `interactive-widget=resizes-content`: en Android el teclado virtual reduce el
+ * viewport de layout en vez de tapar el compositor (validación mobile-first).
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
 };
 
 // Server Component por defecto. Solo el shell interactivo es 'use client'.

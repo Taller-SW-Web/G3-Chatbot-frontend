@@ -109,8 +109,9 @@ button {
 .wf-phone {
   width: 100%;
   max-width: 430px;
-  height: max(600px, min(880px, calc(100dvh - 2rem)));
-  min-height: 600px;
+  /* Se encoge con el viewport (teclado virtual incluido); nunca tapa el compositor. */
+  height: min(880px, calc(100dvh - 2rem));
+  min-height: min(600px, calc(100dvh - 2rem));
   background: var(--color-surface-cloud);
   color: var(--color-text-primary);
   border-radius: 36px;
