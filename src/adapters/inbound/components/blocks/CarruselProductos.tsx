@@ -54,7 +54,7 @@ export function CarruselProductos({
             </button>
             {p.recommendationReason && <p className="mt-1 text-[12px] text-text-secondary break-words">{sanitize(p.recommendationReason)}</p>}
             <div className="flex items-center justify-between mt-1">
-              <AvailabilityBadge state={p.availability} missing={p.missingData?.includes("availability")} className="text-[11px] font-semibold" />
+              <AvailabilityBadge state={p.availability} className="text-[11px] font-semibold" />
               <button aria-label={`Agregar ${sanitize(p.name)}`} onClick={() => onAdd(p)}
                 disabled={!canAddCard(p)}
                 className="w-8 h-8 shrink-0 wf-btn flex items-center justify-center bg-action-primary text-surface-ink disabled:opacity-40 disabled:cursor-not-allowed"><PlusIcon size={16} /></button>

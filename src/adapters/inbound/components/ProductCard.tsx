@@ -48,7 +48,7 @@ export function ProductCard({
         <span data-testid="product-precio" className="block text-[14px] font-semibold text-text-primary">
           <PriceTag {...producto} />
         </span>
-        <AvailabilityBadge state={producto.availability} missing={producto.missingData?.includes("availability")} className="self-start" />
+        <AvailabilityBadge state={producto.availability} className="self-start" />
       </button>
       <button
         data-testid="btn-agregar"

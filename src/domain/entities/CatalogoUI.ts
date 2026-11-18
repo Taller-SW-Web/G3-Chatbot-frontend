@@ -13,27 +13,35 @@ export type AvailabilityState =
   | "DISPONIBLE"
   | "POCAS_UNIDADES"
   | "AGOTADO"
-  | "INDETERMINADO";
+  | "INDETERMINADO"
+  /** Disponibilidad no obtenida: el backend no la envió o mandó un valor desconocido. */
+  | "SIN_DATO";
 
 /** Tono visual por estado; una sola fuente para card, carrusel y modal. */
 export type AvailabilityTone = "ok" | "low" | "out" | "unknown";
 
+/**
+ * `label: null` = el estado no se pinta como etiqueta.
+ * SPEC-09 Req. 1 y SPEC-10 Req. 3: ni `INDETERMINADO` ni la disponibilidad no
+ * obtenida muestran badge; el aviso, si corresponde, va como texto aparte.
+ */
 const AVAILABILITY_META: Record<
   AvailabilityState,
-  { label: string; tone: AvailabilityTone }
+  { label: string | null; tone: AvailabilityTone }
 > = {
   DISPONIBLE: { label: "Disponible", tone: "ok" },
   POCAS_UNIDADES: { label: "¡Quedan pocas unidades!", tone: "low" },
   AGOTADO: { label: "Agotado", tone: "out" },
-  INDETERMINADO: { label: "Disponibilidad no confirmada", tone: "unknown" },
+  INDETERMINADO: { label: null, tone: "unknown" },
+  SIN_DATO: { label: null, tone: "unknown" },
 };
 
-/** Etiqueta y tono únicos por estado (INDETERMINADO nunca se pinta como disponible). */
+/** Etiqueta y tono únicos por estado; solo los estados confirmados pintan badge. */
 export function availabilityMeta(state: AvailabilityState): {
-  label: string;
+  label: string | null;
   tone: AvailabilityTone;
 } {
-  return Object.hasOwn(AVAILABILITY_META, state) ? AVAILABILITY_META[state] : AVAILABILITY_META.INDETERMINADO;
+  return Object.hasOwn(AVAILABILITY_META, state) ? AVAILABILITY_META[state] : AVAILABILITY_META.SIN_DATO;
 }
 
 /** Fila de `CARRUSEL_PRODUCTOS` tal como llega en `bloque.datos.productos`. */
@@ -119,13 +127,13 @@ const BACKEND_STATES: Record<string, AvailabilityState> = {
   INDETERMINADO: "INDETERMINADO",
 };
 
-/** Mapeo único: cualquier estado crudo desconocido cae a INDETERMINADO. */
+/** Mapeo único: solo el valor literal `INDETERMINADO` es indeterminado; el resto sin dato. */
 export function isKnownAvailability(value: unknown): value is string {
   return typeof value === "string" && Object.hasOwn(BACKEND_STATES, value);
 }
 
 export function toAvailabilityState(value: unknown): AvailabilityState {
-  return isKnownAvailability(value) ? BACKEND_STATES[value] : "INDETERMINADO";
+  return isKnownAvailability(value) ? BACKEND_STATES[value] : "SIN_DATO";
 }
 
 /** PEN amount from the server; unavailable is never represented as zero. */
@@ -207,12 +215,12 @@ function availabilityFields(item: BackendCarouselItem, variants: ProductVariant[
     (item.availability != null && !isKnownAvailability(item.availability));
   if (invalid && !missingData.includes("availability")) missingData.push("availability");
   return {
-    availability: missingData.includes("availability") ? "INDETERMINADO" : toAvailabilityState(item.availability),
+    availability: missingData.includes("availability") ? "SIN_DATO" : toAvailabilityState(item.availability),
     missingData,
   };
 }
 
-/** Un INDETERMINADO contractual permite agregar con aviso; un estado inválido no. */
+/** Un INDETERMINADO contractual permite agregar con aviso; sin dato o agotado no. */
 export function canAddWithAvailability(state: AvailabilityState): boolean {
   return state === "DISPONIBLE" || state === "POCAS_UNIDADES" || state === "INDETERMINADO";
 }
