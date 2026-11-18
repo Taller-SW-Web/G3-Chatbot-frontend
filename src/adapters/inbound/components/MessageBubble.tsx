@@ -87,6 +87,7 @@ export function renderBloque(
   onQuickAction?: (accion: AccionRapidaChat) => void,
   actionsBusy = false
 ): ReactNode {
+  if (!bloque || typeof bloque !== "object") return null;
   if (esBloqueTexto(bloque)) {
     return <p key={clave} data-testid="bloque-texto">{renderChatText(bloque.texto)}</p>;
   }
@@ -116,7 +117,7 @@ export function renderBloque(
     }
     case "LISTA_PROMOCIONES": {
       const items = parsePromotions((bloque as PromotionsBlock).datos?.promociones);
-      return <div key={clave} className="mt-2"><ListaPromociones promos={items} /></div>;
+      return <div key={clave} className="mt-2"><ListaPromociones promos={items} unavailable={(bloque as PromotionsBlock).datos?.unavailable === true} /></div>;
     }
     case "DETALLE_PRODUCTO": {
       const detalle = detalleDeBloque(bloque as BloqueDetalle);
