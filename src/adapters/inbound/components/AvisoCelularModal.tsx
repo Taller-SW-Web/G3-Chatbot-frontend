@@ -16,8 +16,9 @@ export function AvisoCelularModal({
 }) {
   const cliente = useChatStore((s) => s.cliente);
   return (
-    <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5" onClick={onClose}>
-      <div className="pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl max-h-[85%] overflow-y-auto no-scrollbar p-6 flex flex-col items-center gap-3 text-center" onClick={(e) => e.stopPropagation()}>
+    <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5">
+      <button type="button" tabIndex={-1} aria-hidden="true" className="absolute inset-0 cursor-default" onClick={onClose} />
+      <div className="relative pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl max-h-[85%] overflow-y-auto no-scrollbar p-6 flex flex-col items-center gap-3 text-center" role="dialog" aria-modal="true">
         <div className="wf-check w-16 h-16 rounded-full flex items-center justify-center bg-warning-background text-warning-default"><LockIcon size={24} /></div>
         <h2 className="font-heading text-[20px]">VERIFICA TU NÚMERO</h2>
         <p className="text-[14px] text-text-secondary">

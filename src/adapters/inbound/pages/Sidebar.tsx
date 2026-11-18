@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SearchIcon, ChevronRightIcon, XIcon, MessagePlusIcon, HistoryIcon, SettingsIcon } from "../components/icons";
 import { BrandLogo } from "../components/BrandLogo";
@@ -34,6 +34,7 @@ export function Sidebar({
   const [q, setQ] = useState("");
   const [termino, setTermino] = useState("");
   const [buscando, setBuscando] = useState(false);
+  const busquedaRef = useRef<HTMLInputElement>(null);
   const cliente = useChatStore((s) => s.cliente);
   const setAccionPendiente = useChatStore((s) => s.setAccionPendiente);
   const setAuthOpen = useChatStore((s) => s.setAuthOpen);
@@ -45,6 +46,11 @@ export function Sidebar({
     const t = setTimeout(() => setTermino(normalizarBusqueda(q)), BUSQUEDA_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [q]);
+
+  // Foco al abrir la busqueda: mismo efecto que autoFocus, sin el atributo (S9379).
+  useEffect(() => {
+    if (buscando) busquedaRef.current?.focus();
+  }, [buscando]);
 
   const recientes = useInfiniteQuery({
     queryKey: ["conversaciones", dueno],
@@ -87,7 +93,7 @@ export function Sidebar({
         <aside className="order-1 w-[85%] max-w-[340px] bg-surface-ink text-text-inverse h-full flex flex-col p-4 gap-3">
           <div className="wf-chip px-4 py-3 flex items-center gap-2 bg-white text-text-primary">
             <SearchIcon size={20} />
-            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+            <input ref={busquedaRef} value={q} onChange={(e) => setQ(e.target.value)}
               maxLength={BUSQUEDA_MAX_CARACTERES}
               placeholder="Buscar conversaciones" aria-label="Buscar conversaciones"
               className="flex-1 outline-none text-sm bg-transparent" />
@@ -111,7 +117,7 @@ export function Sidebar({
             <EstadoListado consulta={consulta} vacio={termino ? "Sin resultados." : "Aún no tienes conversaciones."} claro />
           </div>
         </aside>
-        <div className="flex-1 bg-surface-ink/60 order-2" onClick={onClose} />
+        <button type="button" tabIndex={-1} aria-hidden="true" className="flex-1 bg-surface-ink/60 order-2" onClick={onClose} />
       </div>
     );
   }
@@ -163,7 +169,7 @@ export function Sidebar({
           <span className="ml-auto text-text-muted-dark"><SettingsIcon size={20} /></span>
         </button>
       </aside>
-      <div className="flex-1 bg-surface-ink/60 order-2" onClick={onClose} />
+      <button type="button" tabIndex={-1} aria-hidden="true" className="flex-1 bg-surface-ink/60 order-2" onClick={onClose} />
     </div>
   );
 }

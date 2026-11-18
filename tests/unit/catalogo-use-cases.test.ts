@@ -3,6 +3,7 @@ import { buscarProductosUseCase } from "@/application/use_cases/buscarProductosU
 import { verDetalleProductoUseCase } from "@/application/use_cases/verDetalleProductoUseCase";
 import { consultarDisponibilidadUseCase } from "@/application/use_cases/consultarDisponibilidadUseCase";
 import type { ChatbotApiPort } from "@/ports/outbound/ChatbotApiPort";
+import { messiClub } from "../fixtures/messiClub";
 
 function apiCon(overrides: Partial<ChatbotApiPort> = {}): {
   api: ChatbotApiPort;
@@ -48,5 +49,27 @@ describe("casos de uso de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {
     expect(llamadas.disponibilidad[0]).toBe("A");
     expect(r.status).toBe("DISPONIBLE");
     await expect(consultarDisponibilidadUseCase(api, { sku: " " })).rejects.toThrow();
+  });
+
+  it("REST conserva single_sku y partial y descarta filas sin identidad", async () => {
+    const { api } = apiCon({
+      buscarProductos: vi.fn().mockResolvedValue({ items: [null, {}, messiClub], total: 20, partial: true }),
+      verDetalleProducto: vi.fn().mockResolvedValue(messiClub),
+    });
+    const page = await buscarProductosUseCase(api, {});
+    expect(page.partial).toBe(true);
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0].sku).toBe(messiClub.single_sku);
+    expect((await verDetalleProductoUseCase(api, messiClub.product_id)).singleSku).toBe(messiClub.single_sku);
+  });
+
+  it.each([null, {}, { product_id: " " }, { product_id: "otro" }])("no inventa un detalle para el payload %j", async (payload) => {
+    const { api } = apiCon({ verDetalleProducto: vi.fn().mockResolvedValue(payload) });
+    await expect(verDetalleProductoUseCase(api, messiClub.product_id)).rejects.toThrow("Detalle de producto inválido");
+  });
+
+  it.each([[], null, [{ sku: "OTRO", status: "DISPONIBLE" }], [{ sku: messiClub.single_sku }], [{ sku: messiClub.single_sku, status: "DESCONOCIDO" }]])("no toma la disponibilidad de otro SKU ni un payload incompleto: %j", async (rows) => {
+    const { api } = apiCon({ consultarDisponibilidad: vi.fn().mockResolvedValue(rows) });
+    await expect(consultarDisponibilidadUseCase(api, { sku: messiClub.single_sku })).rejects.toThrow("Sin respuesta de disponibilidad");
   });
 });

@@ -64,6 +64,8 @@ describe("chat blocks with the backend contract", () => {
     expect(screen.getByTestId("bloque-carrusel-productos")).toBeTruthy();
     expect(screen.getByText("Nike Revolution 7")).toBeTruthy();
     expect(screen.getByText("S/ 279.90")).toBeTruthy();
+    // Nombre accesible del detalle: la tarjeta entera es un solo botón.
+    expect(screen.getByRole("button", { name: "Ver detalle de Nike Revolution 7" })).toBeTruthy();
   });
 
   it("adds a variant product by product_id and opens its detail by product_id", () => {
@@ -205,6 +207,14 @@ describe("chat blocks with the backend contract", () => {
         payload: { product_id: "prod-001", talla: "42", color: "negro" },
       })
     );
+  });
+
+  it("SELECTOR_VARIANTE permite agregar con un INDETERMINADO contractual válido", async () => {
+    h.detalle.mockResolvedValue(mapProductDetail({ ...PRODUCTO, availability: "INDETERMINADO" }));
+    const onAction = vi.fn();
+    bubble([{ id: "s-indeterminado", tipo: "SELECTOR_VARIANTE", datos: { product_id: "prod-001", faltantes: ["color"], seleccion: { talla: "42" } } } as Bloque], onAction);
+    fireEvent.click(await screen.findByRole("button", { name: "negro" }));
+    expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ id: "AGREGAR_AL_CARRITO", payload: { product_id: "prod-001", talla: "42", color: "negro" } }));
   });
 
   it("opens the sign-up tab from FORMULARIO REGISTRO", () => {

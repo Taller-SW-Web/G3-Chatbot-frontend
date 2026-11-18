@@ -2,6 +2,7 @@
 
 import { PlusIcon } from "./icons";
 import {
+  canAddCard,
   type CatalogCardItem,
 } from "@/domain/entities/CatalogoUI";
 import { PriceTag } from "./PriceTag";
@@ -13,9 +14,11 @@ import { ProductImage } from "./ProductImage";
 export function ProductCard({
   producto,
   onDetalle,
+  onAdd,
 }: {
   producto: CatalogCardItem;
   onDetalle: (p: CatalogCardItem) => void;
+  onAdd?: (p: CatalogCardItem) => void;
 }) {
   const agotado = producto.availability === "AGOTADO";
   const nombre = sanitize(producto.name);
@@ -45,14 +48,14 @@ export function ProductCard({
         <span data-testid="product-precio" className="block text-[14px] font-semibold text-text-primary">
           <PriceTag {...producto} />
         </span>
-        <AvailabilityBadge state={producto.availability} className="self-start" />
+        <AvailabilityBadge state={producto.availability} missing={producto.missingData?.includes("availability")} className="self-start" />
       </button>
       <button
         data-testid="btn-agregar"
-        aria-label={`Elegir talla y color de ${nombre}`}
-        title={agotado ? "Agotado" : "Elegir talla y color"}
-        disabled={agotado || producto.price === null}
-        onClick={() => onDetalle(producto)}
+        aria-label={producto.hasVariants ? `Elegir talla y color de ${nombre}` : `Agregar ${nombre}`}
+        title={agotado ? "Agotado" : producto.hasVariants ? "Elegir talla y color" : "Agregar al carrito"}
+        disabled={!canAddCard(producto) || (!producto.hasVariants && !onAdd)}
+        onClick={() => producto.hasVariants ? onDetalle(producto) : onAdd?.(producto)}
         className="absolute top-3 right-3 w-9 h-9 wf-btn flex items-center justify-center bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <PlusIcon size={16} />

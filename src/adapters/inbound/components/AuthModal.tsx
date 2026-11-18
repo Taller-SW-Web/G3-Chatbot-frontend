@@ -221,8 +221,9 @@ export function AuthModal() {
   }
 
   return (
-    <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5" onClick={cerrar}>
-      <div className="pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl max-h-[85%] overflow-y-auto no-scrollbar p-4 flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+    <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5">
+      <button type="button" tabIndex={-1} aria-hidden="true" className="absolute inset-0 cursor-default" onClick={cerrar} />
+      <div className="relative pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl max-h-[85%] overflow-y-auto no-scrollbar p-4 flex flex-col gap-3" role="dialog" aria-modal="true">
         {paso === "verificar-correo" ? (
           <div className="flex flex-col items-center gap-3 text-center p-2">
             <h2 className="font-heading text-[20px]">¡REVISA TU CORREO!</h2>

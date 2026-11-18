@@ -20,6 +20,7 @@ export function MiCuentaPage() {
   const logout = useChatStore((s) => s.logout);
   const [otp, setOtp] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [errorVerificacion, setErrorVerificacion] = useState<string | null>(null);
 
   if (!cliente) {
     return (
@@ -32,8 +33,17 @@ export function MiCuentaPage() {
 
   async function verificar(codigo: string) {
     if (!cliente) return;
-    const r = await validarContactoUseCase(container.api, codigo);
-    if (r.verificado) setCliente({ ...cliente, celularVerificado: true });
+    setErrorVerificacion(null);
+    try {
+      const r = await validarContactoUseCase(container.api, codigo);
+      if (r.verificado) {
+        setCliente({ ...cliente, celularVerificado: true });
+      } else {
+        setErrorVerificacion("No pudimos verificar el código. Inténtalo de nuevo.");
+      }
+    } catch {
+      setErrorVerificacion("No pudimos verificar el código. Inténtalo de nuevo.");
+    }
   }
 
   return (
@@ -62,6 +72,9 @@ export function MiCuentaPage() {
             <p className="text-[14px] font-bold">Ingresa el código de 6 dígitos</p>
             <p className="text-[12px] text-text-secondary">5:00 · <button className="underline">Enviar otro código</button></p>
             <OtpCelularForm onOk={verificar} />
+            {errorVerificacion && (
+              <p role="alert" className="text-[12px] text-error-default">{errorVerificacion}</p>
+            )}
           </div>
         )
       )}
