@@ -6,6 +6,11 @@ import { DevolucionForm } from "@/adapters/inbound/components/forms/DevolucionFo
 const onOk = vi.fn();
 const onCancelar = vi.fn();
 
+const LINEAS = [
+  { productoId: "P-1", label: "Zapatilla Volta · 42" },
+  { productoId: "P-2", label: "Zapatilla Volta · 43" },
+];
+
 beforeEach(() => {
   vi.clearAllMocks();
   Object.defineProperty(URL, "createObjectURL", {
@@ -16,7 +21,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-function abrir(lineas = ["Zapatilla Volta · 42", "Zapatilla Volta · 43"]) {
+function abrir(lineas = LINEAS) {
   return render(<DevolucionForm lineas={lineas} onOk={onOk} onCancelar={onCancelar} />);
 }
 
@@ -25,7 +30,7 @@ describe("DevolucionForm", () => {
     abrir();
 
     const linea = screen.getByLabelText("Línea a devolver") as HTMLSelectElement;
-    expect(linea.value).toBe("Zapatilla Volta · 42");
+    expect(linea.value).toBe("P-1");
     expect(screen.getByLabelText("Talla o color deseado")).toBeDefined();
     expect(screen.getByRole("button", { name: "CAMBIO" }).getAttribute("aria-pressed")).toBe("true");
   });
@@ -41,7 +46,7 @@ describe("DevolucionForm", () => {
   it("envía la solicitud con línea, motivo y descripción", async () => {
     abrir();
 
-    fireEvent.change(screen.getByLabelText("Motivo"), { target: { value: "Producto defectuoso" } });
+    fireEvent.change(screen.getByLabelText("Motivo"), { target: { value: "TALLA_INCORRECTA" } });
     fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Llegó con la suela rota" } });
     expect(screen.getByText(/^\d+\/1000$/)).toBeDefined();
 
@@ -50,8 +55,8 @@ describe("DevolucionForm", () => {
     await waitFor(() => expect(onOk).toHaveBeenCalledTimes(1));
     expect(onOk).toHaveBeenCalledWith(expect.objectContaining({
       tipo: "CAMBIO",
-      linea: "Zapatilla Volta · 42",
-      motivo: "Producto defectuoso",
+      linea: "P-1",
+      motivo: "TALLA_INCORRECTA",
       descripcion: "Llegó con la suela rota",
     }));
   });

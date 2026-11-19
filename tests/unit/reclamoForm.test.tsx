@@ -11,7 +11,14 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
 
 function abrir() {
-  return render(<ReclamoForm pedidoId="PED-2026-00891" onOk={onOk} onCancelar={onCancelar} />);
+  return render(
+    <ReclamoForm
+      pedidoId="PED-2026-00891"
+      telefonoInicial="999888777"
+      onOk={onOk}
+      onCancelar={onCancelar}
+    />
+  );
 }
 
 describe("ReclamoForm", () => {
@@ -41,7 +48,7 @@ describe("ReclamoForm", () => {
     abrir();
 
     fireEvent.change(screen.getByLabelText("Motivo del reclamo"), {
-      target: { value: "Producto equivocado" },
+      target: { value: "PRODUCTO_EQUIVOCADO" },
     });
     fireEvent.change(screen.getByLabelText(/Descripci.n del reclamo/), { target: { value: DESCRIPCION } });
     fireEvent.change(screen.getByLabelText("Documento"), { target: { value: "DNI 12345678" } });
@@ -52,9 +59,10 @@ describe("ReclamoForm", () => {
     expect(onOk).toHaveBeenCalledWith({
       pedidoId: "PED-2026-00891",
       tipo: "RECLAMO",
-      motivo: "Producto equivocado",
+      motivo: "PRODUCTO_EQUIVOCADO",
       descripcion: DESCRIPCION,
       documento: "DNI 12345678",
+      telefono: "999888777",
       solucion: "Cambio del producto",
     });
   });
@@ -64,6 +72,7 @@ describe("ReclamoForm", () => {
 
     fireEvent.click(screen.getByLabelText("Queja"));
     fireEvent.change(screen.getByLabelText(/Descripci.n del reclamo/), { target: { value: DESCRIPCION } });
+    fireEvent.change(screen.getByLabelText("Documento"), { target: { value: "72458912" } });
     fireEvent.click(screen.getByRole("button", { name: /ENVIAR RECLAMO/ }));
 
     await waitFor(() => expect(onOk).toHaveBeenCalledWith(expect.objectContaining({ tipo: "QUEJA" })));

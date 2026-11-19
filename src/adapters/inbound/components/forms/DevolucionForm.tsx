@@ -3,7 +3,12 @@
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { devolucionSchema, DEVOLUCION_MOTIVOS, type DevolucionInput } from "@/domain/schemas/devolucion.schema";
+import {
+  devolucionSchema,
+  DEVOLUCION_MOTIVOS,
+  type DevolucionInput,
+  type DevolucionLinea,
+} from "@/domain/schemas/devolucion.schema";
 import { PhotoIcon, RefreshIcon, CheckIcon } from "../icons";
 
 /**
@@ -15,37 +20,63 @@ export function DevolucionForm({
   onOk,
   onCancelar,
 }: {
-  lineas: string[];
-  onOk: (d: DevolucionInput & { evidenciaNombre?: string }) => void;
+  lineas: DevolucionLinea[];
+  onOk: (d: DevolucionInput & { evidenciaArchivo?: File; evidenciaNombre?: string }) => void | Promise<void>;
   onCancelar: () => void;
 }) {
-  const [tipo, setTipo] = useState<"CAMBIO" | "DEVOLUCION">("CAMBIO");
-  const [evidencia, setEvidencia] = useState<{ nombre: string; url: string; tamano: number } | null>(null);
+  const [tipo, setTipo] = useState<"CAMBIO" | "DEVOLUCION_DINERO">("CAMBIO");
+  const [evidencia, setEvidencia] = useState<{
+    file: File;
+    nombre: string;
+    url: string;
+    tamano: number;
+  } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<DevolucionInput>({
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<DevolucionInput>({
     resolver: zodResolver(devolucionSchema),
-    defaultValues: { tipo: "CAMBIO", linea: lineas[0] ?? "", motivo: "Talla incorrecta" },
+    defaultValues: {
+      tipo: "CAMBIO",
+      linea: lineas[0]?.productoId ?? "",
+      motivo: "TALLA_INCORRECTA",
+    },
   });
   const descripcion = watch("descripcion") ?? "";
+  const motivo = watch("motivo");
+  // G5 maps `PRODUCTO_EQUIVOCADO_ENVIADO` to `PRODUCTO_INCORRECTO`, which also
+  // requires evidence. Keep the rule in the UI so the customer does not fail
+  // only after uploading the form.
+  const requiereEvidencia =
+    motivo === "PRODUCTO_DEFECTUOSO" || motivo === "PRODUCTO_EQUIVOCADO_ENVIADO";
 
   function handleFile(file: File | undefined) {
     if (!file) return;
-    setEvidencia({ nombre: file.name, url: URL.createObjectURL(file), tamano: file.size });
+    setEvidencia({
+      file,
+      nombre: file.name,
+      url: URL.createObjectURL(file),
+      tamano: file.size,
+    });
   }
 
   return (
     <form
       onSubmit={handleSubmit((d) =>
-        onOk({ ...d, tipo, evidenciaTamano: evidencia?.tamano, evidenciaNombre: evidencia?.nombre })
+        onOk({
+          ...d,
+          tipo,
+          evidenciaTamano: evidencia?.tamano,
+          evidenciaNombre: evidencia?.nombre,
+          evidenciaArchivo: evidencia?.file,
+        })
       )}
       className="flex flex-col gap-3"
     >
       <select {...register("linea")} aria-label="Línea a devolver" className="wf-input px-3 py-2.5 text-sm">
-        {lineas.map((l) => <option key={l}>{l}</option>)}
+        {lineas.map((l) => <option key={l.productoId} value={l.productoId}>{l.label}</option>)}
       </select>
       <div className="grid grid-cols-2 gap-2 rounded-md bg-white border border-border-default p-1">
         <button type="button" onClick={() => setTipo("CAMBIO")} aria-pressed={tipo === "CAMBIO"} className={`wf-btn py-2.5 text-[12px] font-bold ${tipo === "CAMBIO" ? "bg-surface-ink text-text-inverse" : "text-text-secondary"}`}>CAMBIO</button>
-        <button type="button" onClick={() => setTipo("DEVOLUCION")} aria-pressed={tipo === "DEVOLUCION"} className={`wf-btn py-2.5 text-[12px] font-bold ${tipo === "DEVOLUCION" ? "bg-surface-ink text-text-inverse" : "text-text-secondary"}`}>DEVOLUCIÓN</button>
+        <button type="button" onClick={() => setTipo("DEVOLUCION_DINERO")} aria-pressed={tipo === "DEVOLUCION_DINERO"} className={`wf-btn py-2.5 text-[12px] font-bold ${tipo === "DEVOLUCION_DINERO" ? "bg-surface-ink text-text-inverse" : "text-text-secondary"}`}>DEVOLUCIÓN</button>
       </div>
       {tipo === "CAMBIO" && (
         <select aria-label="Talla o color deseado" className="wf-input px-3 py-2.5 text-sm">
@@ -54,7 +85,7 @@ export function DevolucionForm({
         </select>
       )}
       <select {...register("motivo")} aria-label="Motivo" className="wf-input px-3 py-2.5 text-sm">
-        {DEVOLUCION_MOTIVOS.map((m) => <option key={m}>{m}</option>)}
+        {DEVOLUCION_MOTIVOS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
       </select>
       <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" aria-label="Subir evidencia" onChange={(e) => handleFile(e.target.files?.[0])} />
       {!evidencia ? (
@@ -73,12 +104,15 @@ export function DevolucionForm({
         </div>
       )}
       {errors.evidenciaTamano && <span className="text-[12px] text-error-default">{errors.evidenciaTamano.message}</span>}
+      {requiereEvidencia && !evidencia ? (
+        <span className="text-[12px] text-error-default">Este motivo exige al menos una evidencia.</span>
+      ) : null}
       <textarea {...register("descripcion")} placeholder="Descripción..." aria-label="Descripción" rows={3} maxLength={1000} className="wf-input px-3 py-2.5 text-sm outline-none" />
       <p className="text-[11px] text-text-secondary text-right">{descripcion.length}/1000</p>
       <div className="grid grid-cols-2 gap-2">
         <button type="button" onClick={onCancelar} className="wf-btn py-3 text-[12px] font-bold bg-white border border-border-default">CANCELAR</button>
-        <button type="submit" className="wf-btn py-3 text-[12px] font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover inline-flex items-center justify-center gap-2">
-          {evidencia ? <CheckIcon size={16} /> : <RefreshIcon size={16} />}ENVIAR SOLICITUD
+        <button type="submit" disabled={isSubmitting || (requiereEvidencia && !evidencia)} className="wf-btn py-3 text-[12px] font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-45 inline-flex items-center justify-center gap-2">
+          {evidencia ? <CheckIcon size={16} /> : <RefreshIcon size={16} />}{isSubmitting ? "ENVIANDO..." : "ENVIAR SOLICITUD"}
         </button>
       </div>
     </form>

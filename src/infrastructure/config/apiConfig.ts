@@ -6,11 +6,12 @@ export const apiConfig = {
   // `||`, no `??`: una variable definida pero vacía debe caer al mismo origen.
   baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "/api/v1",
   timeouts: {
-    catalogo: 4000,
-    // Catalog lists aggregate taxonomy, details and up to 8s of bounded pricing.
-    // Individual detail, stock and REST cart calls retain their existing budgets.
-    listadoCatalogo: 12000,
-    defecto: 8000,
-    pago: 10000,
+    // G6/G5 are remote Render/Azure services: allow cold starts without
+    // turning a temporary 5xx into a broken flow in the UI.
+    catalogo: 10000,
+    // Catalog lists aggregate taxonomy, details and bounded pricing.
+    listadoCatalogo: 20000,
+    defecto: 20000,
+    pago: 30000,
   },
 } as const;
