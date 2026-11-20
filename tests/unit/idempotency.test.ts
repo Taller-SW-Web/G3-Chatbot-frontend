@@ -35,17 +35,9 @@ describe("newIdempotencyKey", () => {
     expect(["8", "9", "a", "b"]).toContain(key[19].toLowerCase());
   });
 
-  it("mantiene la forma v4 con el fallback de Math.random", () => {
+  it("rechaza entornos sin generador criptográfico", () => {
     vi.stubGlobal("crypto", undefined);
-    let calls = 0;
-    vi.spyOn(Math, "random").mockImplementation(() => {
-      calls += 1;
-      return ((calls % 97) + 1) / 98;
-    });
 
-    const key = newIdempotencyKey();
-
-    expect(key).toMatch(UUID_V4);
-    expect(newIdempotencyKey()).not.toBe(key);
+    expect(() => newIdempotencyKey()).toThrow(/generador seguro/);
   });
 });
