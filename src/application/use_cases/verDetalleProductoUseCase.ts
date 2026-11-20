@@ -1,7 +1,7 @@
 import type { ChatbotApiPort } from "@/ports/outbound/ChatbotApiPort";
 import {
   mapProductDetail,
-  type BackendProductDetail,
+  isProductRow,
   type CatalogDetail,
 } from "@/domain/entities/CatalogoUI";
 
@@ -13,6 +13,7 @@ export async function verDetalleProductoUseCase(
   if (!productId.trim()) throw new Error("productId requerido");
   const data = (await api.verDetalleProducto(
     productId.trim()
-  )) as BackendProductDetail;
-  return mapProductDetail(data ?? { product_id: productId });
+  ));
+  if (!isProductRow(data) || data.product_id !== productId.trim()) throw new Error("Detalle de producto inválido");
+  return mapProductDetail(data);
 }

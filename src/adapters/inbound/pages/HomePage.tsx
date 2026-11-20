@@ -7,6 +7,7 @@ import { ArrowUpIcon, PhotoIcon } from "../components/icons";
 import { ProductCard } from "../components/ProductCard";
 import {
   toAvailabilityState,
+  canAddCard,
   type CatalogCardItem,
   type CatalogDetail,
 } from "@/domain/entities/CatalogoUI";
@@ -202,7 +203,10 @@ export function HomePage() {
             </button>
           </div>
         )}
-        {!catalogo.isPending && !catalogo.isError && productos.length === 0 && (
+        {catalogo.data?.partial && (
+          <p role="status" className="text-[13px] text-text-secondary">Mostramos parte de los resultados. No pudimos consultar todos los datos ahora.</p>
+        )}
+        {!catalogo.isPending && !catalogo.isError && !catalogo.data?.partial && productos.length === 0 && (
           <p className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3">
             No hay productos en oferta ahora mismo.
           </p>
@@ -210,7 +214,12 @@ export function HomePage() {
 
         <div className="grid grid-cols-2 gap-3">
           {productos.map((p) => (
-            <ProductCard key={p.product_id} producto={p} onDetalle={(item) => setDetalleId(item.product_id)} />
+            <ProductCard key={p.product_id} producto={p} onDetalle={(item) => setDetalleId(item.product_id)}
+              onAdd={(item) => {
+                if (canAddCard(item) && item.sku && !agregar.isPending) {
+                  agregar.mutate({ item, sel: { sku: item.sku, talla: null, color: null } });
+                }
+              }} />
           ))}
         </div>
 
@@ -227,7 +236,7 @@ export function HomePage() {
             ))}
           </div>
         </div>
-        <p className="text-[12px] text-text-secondary">Toca + para elegir talla y color antes de agregar.</p>
+        <p className="text-[12px] text-text-secondary">Toca + para agregar. Si el producto tiene opciones, elige talla y color.</p>
       </div>
 
       {(creando || fallido !== null) && (

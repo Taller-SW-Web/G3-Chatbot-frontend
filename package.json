@@ -17,13 +17,13 @@
   "dependencies": {
     "@hookform/resolvers": "^5.9.2",
     "@tanstack/react-query": "^5.106.0",
-    "axios": "^1.21.0",
+    "axios": "^1.21.1",
     "dompurify": "^3.4.17",
     "isomorphic-dompurify": "^4.6.0",
     "next": "16.4.5",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "react-hook-form": "^7.62.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-hook-form": "^7.92.0",
     "react-markdown": "10.1.0",
     "remark-gfm": "4.0.1",
     "zod": "^4.6.7",
@@ -46,7 +46,7 @@
     "playwright": "^1.65.0",
     "tailwindcss": "^4",
     "typescript": "^6",
-    "vite": "7.3.7",
+    "vite": "8.3.8",
     "vitest": "^4.1.12"
   },
   "pnpm": {

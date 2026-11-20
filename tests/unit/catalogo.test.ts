@@ -12,7 +12,7 @@ import {
 describe("mappers de catálogo (SPEC-06, SPEC-09)", () => {
   it("mapea item de carrusel con fallbacks", () => {
     const item = mapCarouselItem(
-      { product_id: "prod-001", name: "Nike Revolution", price: 279.9, availability: "DISPONIBLE" },
+      { product_id: "prod-001", name: "Nike Revolution", price: 279.9, availability: "DISPONIBLE", single_sku: "NIKE-UNICO" },
       1
     );
     expect(item).toMatchObject({
