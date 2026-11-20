@@ -89,7 +89,13 @@ export function ReclamoPage() {
       <ReclamoForm
         pedidoId={pedidoId}
         telefonoInicial={perfil.data?.celular ?? ""}
-        onOk={async (input) => { await crear.mutateAsync(input); }}
+        onOk={async (input) => {
+          try {
+            await crear.mutateAsync(input);
+          } catch {
+            // onError already maps the API error to the visible message.
+          }
+        }}
         onCancelar={() => router.push("/pedidos")}
       />
     </div>

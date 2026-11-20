@@ -123,7 +123,13 @@ export function DevolucionPage() {
       {error ? <p className="text-[12px] text-error-default">{error}</p> : null}
       <DevolucionForm
         lineas={lineas}
-        onOk={async (input) => { await crear.mutateAsync(input); }}
+        onOk={async (input) => {
+          try {
+            await crear.mutateAsync(input);
+          } catch {
+            // onError already maps the API error to the visible message.
+          }
+        }}
         onCancelar={() => router.push("/pedidos")}
       />
     </div>
