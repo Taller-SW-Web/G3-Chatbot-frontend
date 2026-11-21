@@ -1,10 +1,10 @@
 "use client";
 
-import { CartDiscounts } from "../CartDiscounts";
-import { PriceTag } from "../PriceTag";
-import { parseAmount } from "@/domain/entities/PromocionesUI";
-import { sanitize } from "@/domain/utils/sanitize";
-import type { DatosCarritoBloque } from "@/domain/entities/Bloque";
+import { CartDiscounts } from "@/modules/mod-cart/ui/CartDiscounts";
+import { PriceTag } from "@/modules/mod-catalog/public";
+import { parseAmount } from "@/modules/mod-catalog/public";
+import { sanitize } from "@/shared/security/sanitize";
+import type { DatosCarritoBloque } from "@/modules/mod-cart/domain/entities/DatosCarritoBloque";
 
 /** CARRITO resumido + Ver carrito/Pagar. SPEC-11.
  * Pinta solo el bloque del servidor: precios y stock vienen del backend,

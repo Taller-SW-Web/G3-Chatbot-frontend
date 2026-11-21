@@ -1,4 +1,4 @@
-import { problemCode } from "@/domain/utils/httpError";
+import { problemCode } from "@/shared/api/httpError";
 
 /** Recupera una conversación anónima guardada que ya no pertenece a la sesión. */
 export async function agregarCarritoAnonimoUseCase({

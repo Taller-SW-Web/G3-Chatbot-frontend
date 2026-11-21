@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
-import { CartPage } from "@/adapters/inbound/pages/CartPage";
-import { useChatStore } from "@/application/state/chatStore";
+import { CartPage } from "@/modules/mod-cart/ui/CartPage";
+import { useChatStore } from "@/shared/auth/chatStore";
 
 const h = vi.hoisted(() => {
   const CONV_STORE = "0f9a1c2e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
@@ -42,28 +42,28 @@ const h = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/application/use_cases/actualizarCantidadCarritoUseCase", () => ({
+vi.mock("@/modules/mod-cart/application/actualizarCantidadCarritoUseCase", () => ({
   actualizarCantidadCarritoUseCase: h.actualizar,
 }));
-vi.mock("@/application/use_cases/quitarDelCarritoUseCase", () => ({
+vi.mock("@/modules/mod-cart/application/quitarDelCarritoUseCase", () => ({
   quitarDelCarritoUseCase: h.quitar,
 }));
-vi.mock("@/application/use_cases/vaciarCarritoUseCase", () => ({
+vi.mock("@/modules/mod-cart/application/vaciarCarritoUseCase", () => ({
   vaciarCarritoUseCase: h.vaciar,
 }));
-vi.mock("@/application/use_cases/agregarProductoAlCarritoUseCase", () => ({
+vi.mock("@/modules/mod-cart/application/agregarProductoAlCarritoUseCase", () => ({
   agregarProductoAlCarritoUseCase: h.agregar,
 }));
-vi.mock("@/application/use_cases/aplicarCuponUseCase", () => ({
+vi.mock("@/modules/mod-cart/application/aplicarCuponUseCase", () => ({
   aplicarCuponUseCase: h.aplicarCupon,
 }));
-vi.mock("@/application/use_cases/quitarCuponUseCase", () => ({
+vi.mock("@/modules/mod-cart/application/quitarCuponUseCase", () => ({
   quitarCuponUseCase: h.quitarCupon,
 }));
-vi.mock("@/infrastructure/di/container", () => ({ container: { api: {} } }));
+vi.mock("@/shared/di/container", () => ({ container: { api: {} } }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 // El GET resuelve la conversación del store; la página NO recibe la prop.
-vi.mock("@/application/hooks/useCarrito", () => ({
+vi.mock("@/modules/mod-cart/application/useCarrito", () => ({
   useCarrito: () => ({
     query: { data: h.cartData ?? h.CARRITO, isPending: false, isError: false, refetch: vi.fn() },
     queryKey: ["carrito", "anonimo", "cliente"],

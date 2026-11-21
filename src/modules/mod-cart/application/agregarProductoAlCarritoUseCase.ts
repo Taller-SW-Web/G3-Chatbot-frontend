@@ -1,8 +1,8 @@
-import type { AgregarAlCarritoInput, ChatbotApiPort } from "@/ports/outbound/ChatbotApiPort";
+import type { AgregarAlCarritoInput, CarritoPort } from "@/modules/mod-cart/ports/carritoPort";
 
 /** {sku,cantidad} valida stock 409/503. `product_id`/`talla`/`color` completan la línea. SPEC-10,11 */
 export async function agregarProductoAlCarritoUseCase(
-  api: ChatbotApiPort,
+  api: CarritoPort,
   input: AgregarAlCarritoInput & { conversacionId?: string }
 ) {
   if (!input.sku.trim()) throw new Error("sku requerido");

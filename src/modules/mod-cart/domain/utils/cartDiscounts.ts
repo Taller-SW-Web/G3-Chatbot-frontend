@@ -1,4 +1,4 @@
-import { parseAmount } from "../entities/PromocionesUI";
+import { parseAmount } from "@/modules/mod-catalog/public";
 
 export type ParsedDiscounts = {
   items: { name: string; amount: number }[];

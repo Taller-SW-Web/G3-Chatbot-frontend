@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { conversacionParaCarrito } from "@/domain/utils/carrito";
-import { mensajeCarrito } from "@/application/errors/carritoMensajes";
+import { conversacionParaCarrito } from "@/shared/commerce/carrito";
+import { mensajeCarrito } from "@/modules/mod-cart/application/errors/carritoMensajes";
 
 describe("carrito: id de conversación anónimo (SPEC-11)", () => {
   it("solo acepta UUIDs reales; descarta slugs mock", () => {

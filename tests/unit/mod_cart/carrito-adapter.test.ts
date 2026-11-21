@@ -29,7 +29,9 @@ Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
 });
 
-import { chatbotApi } from "@/adapters/outbound/ChatbotApiAxiosAdapter";
+import { container } from "@/shared/di/container";
+
+const chatbotApi = container.api;
 
 const CARRITO = {
   lineas: [

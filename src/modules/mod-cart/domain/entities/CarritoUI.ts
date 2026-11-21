@@ -1,4 +1,4 @@
-import type { ProductoUI } from "./ProductoUI";
+import type { ProductoUI } from "@/modules/mod-cart/domain/entities/ProductoUI";
 
 export type LineaCarrito = {
   producto: ProductoUI;

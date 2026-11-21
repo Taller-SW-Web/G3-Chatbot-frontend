@@ -1,5 +1,5 @@
-import { problemCode, problemField } from "@/domain/utils/httpError";
-import { mensajeCarrito } from "./carritoMensajes";
+import { problemCode, problemField } from "@/shared/api/httpError";
+import { mensajeCarrito } from "@/modules/mod-cart/application/errors/carritoMensajes";
 
 /** Motivos de rechazo que devuelve Productos en un `422 CUPON_INVALIDO`. */
 const MOTIVOS: Record<string, string> = {

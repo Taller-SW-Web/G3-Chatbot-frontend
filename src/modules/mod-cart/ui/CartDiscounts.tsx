@@ -1,6 +1,6 @@
-import { parseCartDiscounts } from "@/domain/utils/cartDiscounts";
-import { sanitize } from "@/domain/utils/sanitize";
-import { PriceTag } from "./PriceTag";
+import { parseCartDiscounts } from "@/modules/mod-cart/domain/utils/cartDiscounts";
+import { sanitize } from "@/shared/security/sanitize";
+import { PriceTag } from "@/modules/mod-catalog/public";
 
 /** Shared presentation boundary for REST, persisted and streamed cart discounts. */
 export function CartDiscounts({ value }: { value: unknown }) {

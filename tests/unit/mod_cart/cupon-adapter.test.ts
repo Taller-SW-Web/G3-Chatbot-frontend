@@ -29,10 +29,12 @@ Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
 });
 
-import { chatbotApi } from "@/adapters/outbound/ChatbotApiAxiosAdapter";
-import { aplicarCuponUseCase } from "@/application/use_cases/aplicarCuponUseCase";
-import { quitarCuponUseCase } from "@/application/use_cases/quitarCuponUseCase";
-import type { ChatbotApiPort } from "@/ports/outbound/ChatbotApiPort";
+import { container } from "@/shared/di/container";
+
+const chatbotApi = container.api;
+import { aplicarCuponUseCase } from "@/modules/mod-cart/application/aplicarCuponUseCase";
+import { quitarCuponUseCase } from "@/modules/mod-cart/application/quitarCuponUseCase";
+import type { CarritoPort } from "@/modules/mod-cart/ports/carritoPort";
 
 const RESULTADO = {
   mensaje: "Cupón SPORT10 aplicado.",
@@ -87,7 +89,7 @@ describe("cupones: contrato del adapter (SPEC-13)", () => {
     const api = {
       aplicarCupon: vi.fn().mockResolvedValue(RESULTADO),
       quitarCupon: vi.fn().mockResolvedValue(RESULTADO),
-    } as unknown as ChatbotApiPort;
+    } as unknown as CarritoPort;
 
     await aplicarCuponUseCase(api, "SPORT10", true);
     await quitarCuponUseCase(api);

@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from "vitest";
-import { actualizarCantidadCarritoUseCase } from "@/application/use_cases/actualizarCantidadCarritoUseCase";
-import { quitarDelCarritoUseCase } from "@/application/use_cases/quitarDelCarritoUseCase";
-import { agregarProductoAlCarritoUseCase } from "@/application/use_cases/agregarProductoAlCarritoUseCase";
-import type { ChatbotApiPort } from "@/ports/outbound/ChatbotApiPort";
+import { actualizarCantidadCarritoUseCase } from "@/modules/mod-cart/application/actualizarCantidadCarritoUseCase";
+import { quitarDelCarritoUseCase } from "@/modules/mod-cart/application/quitarDelCarritoUseCase";
+import { agregarProductoAlCarritoUseCase } from "@/modules/mod-cart/application/agregarProductoAlCarritoUseCase";
+import type { CarritoPort } from "@/modules/mod-cart/ports/carritoPort";
 
 const api = {
   actualizarCantidadCarrito: vi.fn(),
   eliminarLineaCarrito: vi.fn(),
   agregarAlCarrito: vi.fn(),
-} as unknown as ChatbotApiPort;
+} as unknown as CarritoPort;
 
 describe("casos de uso del carrito (SPEC-11)", () => {
   it("actualizar valida cantidad 0-10 e itemId", async () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { agregarCarritoAnonimoUseCase } from "@/application/use_cases/agregarCarritoAnonimoUseCase";
+import { agregarCarritoAnonimoUseCase } from "@/modules/mod-cart/application/agregarCarritoAnonimoUseCase";
 
 const vieja = "0f9a1c2e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
 const nueva = "11111111-2222-4333-8444-555555555555";

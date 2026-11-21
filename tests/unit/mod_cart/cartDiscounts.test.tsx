@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { CartDiscounts } from "@/adapters/inbound/components/CartDiscounts";
+import { CartDiscounts } from "@/modules/mod-cart/ui/CartDiscounts";
 
 afterEach(() => cleanup());
 

@@ -1,8 +1,8 @@
-import type { ChatbotApiPort } from "@/ports/outbound/ChatbotApiPort";
+import type { CarritoPort } from "@/modules/mod-cart/ports/carritoPort";
 
 /** Quita una línea del carrito (SPEC-11 Req. 2). */
 export async function quitarDelCarritoUseCase(
-  api: ChatbotApiPort,
+  api: CarritoPort,
   input: { itemId: string; conversacionId?: string }
 ): Promise<{ mensaje: string }> {
   const itemId = input.itemId.trim();

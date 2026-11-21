@@ -2,11 +2,11 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useChatStore } from "@/application/state/chatStore";
-import { container } from "@/infrastructure/di/container";
-import { listarCarritoUseCase } from "@/application/use_cases/listarCarritoUseCase";
-import { conversacionParaCarrito } from "@/domain/utils/carrito";
-import { problemCode } from "@/domain/utils/httpError";
+import { useChatStore } from "@/shared/auth/chatStore";
+import { container } from "@/shared/di/container";
+import { listarCarritoUseCase } from "@/modules/mod-cart/application/listarCarritoUseCase";
+import { conversacionParaCarrito } from "@/shared/commerce/carrito";
+import { problemCode } from "@/shared/api/httpError";
 
 /** Clave única en caché: dueño (cliente o anónimo) + conversación. */
 export function carritoQueryKey(dueno: string, conversacion?: string) {
