@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import { AppShell } from "@/adapters/inbound/pages/AppShell";
-import { AuthGuard } from "@/adapters/inbound/components/AuthGuard";
-import { ReclamoPage } from "@/adapters/inbound/pages/ReclamoPage";
+import { AppShell } from "@/shared/ui/shell/AppShell";
+import { AuthGuard } from "@/shared/auth/AuthGuard";
+import { ReclamoPage } from "@/modules/mod-postventa/public";
 
 export default function ReclamoRoute() {
   return (

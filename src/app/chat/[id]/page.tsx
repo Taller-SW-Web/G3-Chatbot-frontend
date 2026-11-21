@@ -1,5 +1,5 @@
-import { AppShell } from "@/adapters/inbound/pages/AppShell";
-import { ChatPage } from "@/adapters/inbound/pages/ChatPage";
+import { AppShell } from "@/shared/ui/shell/AppShell";
+import { ChatPage } from "@/modules/mod-chat/public";
 
 export default async function ChatRoute({
   params,

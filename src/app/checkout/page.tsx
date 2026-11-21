@@ -1,6 +1,6 @@
-import { AppShell } from "@/adapters/inbound/pages/AppShell";
-import { CheckoutPage } from "@/adapters/inbound/pages/CheckoutPage";
-import { AuthGuard } from "@/adapters/inbound/components/AuthGuard";
+import { AppShell } from "@/shared/ui/shell/AppShell";
+import { CheckoutPage } from "@/modules/mod-checkout/public";
+import { AuthGuard } from "@/shared/auth/AuthGuard";
 
 export default function CheckoutRoute() {
   return (

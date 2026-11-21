@@ -1,5 +1,5 @@
-import { AppShell } from "@/adapters/inbound/pages/AppShell";
-import { OrderSuccessPage } from "@/adapters/inbound/pages/OrderSuccessPage";
+import { AppShell } from "@/shared/ui/shell/AppShell";
+import { OrderSuccessPage } from "@/modules/mod-checkout/public";
 
 export default function ExitoRoute() {
   return (

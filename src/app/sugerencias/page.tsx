@@ -1,5 +1,5 @@
-import { AppShell } from "@/adapters/inbound/pages/AppShell";
-import { SugerenciasPage } from "@/adapters/inbound/pages/SugerenciasPage";
+import { AppShell } from "@/shared/ui/shell/AppShell";
+import { SugerenciasPage } from "@/modules/mod-chat/public";
 
 export default function SugerenciasRoute() {
   return (

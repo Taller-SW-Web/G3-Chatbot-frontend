@@ -1,5 +1,5 @@
-import { AppShell } from "@/adapters/inbound/pages/AppShell";
-import { HomePage } from "@/adapters/inbound/pages/HomePage";
+import { AppShell } from "@/shared/ui/shell/AppShell";
+import { HomePage } from "@/modules/mod-catalog/public";
 
 export default function HomeRoute() {
   return (
