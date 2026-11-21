@@ -120,6 +120,16 @@ describe("AuthModal", () => {
     expect(useChatStore.getState().accionPendiente).toBeNull();
   });
 
+  it("no navega a una acción pendiente externa tras iniciar sesión", async () => {
+    useChatStore.setState({ accionPendiente: "https://evil.example" });
+    render(<AuthModal />);
+
+    login();
+    await waitFor(() => expect(useChatStore.getState().authOpen).toBe(false));
+
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it("cierra sin navegar cuando no hay acción pendiente", async () => {
     render(<AuthModal />);
 
