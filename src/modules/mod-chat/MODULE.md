@@ -7,7 +7,7 @@
 
 ## Responsabilidad
 
-Conversación, historial, stream SSE del turno, render de bloques, sidebar de conversaciones y sugerencias. Es el único módulo que puede depender de todos; ningún módulo depende de `chat` (salvo la excepción documentada de la Home).
+Conversación, historial, stream SSE del turno, render de bloques, sidebar de conversaciones y sugerencias. Es el único módulo que puede depender de todos; ningún módulo depende de `chat`.
 
 ## Superficie pública
 

@@ -7,7 +7,7 @@
 
 ## Responsabilidad
 
-Sesión del cliente, registro, MFA, verificación de correo y datos de cuenta. No incluye el store de sesión ni el guard: ambos viven en `shared/auth` porque los usa toda la app.
+Sesión del cliente, registro, MFA, verificación de correo, datos de cuenta y política de contraseña evaluable (reglas + caché). No incluye el store de sesión ni el guard: ambos viven en `shared/auth` porque los usa toda la app.
 
 ## Superficie pública
 
