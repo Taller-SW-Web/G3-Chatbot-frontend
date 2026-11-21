@@ -3,11 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MiCuentaPage } from "@/modules/mod-auth/ui/MiCuentaPage";
 import { useChatStore } from "@/shared/auth/chatStore";
+import { queryClient } from "@/shared/di/queryClient";
 
 const api = vi.hoisted(() => ({
   solicitarOtpCelular: vi.fn(),
   verificarOtpCelular: vi.fn(),
   validarContactoCelular: vi.fn(),
+  logout: vi.fn(),
 }));
 const push = vi.hoisted(() => vi.fn());
 
@@ -39,6 +41,10 @@ beforeEach(() => {
     celularEnmascarado: "*****321",
   });
   api.validarContactoCelular.mockResolvedValue({ verificado: true });
+  api.logout.mockImplementation(async () => {
+    useChatStore.getState().logout();
+    return { ok: true };
+  });
 });
 
 afterEach(cleanup);
@@ -133,14 +139,36 @@ describe("MiCuentaPage", () => {
     expect(push).toHaveBeenCalledWith("/sugerencias");
   });
 
-  it("cierra la sesión y vuelve al inicio", () => {
+  it("cierra la sesión por la API, limpia ids persistidos y la caché, y vuelve al inicio", async () => {
+    queryClient.setQueryData(["pedidos"], [{ id: "p1" }]);
+    useChatStore.setState({
+      cliente: cliente(),
+      accessToken: "jwt",
+      ultimaConversacionId: "c1",
+      ultimoPedido: { orderId: "PED-1" } as never,
+    });
+    render(<MiCuentaPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "CERRAR SESIÓN" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/"));
+    expect(api.logout).toHaveBeenCalledTimes(1);
+    const s = useChatStore.getState();
+    expect(s.cliente).toBeNull();
+    expect(s.accessToken).toBeNull();
+    expect(s.ultimaConversacionId).toBeNull();
+    expect(s.ultimoPedido).toBeNull();
+    expect(queryClient.getQueryData(["pedidos"])).toBeUndefined();
+  });
+
+  it("limpia el estado local aunque la API de logout falle", async () => {
+    api.logout.mockRejectedValue(new Error("network"));
     useChatStore.setState({ cliente: cliente(), accessToken: "jwt" });
     render(<MiCuentaPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "CERRAR SESIÓN" }));
 
-    expect(useChatStore.getState().cliente).toBeNull();
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/"));
     expect(useChatStore.getState().accessToken).toBeNull();
-    expect(push).toHaveBeenCalledWith("/");
   });
 });

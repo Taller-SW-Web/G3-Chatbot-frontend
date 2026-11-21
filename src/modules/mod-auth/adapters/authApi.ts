@@ -2,6 +2,7 @@
 
 import { http, refreshSessionOnce } from "@/shared/api/http";
 import { useChatStore } from "@/shared/auth/chatStore";
+import { marcarCierreVoluntario } from "@/shared/auth/cierreVoluntario";
 import { normalizarPolitica } from "@/shared/auth/passwordPolicy";
 import {
   getPoliticaContrasenaCache,
@@ -67,6 +68,7 @@ export const authApi: AuthPort = {
     return (await refreshSessionOnce()) as SessionOpened;
   },
   async logout() {
+    marcarCierreVoluntario();
     try {
       const { data } = await http.post("/sesion/logout");
       return data as { ok: true };

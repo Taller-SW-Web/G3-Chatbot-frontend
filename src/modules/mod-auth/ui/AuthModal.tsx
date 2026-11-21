@@ -25,6 +25,7 @@ import {
 import type { LoginInput } from "@/modules/mod-auth/domain/schemas/login.schema";
 import type { RegistroInput } from "@/modules/mod-auth/domain/schemas/registro.schema";
 import type { PoliticaContrasena } from "@/shared/auth/passwordPolicy";
+import { safeInternalPath } from "@/shared/security/safeInternalPath";
 
 type Paso = "login" | "mfa" | "verificar-correo" | "reenviar";
 type Canal = "EMAIL" | "SMS";
@@ -101,7 +102,7 @@ export function AuthModal() {
   }
 
   function continuar() {
-    const destino = accionPendiente;
+    const destino = safeInternalPath(accionPendiente);
     setAccionPendiente(null);
     cerrar();
     if (destino) router.push(destino);
