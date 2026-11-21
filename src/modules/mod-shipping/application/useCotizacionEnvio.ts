@@ -32,7 +32,7 @@ export function useCotizacionEnvio(direccion: DireccionCotizable | null) {
     queryKey: cotizacionEnvioQueryKey(direccion),
     queryFn: async () => {
       if (!direccion) throw new Error("dirección requerida");
-      return cotizarEnvioUseCase(container.api, {
+      return cotizarEnvioUseCase(container.envio, {
         destinatario: direccion.nombre,
         direccion: direccion.direccion,
         distrito: direccion.distrito,

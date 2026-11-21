@@ -1,10 +1,8 @@
 "use client";
 
 import { CheckIcon } from "@/shared/ui/icons";
-import {
-  evaluarPolitica,
-  type PoliticaContrasena,
-} from "@/shared/auth/passwordPolicy";
+import type { PoliticaContrasena } from "@/shared/auth/passwordPolicy";
+import { evaluarPolitica } from "@/modules/mod-auth/domain/passwordPolicy";
 
 /** SPEC-01 Req. 2: reglas de la política de Seguridad evaluadas en tiempo real. */
 export function PasswordPolicyChecklist({

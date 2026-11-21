@@ -8,7 +8,7 @@ const api = vi.hoisted(() => ({ validarContactoCelular: vi.fn() }));
 const push = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-vi.mock("@/shared/di/container", () => ({ container: { api, stream: {} } }));
+vi.mock("@/shared/di/container", () => ({ container: { auth: api } }));
 
 function cliente(extra: Record<string, unknown> = {}) {
   return {

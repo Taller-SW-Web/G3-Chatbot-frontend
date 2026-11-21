@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowUpIcon, PhotoIcon } from "@/shared/ui/icons";
 import { ProductCard } from "@/modules/mod-catalog/ui/ProductCard";
 import {
@@ -11,14 +10,7 @@ import {
   type CatalogCardItem,
   type CatalogDetail,
 } from "@/modules/mod-catalog/domain/entities/CatalogoUI";
-import {
-  isUnavailable,
-  problemCode,
-  problemFaltantes,
-} from "@/shared/api/httpError";
-import { useChatStore } from "@/shared/auth/chatStore";
-import { conversacionParaCarrito } from "@/shared/commerce/carrito";
-import { mensajeCarrito } from "@/modules/mod-cart/public";
+import { isUnavailable, problemCode } from "@/shared/api/httpError";
 import {
   ModalShell,
   ProductDetailModal,
@@ -26,24 +18,30 @@ import {
 import { buscarProductosUseCase } from "@/modules/mod-catalog/application/buscarProductosUseCase";
 import { verDetalleProductoUseCase } from "@/modules/mod-catalog/application/verDetalleProductoUseCase";
 import { consultarDisponibilidadUseCase } from "@/modules/mod-catalog/application/consultarDisponibilidadUseCase";
-import { agregarProductoAlCarritoUseCase } from "@/modules/mod-cart/public";
-import { agregarCarritoAnonimoUseCase } from "@/modules/mod-cart/public";
-import { crearConversacionUseCase } from "@/modules/mod-chat/public";
-import { MENSAJE_MAX_CARACTERES } from "@/modules/mod-chat/public";
 import { container } from "@/shared/di/container";
 
-/** Mensaje del agregado; en 409 VARIANTE_REQUERIDA indica qué falta (talla/color). */
-function mensajeAgregar(error: unknown): string {
-  if (problemCode(error) === "VARIANTE_REQUERIDA") {
-    const faltan = problemFaltantes(error);
-    if (faltan.length > 0) return `Elige ${faltan.join(" y ")} antes de agregar.`;
-  }
-  return mensajeCarrito(problemCode(error));
-}
+/** Producto y variante elegidos para agregar desde la home. */
+export type HomeAgregarInput = {
+  item: CatalogCardItem;
+  sel: { sku: string | null; talla: string | null; color: string | null };
+};
+
+/** Resultado ya traducido a texto visible por el composition root. */
+export type HomeAgregarResultado =
+  | { ok: true; mensaje: string }
+  | { ok: false; mensaje: string };
+
+export type HomePageProps = {
+  /** Agrega al carrito (la conversación anónima la resuelve el route file). */
+  onAgregar: (input: HomeAgregarInput) => Promise<HomeAgregarResultado>;
+  /** Crea la conversación y navega al chat; rechaza si no se pudo. */
+  onAbrirChat: (texto: string) => Promise<void>;
+  /** Límite del compositor (hoy vive en el contrato de mod-chat). */
+  mensajeMaxCaracteres: number;
+};
 
 /** `/`: banner ofertas, grid en oferta, campo chat inferior. SPEC-05 Req.2, SPEC-06,08,09 */
-export function HomePage() {
-  const router = useRouter();
+export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomePageProps) {
   const [banner, setBanner] = useState(0);
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [composer, setComposer] = useState("");
@@ -52,95 +50,55 @@ export function HomePage() {
   const [fallido, setFallido] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [agregado, setAgregado] = useState<string | null>(null);
+  const [agregando, setAgregando] = useState(false);
   /** Gesto táctil del banner: horizontal cambia de slide, el clic posterior no navega. */
   const swipeBanner = useRef<{ x: number; y: number; id: number } | null>(null);
   const swipeConsumido = useRef(false);
-  const queryClient = useQueryClient();
-  const cliente = useChatStore((s) => s.cliente);
-  const ultimaConversacionId = useChatStore((s) => s.ultimaConversacionId);
-  const setUltimaConversacionId = useChatStore((s) => s.setUltimaConversacionId);
-  const setPrimerMensaje = useChatStore((s) => s.setPrimerMensaje);
 
   // Grid con datos reales (SPEC-06). Sin fallback a mocks en este flujo.
   const catalogo = useQuery({
     queryKey: ["catalogo", "ofertas"],
-    queryFn: () => buscarProductosUseCase(container.api, { pagina: 1, tamanio: 10, soloOfertas: true }),
+    queryFn: () => buscarProductosUseCase(container.catalogo, { pagina: 1, tamanio: 10, soloOfertas: true }),
   });
   const productos: CatalogCardItem[] = catalogo.data?.items ?? [];
 
   const detalleQuery = useQuery({
     queryKey: ["catalogo", "detalle", detalleId],
-    queryFn: () => verDetalleProductoUseCase(container.api, detalleId as string),
+    queryFn: () => verDetalleProductoUseCase(container.catalogo, detalleId as string),
     enabled: detalleId != null,
   });
   const detalle: CatalogDetail | null = detalleQuery.data ?? null;
 
   // SPEC-09 Req. 2 "agregar desde la tarjeta": la línea la crea el backend con
-  // nombre, imagen e id reales. El front solo invalida el carrito y el badge.
-  // Si hay que abrir una conversación anónima, se reutiliza en reintentos y solo
-  // se persiste cuando el agregado funcionó (no deja una conversación sin uso).
-  const convCreadaRef = useRef<string | null>(null);
-  const agregar = useMutation({
-    mutationFn: async (input: {
-      item: CatalogCardItem;
-      sel: { sku: string | null; talla: string | null; color: string | null };
-    }) => {
-      const { item, sel } = input;
-      if (sel.sku == null) throw new Error("sku requerido");
-      const sku = sel.sku;
-      const crearConversacion = async () => {
-        const { conversacionId } = await crearConversacionUseCase(container.api);
-        convCreadaRef.current = conversacionId;
-        return conversacionId;
-      };
-      const agregarEnConversacion = async (conversacionId?: string) => {
-        await agregarProductoAlCarritoUseCase(container.api, {
-          sku,
-          cantidad: 1,
-          product_id: item.product_id,
-          talla: sel.talla ?? undefined,
-          color: sel.color ?? undefined,
-          conversacionId,
-        });
-      };
-      let conversacion: string | undefined;
-      if (cliente) {
-        await agregarEnConversacion();
+  // nombre, imagen e id reales. El carrito y la conversación anónima los resuelve
+  // `app/page.tsx`; aquí solo se pinta el resultado y se cierra el detalle.
+  async function agregarItem(input: HomeAgregarInput) {
+    if (agregando) return;
+    setAgregando(true);
+    try {
+      const resultado = await onAgregar(input);
+      if (resultado.ok) {
+        setAviso(null);
+        setAgregado(resultado.mensaje);
+        setDetalleId(null);
       } else {
-        conversacion = await agregarCarritoAnonimoUseCase({
-          conversacionGuardada: conversacionParaCarrito(ultimaConversacionId),
-          conversacionCreada: convCreadaRef.current,
-          crearConversacion,
-          limpiarConversacion: () => setUltimaConversacionId(null),
-          agregar: agregarEnConversacion,
-        });
+        setAgregado(null);
+        setAviso(resultado.mensaje);
       }
-      return { item, conversacion };
-    },
-    onSuccess: ({ item, conversacion }) => {
-      if (conversacion) setUltimaConversacionId(conversacion);
-      setAviso(null);
-      setAgregado(`${item.name} se agregó a tu carrito.`);
-      setDetalleId(null);
-      void queryClient.invalidateQueries({ queryKey: ["carrito"] });
-    },
-    onError: (error) => {
-      setAgregado(null);
-      setAviso(mensajeAgregar(error));
-    },
-  });
+    } finally {
+      setAgregando(false);
+    }
+  }
 
-  /** Crea una conversación real, deja el texto como primer mensaje y abre el chat. */
+  /** Deja el texto al route file, que crea la conversación y navega al chat. */
   async function irChat(texto?: string) {
     const limpio = texto?.trim();
-    if (!limpio || limpio.length > MENSAJE_MAX_CARACTERES || creando) return;
+    if (!limpio || limpio.length > mensajeMaxCaracteres || creando) return;
     setCreando(true);
     setFallido(null);
     try {
-      const { conversacionId } = await crearConversacionUseCase(container.api);
-      setPrimerMensaje(limpio);
+      await onAbrirChat(limpio);
       setComposer("");
-      router.push(`/chat/${encodeURIComponent(conversacionId)}`);
     } catch {
       setFallido(limpio);
     } finally {
@@ -249,8 +207,8 @@ export function HomePage() {
           {productos.map((p) => (
             <ProductCard key={p.product_id} producto={p} onDetalle={(item) => setDetalleId(item.product_id)}
               onAdd={(item) => {
-                if (canAddCard(item) && item.sku && !agregar.isPending) {
-                  agregar.mutate({ item, sel: { sku: item.sku, talla: null, color: null } });
+                if (canAddCard(item) && item.sku && !agregando) {
+                  void agregarItem({ item, sel: { sku: item.sku, talla: null, color: null } });
                 }
               }} />
           ))}
@@ -291,7 +249,7 @@ export function HomePage() {
       <div className="flex shrink-0 items-center gap-2 border-t border-border-default bg-surface-cloud px-3 py-3">
         <button aria-label="Agregar imagen (próximamente)" title="Próximamente" disabled
           className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse disabled:opacity-45 disabled:cursor-not-allowed"><PhotoIcon size={20} /></button>
-        <input value={composer} maxLength={MENSAJE_MAX_CARACTERES} disabled={creando} aria-label="Mensaje"
+        <input value={composer} maxLength={mensajeMaxCaracteres} disabled={creando} aria-label="Mensaje"
           onChange={(e) => setComposer(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") void irChat(composer); }}
           placeholder="Pregunta por zapatillas, tallas, pedidos…"
@@ -330,10 +288,10 @@ export function HomePage() {
           onClose={() => setDetalleId(null)}
           onAdd={(sel) => {
             const item = productos.find((c) => c.product_id === detalleId);
-            if (item) agregar.mutate({ item, sel });
+            if (item) void agregarItem({ item, sel });
           }}
           consultarDisponibilidad={(sku) =>
-            consultarDisponibilidadUseCase(container.api, { sku }).then((r) =>
+            consultarDisponibilidadUseCase(container.catalogo, { sku }).then((r) =>
               toAvailabilityState(r.status)
             )
           }

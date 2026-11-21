@@ -1,7 +1,6 @@
 /** Pure session helpers (SPEC-03). No React, no network, no storage. */
 
 import type { Cliente, TipoDocumento } from "@/shared/auth/Cliente";
-import type { RegistroInput } from "@/modules/mod-auth/public";
 import { describirReglaPolitica } from "@/shared/auth/passwordPolicy";
 import { maskCelular } from "@/shared/security/sanitize";
 import type { PerfilCliente, UsuarioSesion } from "@/shared/auth/types";
@@ -126,8 +125,22 @@ export function clienteDesdePerfil(perfil: PerfilCliente, correoFallback: string
   };
 }
 
+/**
+ * Campos visibles del formulario de registro que el BFF puede señalar.
+ * Tipo neutral del kernel: `mod-auth` lo implementa con `RegistroInput`, así
+ * `shared/` no importa el dominio de un módulo (H-05).
+ */
+export type RegistroCampo =
+  | "nombres"
+  | "apellidos"
+  | "correo"
+  | "celular"
+  | "contrasena"
+  | "confirmar"
+  | "aceptaTerminos";
+
 /** Camino del campo del BFF (`errores[].campo`) al campo visible del formulario (SPEC-01 Req. 4). */
-const CAMPO_BFF_A_FORM: Record<string, keyof RegistroInput> = {
+const CAMPO_BFF_A_FORM: Record<string, RegistroCampo> = {
   email: "correo",
   phone: "celular",
   firstName: "nombres",
@@ -146,7 +159,7 @@ export type ErrorFila = {
 export type RegistroFailure = {
   message: string;
   ofrecerLogin: boolean;
-  erroresCampo?: Partial<Record<keyof RegistroInput, string>>;
+  erroresCampo?: Partial<Record<RegistroCampo, string>>;
 };
 
 /** Mapea el problem+json de `/sesion/registro` a mensajes, sin revelar si el correo existe (SPEC-01 Req. 4). */
@@ -156,9 +169,9 @@ export function describeRegistroFailure(
   errores?: Array<ErrorFila>
 ): RegistroFailure {
   if (code === "VALIDACION" && errores?.length) {
-    const porCampo: Partial<Record<keyof RegistroInput, string>> = {};
+    const porCampo: Partial<Record<RegistroCampo, string>> = {};
     for (const e of errores) {
-      const destino = CAMPO_BFF_A_FORM[e.campo ?? ""] ?? (e.campo as keyof RegistroInput | undefined);
+      const destino = CAMPO_BFF_A_FORM[e.campo ?? ""] ?? (e.campo as RegistroCampo | undefined);
       if (destino && e.mensaje) porCampo[destino] = e.mensaje;
     }
     if (Object.keys(porCampo).length) {

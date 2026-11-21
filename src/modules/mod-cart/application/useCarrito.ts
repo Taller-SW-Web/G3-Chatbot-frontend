@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useChatStore } from "@/shared/auth/chatStore";
 import { container } from "@/shared/di/container";
 import { listarCarritoUseCase } from "@/modules/mod-cart/application/listarCarritoUseCase";
-import { conversacionParaCarrito } from "@/shared/commerce/carrito";
+import { conversacionParaCarrito } from "@/modules/mod-cart/domain/utils/conversacionParaCarrito";
 import { problemCode } from "@/shared/api/httpError";
 
 /** Clave única en caché: dueño (cliente o anónimo) + conversación. */
@@ -31,7 +31,7 @@ export function useCarrito() {
     queryKey,
     queryFn: async () => {
       try {
-        return await listarCarritoUseCase(container.api, conversacion);
+        return await listarCarritoUseCase(container.carrito, conversacion);
       } catch (error) {
         if (!cliente && conversacion && problemCode(error) === "RECURSO_NO_ENCONTRADO" &&
           useChatStore.getState().ultimaConversacionId === conversacion &&

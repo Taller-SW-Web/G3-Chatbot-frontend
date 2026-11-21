@@ -103,7 +103,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
     setPendingActionId(accion.id);
     setErrorAccion(null);
     try {
-      await ejecutarAccionChatUseCase(container.api, {
+      await ejecutarAccionChatUseCase(container.chat, {
         conversacionId: conversationId,
         accion: { tipo: accion.id, payload: accion.payload ?? {} },
       });

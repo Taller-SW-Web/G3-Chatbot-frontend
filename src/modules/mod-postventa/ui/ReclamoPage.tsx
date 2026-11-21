@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { CheckIcon } from "@/shared/ui/icons";
 import { ReclamoForm } from "@/modules/mod-postventa/ui/forms/ReclamoForm";
 import { container } from "@/shared/di/container";
+import { usePerfil } from "@/shared/auth/usePerfil";
 import type { ReclamoInput } from "@/modules/mod-postventa/domain/schemas/reclamo.schema";
 import { isUnavailable, problemCode } from "@/shared/api/httpError";
 
@@ -18,15 +19,11 @@ export function ReclamoPage() {
   const [plazo, setPlazo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const perfil = useQuery({
-    queryKey: ["perfil"],
-    queryFn: () => container.api.fetchProfile(),
-    retry: false,
-  });
+  const perfil = usePerfil();
 
   const crear = useMutation({
     mutationFn: (input: ReclamoInput) =>
-      container.api.crearReclamo({
+      container.postventa.crearReclamo({
         pedidoId: input.pedidoId,
         tipo: input.tipo,
         motivo: input.motivo,

@@ -40,7 +40,7 @@ export function SeguimientoPage() {
 
   const seguimiento = useQuery({
     queryKey: ["seguimiento", pedidoId],
-    queryFn: () => container.api.obtenerSeguimientoPedido(pedidoId),
+    queryFn: () => container.pedidos.obtenerSeguimientoPedido(pedidoId),
     enabled: Boolean(pedidoId),
     retry: false,
     staleTime: 30_000,

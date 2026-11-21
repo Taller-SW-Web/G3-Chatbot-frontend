@@ -19,6 +19,7 @@ export { vaciarCarritoUseCase } from "./application/vaciarCarritoUseCase";
 export { mensajeCarrito } from "./application/errors/carritoMensajes";
 export { mensajeCupon } from "./application/errors/cuponMensajes";
 
+export { conversacionParaCarrito } from "./domain/utils/conversacionParaCarrito";
 export type { CarritoUI } from "./domain/entities/CarritoUI";
 export type { DatosCarritoBloque, LineaCarritoBloque } from "./domain/entities/DatosCarritoBloque";
 export { parseCartDiscounts } from "./domain/utils/cartDiscounts";

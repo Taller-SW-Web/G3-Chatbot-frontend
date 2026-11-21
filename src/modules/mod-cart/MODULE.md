@@ -7,13 +7,13 @@
 
 ## Responsabilidad
 
-Líneas del carrito, cantidades, cupón, totales, bloque `CARRITO` del chat y el hook `useCarrito` del badge. No incluye el pago ni el envío.
+Líneas del carrito, cantidades, cupón, totales, bloque `CARRITO` del chat, el hook `useCarrito` del badge y la resolución del carrito anónimo por conversación (`conversacionParaCarrito`). No incluye el pago ni el envío.
 
 ## Superficie pública
 
 | Tipo | Archivo | Qué expone |
 |---|---|---|
-| Frontend | `public.ts` | `CartPage`, `BloqueCarrito`, `useCarrito`, casos de uso de carrito/cupón, `mensajeCarrito`, `parseCartDiscounts`, tipos del wire |
+| Frontend | `public.ts` | `CartPage`, `BloqueCarrito`, `useCarrito`, `conversacionParaCarrito`, casos de uso de carrito/cupón, `mensajeCarrito`, `parseCartDiscounts`, tipos del wire |
 
 ## Rutas
 

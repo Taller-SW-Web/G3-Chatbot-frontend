@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
-import { HomePage } from "@/modules/mod-catalog/ui/HomePage";
+import { HomePage, type HomeAgregarResultado } from "@/modules/mod-catalog/ui/HomePage";
 import { useChatStore } from "@/shared/auth/chatStore";
 import type { CatalogCardItem, CatalogDetail } from "@/modules/mod-catalog/domain/entities/CatalogoUI";
 import { mapCarouselItem, mapProductDetail } from "@/modules/mod-catalog/domain/entities/CatalogoUI";
@@ -14,19 +14,15 @@ const h = vi.hoisted(() => ({
   detalle: vi.fn(),
   disponibilidad: vi.fn(),
   agregar: vi.fn(),
-  anonimo: vi.fn(),
-  crear: vi.fn(),
-  push: vi.fn(),
+  abrirChat: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: h.push }) }));
-vi.mock("@/shared/di/container", () => ({ container: { api: {}, stream: {} } }));
 vi.mock("@/modules/mod-catalog/application/buscarProductosUseCase", () => ({ buscarProductosUseCase: h.buscar }));
 vi.mock("@/modules/mod-catalog/application/verDetalleProductoUseCase", () => ({ verDetalleProductoUseCase: h.detalle }));
 vi.mock("@/modules/mod-catalog/application/consultarDisponibilidadUseCase", () => ({ consultarDisponibilidadUseCase: h.disponibilidad }));
-vi.mock("@/modules/mod-cart/application/agregarProductoAlCarritoUseCase", () => ({ agregarProductoAlCarritoUseCase: h.agregar }));
-vi.mock("@/modules/mod-cart/application/agregarCarritoAnonimoUseCase", () => ({ agregarCarritoAnonimoUseCase: h.anonimo }));
-vi.mock("@/modules/mod-chat/application/crearConversacionUseCase", () => ({ crearConversacionUseCase: h.crear }));
+
+/** Acciones cableadas por `app/page.tsx` (catálogo + carrito + chat). */
+vi.mock("@/shared/di/container", () => ({ container: { catalogo: {} } }));
 
 const producto: CatalogCardItem = {
   product_id: "p1",
@@ -55,17 +51,23 @@ const detalle: CatalogDetail = {
 
 function montar() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(createElement(QueryClientProvider, { client: queryClient }, createElement(HomePage)));
+  return render(
+    createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(HomePage, {
+        onAgregar: h.agregar,
+        onAbrirChat: h.abrirChat,
+        mensajeMaxCaracteres: 1000,
+      })
+    )
+  );
 }
 
 async function agregarDesdeModal() {
   const button = await screen.findByRole("button", { name: "AGREGAR AL CARRITO" });
   await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(button);
-}
-
-function errorCon(code: string, status = 409, extra: Record<string, unknown> = {}) {
-  return { response: { status, data: { code, ...extra } } };
 }
 
 beforeEach(() => {
@@ -78,23 +80,25 @@ beforeEach(() => {
     authOpen: false,
   });
   h.buscar.mockResolvedValue({ items: [producto], total: 1 });
-  h.crear.mockResolvedValue({ conversacionId: "nueva" });
   h.detalle.mockResolvedValue(detalle);
   h.disponibilidad.mockResolvedValue({ sku: "SKU-42-NEGRO", status: "DISPONIBLE" });
-  h.agregar.mockResolvedValue({ ok: true });
-  h.anonimo.mockResolvedValue(undefined);
+  h.agregar.mockResolvedValue({ ok: true, mensaje: "Zapatilla Volta se agregó a tu carrito." });
+  h.abrirChat.mockResolvedValue(undefined);
 });
 
 afterEach(cleanup);
 
-describe("HomePage", () => {
+describe("HomePage (catálogo + slots)", () => {
   it("agrega Messi Club desde la tarjeta sin pedir variantes ni abrir el detalle", async () => {
     useChatStore.setState({ cliente: { id: "u1", correo: "ana@ejemplo.pe" } as never });
     h.buscar.mockResolvedValue({ items: [mapCarouselItem(messiClub, 1)], total: 1 });
     montar();
     fireEvent.click(await screen.findByRole("button", { name: "Agregar adidas Messi Club" }));
     await screen.findByText(/se agregó a tu carrito/);
-    expect(h.agregar).toHaveBeenCalledWith({}, expect.objectContaining({ sku: messiClub.single_sku, product_id: messiClub.product_id, cantidad: 1 }));
+    expect(h.agregar).toHaveBeenCalledWith(expect.objectContaining({
+      item: expect.objectContaining({ product_id: messiClub.product_id }),
+      sel: { sku: messiClub.single_sku, talla: null, color: null },
+    }));
     expect(h.detalle).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -112,7 +116,10 @@ describe("HomePage", () => {
     expect(screen.queryByRole("group", { name: "Color" })).toBeNull();
     fireEvent.click(add);
     await screen.findByText(/se agregó a tu carrito/);
-    expect(h.agregar).toHaveBeenCalledWith({}, expect.objectContaining({ sku: messiClub.single_sku, product_id: messiClub.product_id }));
+    expect(h.agregar).toHaveBeenCalledWith(expect.objectContaining({
+      item: expect.objectContaining({ product_id: messiClub.product_id }),
+      sel: { sku: messiClub.single_sku, talla: null, color: null },
+    }));
   });
 
   it("avisa de una lista REST parcial, incluso sin productos", async () => {
@@ -169,34 +176,15 @@ describe("HomePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "AGREGAR AL CARRITO" }));
 
     expect(await screen.findByText(/se agregó a tu carrito/)).toBeDefined();
-    expect(h.agregar).toHaveBeenCalledWith({}, {
-      sku: "SKU-42-NEGRO",
-      cantidad: 1,
-      product_id: "p1",
-      talla: "42",
-      color: "negro",
-      conversacionId: undefined,
+    expect(h.agregar).toHaveBeenCalledWith({
+      item: expect.objectContaining({ product_id: "p1" }),
+      sel: { sku: "SKU-42-NEGRO", talla: "42", color: "negro" },
     });
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("en anónimo crea la conversación y la guarda al agregar", async () => {
-    h.anonimo.mockResolvedValue("conv-anonima");
-    montar();
-
-    fireEvent.click(await screen.findByRole("button", { name: "Elegir talla y color de Zapatilla Volta" }));
-    await agregarDesdeModal();
-
-    await waitFor(() => expect(useChatStore.getState().ultimaConversacionId).toBe("conv-anonima"));
-    expect(h.anonimo).toHaveBeenCalledWith(expect.objectContaining({
-      conversacionGuardada: undefined,
-      conversacionCreada: null,
-    }));
-    expect(h.push).not.toHaveBeenCalled();
-  });
-
-  it("explica qué falta cuando el backend pide variante", async () => {
-    h.agregar.mockRejectedValue(errorCon("VARIANTE_REQUERIDA", 409, { faltantes: ["talla", "color"] }));
+  it("muestra el mensaje de error que devuelve el composition root", async () => {
+    h.agregar.mockResolvedValue({ ok: false, mensaje: "Elige talla y color antes de agregar." });
     useChatStore.setState({ cliente: { id: "u1", correo: "ana@ejemplo.pe" } as never });
     montar();
 
@@ -206,15 +194,16 @@ describe("HomePage", () => {
     expect(await screen.findByText("Elige talla y color antes de agregar.")).toBeDefined();
   });
 
-  it("traduce otros errores del carrito", async () => {
-    h.agregar.mockRejectedValue(errorCon("STOCK_INSUFICIENTE"));
+  it("mantiene abierto el detalle cuando el agregado falla", async () => {
+    h.agregar.mockResolvedValue({ ok: false, mensaje: "No hay stock suficiente para esa cantidad. Prueba con menos." });
     useChatStore.setState({ cliente: { id: "u1", correo: "ana@ejemplo.pe" } as never });
     montar();
 
     fireEvent.click(await screen.findByRole("button", { name: "Elegir talla y color de Zapatilla Volta" }));
     await agregarDesdeModal();
 
-    expect(await screen.findByText(/No hay stock suficiente/)).toBeDefined();
+    expect(await screen.findByRole("dialog")).toBeDefined();
+    expect(screen.getByText(/No hay stock suficiente/)).toBeDefined();
   });
 
   it("muestra el error del detalle y permite reintentar", async () => {
@@ -239,22 +228,20 @@ describe("HomePage", () => {
     expect(await screen.findByText(/No pudimos cargar el detalle\. Revisa tu conexión/)).toBeDefined();
   });
 
-  it("crea la conversación desde el compositor y abre el chat", async () => {
+  it("delega la creación de la conversación al route file y limpia el compositor", async () => {
     montar();
 
     const campo = screen.getByLabelText("Mensaje") as HTMLInputElement;
     fireEvent.change(campo, { target: { value: "  Quiero zapatillas  " } });
     fireEvent.click(screen.getByLabelText("Enviar"));
 
-    await waitFor(() => expect(h.push).toHaveBeenCalledWith("/chat/nueva"));
-    expect(h.crear).toHaveBeenCalledTimes(1);
-    expect(useChatStore.getState().primerMensaje).toBe("Quiero zapatillas");
+    await waitFor(() => expect(h.abrirChat).toHaveBeenCalledWith("Quiero zapatillas"));
     expect(campo.value).toBe("");
   });
 
   it("envía con Enter y respeta el estado de creación", async () => {
-    let resolver!: (v: { conversacionId: string }) => void;
-    h.crear.mockReturnValue(new Promise((r) => { resolver = r; }));
+    let resolver!: () => void;
+    h.abrirChat.mockReturnValue(new Promise<void>((r) => { resolver = r; }));
     montar();
 
     const campo = screen.getByLabelText("Mensaje");
@@ -263,10 +250,10 @@ describe("HomePage", () => {
 
     expect(screen.getByText("Creando conversación…")).toBeDefined();
     expect((campo as HTMLInputElement).disabled).toBe(true);
-    await waitFor(() => expect(h.crear).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(h.abrirChat).toHaveBeenCalledTimes(1));
 
-    resolver({ conversacionId: "nueva" });
-    await waitFor(() => expect(h.push).toHaveBeenCalledWith("/chat/nueva"));
+    resolver();
+    await waitFor(() => expect((campo as HTMLInputElement).disabled).toBe(false));
   });
 
   it("no envía un texto vacío", () => {
@@ -275,7 +262,7 @@ describe("HomePage", () => {
   });
 
   it("permite reintentar la creación de la conversación", async () => {
-    h.crear.mockRejectedValueOnce(new Error("caído"));
+    h.abrirChat.mockRejectedValueOnce(new Error("caído"));
     montar();
 
     fireEvent.change(screen.getByLabelText("Mensaje"), { target: { value: "Hola" } });
@@ -284,20 +271,17 @@ describe("HomePage", () => {
     expect(await screen.findByRole("alert")).toBeDefined();
     fireEvent.click(screen.getByText("REINTENTAR"));
 
-    await waitFor(() => expect(h.push).toHaveBeenCalledWith("/chat/nueva"));
-    expect(h.crear).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(h.abrirChat).toHaveBeenCalledTimes(2));
   });
 
   it("abre el chat de ofertas desde el banner y las acciones rápidas", async () => {
     montar();
 
     fireEvent.click(screen.getByLabelText("Ver ofertas Inka Athletics"));
-    await waitFor(() => expect(h.crear).toHaveBeenCalledTimes(1));
-    expect(useChatStore.getState().primerMensaje).toBe("Ver ofertas");
+    await waitFor(() => expect(h.abrirChat).toHaveBeenCalledWith("Ver ofertas"));
 
     fireEvent.click(screen.getByText("Rastrear pedido"));
-    await waitFor(() => expect(h.crear).toHaveBeenCalledTimes(2));
-    expect(useChatStore.getState().primerMensaje).toBe("Rastrear pedido");
+    await waitFor(() => expect(h.abrirChat).toHaveBeenCalledWith("Rastrear pedido"));
   });
 
   it("cambia el banner activo", () => {
@@ -305,5 +289,23 @@ describe("HomePage", () => {
     expect(screen.getByText("1 / 4")).toBeDefined();
     fireEvent.click(screen.getByLabelText("Banner 3"));
     expect(screen.getByText("3 / 4")).toBeDefined();
+  });
+
+  it("sobrevive a un resultado de agregado sin mensaje de error", async () => {
+    h.agregar.mockResolvedValue({ ok: false, mensaje: "No pudimos completar la acción. Intenta de nuevo." } satisfies HomeAgregarResultado);
+    useChatStore.setState({ cliente: { id: "u1", correo: "ana@ejemplo.pe" } as never });
+    montar();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Elegir talla y color de Zapatilla Volta" }));
+    await agregarDesdeModal();
+    expect(await screen.findByText(/No pudimos completar la acción/)).toBeDefined();
+  });
+
+  it("no llama al agregado si el producto no admite agregado directo", async () => {
+    const agotado: CatalogCardItem = { ...producto, availability: "AGOTADO", sku: "SKU-1" } as CatalogCardItem;
+    h.buscar.mockResolvedValue({ items: [agotado], total: 1 });
+    montar();
+    await screen.findByText("Zapatilla Volta");
+    expect(h.agregar).not.toHaveBeenCalled();
   });
 });

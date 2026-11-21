@@ -44,7 +44,7 @@ export function ConfirmacionPedido({
     enCurso.current = true;
     setEstado({ fase: "enviando" });
     try {
-      const r = await reenviarConfirmacionUseCase(container.api, { pedidoId });
+      const r = await reenviarConfirmacionUseCase(container.pedidos, { pedidoId });
       setEstado({ fase: "enviado", restantes: r.reenviosRestantes, correo: r.correoEnmascarado });
     } catch (error) {
       const code = problemCode(error);

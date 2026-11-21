@@ -7,13 +7,13 @@
 
 ## Responsabilidad
 
-Historial de pedidos por estado, detalle, seguimiento del despacho, reenvío de confirmación y calificación de entrega. Incluye las vistas de solo lectura de reclamos y devoluciones que aparecen en las pestañas de historial; su creación vive en `mod-postventa`.
+Historial de pedidos por estado, detalle, seguimiento del despacho, reenvío de confirmación y calificación de entrega. Las pestañas de devoluciones y reclamos se inyectan como slots desde `app/pedidos/page.tsx` con componentes de `mod-postventa`; su creación también vive ahí.
 
 ## Superficie pública
 
 | Tipo | Archivo | Qué expone |
 |---|---|---|
-| Frontend | `public.ts` | `OrderHistoryPage`, `SeguimientoPage`, `ConfirmacionPedido`, `ListaPedidos`, `EstadoPedido`, `ListaReclamos`, `ListaDevoluciones`, casos de uso y tipos |
+| Frontend | `public.ts` | `OrderHistoryPage` (+ `OrderHistorySlots`), `SeguimientoPage`, `ConfirmacionPedido`, `ListaPedidos`, `EstadoPedido`, `pedidosPort`, casos de uso y tipos |
 
 ## Rutas
 
@@ -29,7 +29,7 @@ Historial de pedidos por estado, detalle, seguimiento del despacho, reenvío de 
 
 ## Dependencias externas
 
-`mod-checkout` (declarada en el manifiesto; hoy solo comparte tipos de pedido). No importa módulos por dentro.
+`mod-checkout` (declarada en el manifiesto; hoy solo comparte tipos de pedido). Expone `pedidosPort` para que `mod-postventa` consulte el pedido sin tocar el adapter.
 
 ## Pruebas
 

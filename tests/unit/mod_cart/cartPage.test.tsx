@@ -60,7 +60,7 @@ vi.mock("@/modules/mod-cart/application/aplicarCuponUseCase", () => ({
 vi.mock("@/modules/mod-cart/application/quitarCuponUseCase", () => ({
   quitarCuponUseCase: h.quitarCupon,
 }));
-vi.mock("@/shared/di/container", () => ({ container: { api: {} } }));
+vi.mock("@/shared/di/container", () => ({ container: { carrito: {} } }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 // El GET resuelve la conversación del store; la página NO recibe la prop.
 vi.mock("@/modules/mod-cart/application/useCarrito", () => ({

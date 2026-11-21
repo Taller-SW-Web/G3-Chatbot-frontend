@@ -16,9 +16,13 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => params.value,
 }));
 
+vi.mock("@/modules/mod-orders/public", () => ({
+  pedidosPort: { obtenerPedido },
+}));
+
 vi.mock("@/shared/di/container", () => ({
   container: {
-    api: { obtenerPedido, crearDevolucion, subirEvidencia },
+    postventa: { crearDevolucion, subirEvidencia },
   },
 }));
 

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { OrderHistoryPage } from "@/modules/mod-orders/ui/OrderHistoryPage";
+import { HistorialDevoluciones, HistorialReclamos } from "@/modules/mod-postventa/ui/HistorialPostventa";
 
 const push = vi.hoisted(() => vi.fn());
 const listarPedidos = vi.hoisted(() => vi.fn());
@@ -13,11 +14,17 @@ const calificarPedido = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/shared/di/container", () => ({
   container: {
-    api: { listarPedidos, listarDevoluciones, listarReclamos, calificarPedido },
+    pedidos: { listarPedidos, calificarPedido },
+    postventa: { listarDevoluciones, listarReclamos },
   },
 }));
 
-function renderPage(ui = <OrderHistoryPage />) {
+/** Mismo contrato que arma `app/pedidos/page.tsx`. */
+function slots() {
+  return { reembolso: <HistorialDevoluciones />, reclamos: <HistorialReclamos /> };
+}
+
+function renderPage(ui = <OrderHistoryPage slots={slots()} />) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
@@ -121,8 +128,15 @@ describe("OrderHistoryPage", () => {
   });
 
   it("respeta la pestaña inicial", async () => {
-    renderPage(<OrderHistoryPage initialTab="reclamos" />);
+    renderPage(<OrderHistoryPage initialTab="reclamos" slots={slots()} />);
     await waitFor(() => expect(screen.getByText(/REC-2026-0118/)).toBeDefined());
     expect(screen.queryByText("Pedido PED-2026-00001")).toBeNull();
+  });
+
+  it("no consulta postventa cuando el slot no está inyectado", async () => {
+    renderPage(<OrderHistoryPage initialTab="reembolso" />);
+    expect(screen.queryByText(/DEV-2026-00045/)).toBeNull();
+    expect(listarDevoluciones).not.toHaveBeenCalled();
+    expect(listarReclamos).not.toHaveBeenCalled();
   });
 });

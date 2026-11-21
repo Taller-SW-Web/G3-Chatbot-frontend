@@ -35,7 +35,7 @@ export function MiCuentaPage() {
     if (!cliente) return;
     setErrorVerificacion(null);
     try {
-      const r = await validarContactoUseCase(container.api, codigo);
+      const r = await validarContactoUseCase(container.auth, codigo);
       if (r.verificado) {
         setCliente({ ...cliente, celularVerificado: true });
       } else {

@@ -12,7 +12,7 @@ import { avisoConfirmacion, correoParaChat } from "@/modules/mod-orders/domain/u
 const h = vi.hoisted(() => ({ reenviar: vi.fn() }));
 
 vi.mock("@/shared/di/container", () => ({
-  container: { api: { reenviarConfirmacion: h.reenviar } },
+  container: { pedidos: { reenviarConfirmacion: h.reenviar } },
 }));
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

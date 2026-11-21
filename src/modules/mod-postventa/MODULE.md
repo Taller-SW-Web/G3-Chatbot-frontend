@@ -13,7 +13,7 @@ Solicitudes de cambio/devolución con evidencias, Libro de Reclamaciones (reclam
 
 | Tipo | Archivo | Qué expone |
 |---|---|---|
-| Frontend | `public.ts` | `DevolucionPage`, `ReclamoPage`, formularios, constancias/estados y tipos del contrato |
+| Frontend | `public.ts` | `DevolucionPage`, `ReclamoPage`, `HistorialDevoluciones`, `HistorialReclamos`, `ListaDevoluciones`, `ListaReclamos`, formularios, constancias/estados y tipos del contrato |
 
 ## Rutas
 
@@ -28,7 +28,9 @@ Solicitudes de cambio/devolución con evidencias, Libro de Reclamaciones (reclam
 
 ## Dependencias externas
 
-`mod-orders` (declarada; hoy no hay imports cruzados).
+`mod-orders`: `DevolucionPage` consulta el pedido con `pedidosPort` de su
+`public.ts`. El perfil del reclamante se lee con `usePerfil` de `shared/auth`
+(sin arista hacia `mod-auth`).
 
 ## Pruebas
 

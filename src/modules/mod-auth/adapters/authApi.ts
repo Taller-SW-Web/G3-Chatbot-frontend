@@ -2,11 +2,11 @@
 
 import { http, refreshSessionOnce } from "@/shared/api/http";
 import { useChatStore } from "@/shared/auth/chatStore";
+import { normalizarPolitica } from "@/shared/auth/passwordPolicy";
 import {
   getPoliticaContrasenaCache,
-  normalizarPolitica,
   setPoliticaContrasenaCache,
-} from "@/shared/auth/passwordPolicy";
+} from "@/modules/mod-auth/application/politicaContrasenaCache";
 import type {
   AuthPort,
   MfaChallenge,

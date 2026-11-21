@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { CheckIcon } from "@/shared/ui/icons";
 import { DevolucionForm } from "@/modules/mod-postventa/ui/forms/DevolucionForm";
+import { pedidosPort } from "@/modules/mod-orders/public";
 import { container } from "@/shared/di/container";
 import { useChatStore } from "@/shared/auth/chatStore";
 import type { DevolucionInput } from "@/modules/mod-postventa/domain/schemas/devolucion.schema";
@@ -21,7 +22,7 @@ export function DevolucionPage() {
 
   const pedido = useQuery({
     queryKey: ["pedido", pedidoId],
-    queryFn: () => container.api.obtenerPedido(pedidoId),
+    queryFn: () => pedidosPort.obtenerPedido(pedidoId),
     enabled: Boolean(pedidoId),
     retry: false,
   });
@@ -29,9 +30,9 @@ export function DevolucionPage() {
   const crear = useMutation({
     mutationFn: async (input: DevolucionInput & { evidenciaArchivo?: File }) => {
       const evidencia = input.evidenciaArchivo
-        ? await container.api.subirEvidencia(input.evidenciaArchivo, conversacionId ?? undefined)
+        ? await container.postventa.subirEvidencia(input.evidenciaArchivo, conversacionId ?? undefined)
         : null;
-      return container.api.crearDevolucion({
+      return container.postventa.crearDevolucion({
         pedidoId,
         tipo: input.tipo,
         motivo: input.motivo,

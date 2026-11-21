@@ -11,10 +11,17 @@ import {
 
 const modulesDir = path.join(root, "src/modules");
 const exceptionsPath = path.join(root, "scripts/module-boundaries.exceptions.json");
-const exceptions = fs.existsSync(exceptionsPath)
+const exceptionsRaw = fs.existsSync(exceptionsPath)
   ? JSON.parse(fs.readFileSync(exceptionsPath, "utf8"))
-  : [];
-const allowed = new Set(exceptions.map((e) => `${e.from}->${e.to}`));
+  : {};
+// Formato v1 (array) → v2 (objeto con moduleEdges + sharedPrivateImports).
+const exceptions = Array.isArray(exceptionsRaw)
+  ? { moduleEdges: exceptionsRaw, sharedPrivateImports: [] }
+  : exceptionsRaw;
+const allowed = new Set((exceptions.moduleEdges ?? []).map((e) => `${e.from}->${e.to}`));
+const sharedPrivateImportFiles = new Set(
+  (exceptions.sharedPrivateImports ?? []).map((e) => e.file)
+);
 
 const errors = [];
 const warnings = new Set();
@@ -44,7 +51,7 @@ for (const id of ids) {
     fail(`${id}: falta la carpeta`);
     continue;
   }
-  for (const required of ["MODULE.md", "module.manifest.ts", "public.ts", "ports", "adapters"]) {
+  for (const required of ["MODULE.md", "module.manifest.ts", "public.ts", "ui", "ports", "adapters"]) {
     if (!fs.existsSync(path.join(dir, required))) fail(`${id}: falta ${required}`);
   }
   const ports = fs.existsSync(path.join(dir, "ports"))
@@ -112,7 +119,7 @@ function isTypeOnly(node) {
       node.importClause.namedBindings.elements.every((e) => e.isTypeOnly));
 }
 
-function importedSpecifiers(file) {
+function scanSource(file) {
   const source = ts.createSourceFile(
     file,
     fs.readFileSync(file, "utf8"),
@@ -120,8 +127,10 @@ function importedSpecifiers(file) {
     true,
     file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
   );
-  const out = [];
-  const add = (spec, typeOnly = false) => { if (spec) out.push({ spec, typeOnly }); };
+  const imports = [];
+  const containerKeys = [];
+  const dynamicImports = [];
+  const add = (spec, typeOnly = false) => { if (spec) imports.push({ spec, typeOnly }); };
   const visit = (node) => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       add(node.moduleSpecifier.text, isTypeOnly(node));
@@ -131,19 +140,45 @@ function importedSpecifiers(file) {
       ts.isStringLiteral(node.moduleSpecifier)
     ) {
       add(node.moduleSpecifier.text, node.isTypeOnly);
+    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      if (node.arguments.length === 1 && ts.isStringLiteral(node.arguments[0])) {
+        add(node.arguments[0].text);
+      } else {
+        dynamicImports.push(node.arguments.map((a) => a.getText(source)).join(", "));
+      }
     } else if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-      node.arguments.length === 1 &&
-      ts.isStringLiteral(node.arguments[0])
+      ts.isPropertyAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "container"
     ) {
-      add(node.arguments[0].text);
+      containerKeys.push(node.name.text);
+    } else if (
+      ts.isElementAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "container" &&
+      node.argumentExpression &&
+      ts.isStringLiteral(node.argumentExpression)
+    ) {
+      containerKeys.push(node.argumentExpression.text);
     }
     ts.forEachChild(node, visit);
   };
   visit(source);
-  return out;
+  return { imports, containerKeys, dynamicImports };
 }
+
+/** Alias de `container` → módulo dueño del adapter (evita llamadas cruzadas encubiertas). */
+const CONTAINER_KEY_MODULE = {
+  auth: "mod-auth",
+  catalogo: "mod-catalog",
+  carrito: "mod-cart",
+  envio: "mod-shipping",
+  checkout: "mod-checkout",
+  pedidos: "mod-orders",
+  postventa: "mod-postventa",
+  chat: "mod-chat",
+  stream: "mod-chat",
+};
 
 const sourceFiles = walk(path.join(root, "src"));
 const STRANGLER = ["adapters", "application", "domain", "ports", "infrastructure"];
@@ -157,9 +192,34 @@ for (const file of sourceFiles) {
   const rel = path.relative(root, file).replace(/\\/g, "/");
   const moduleMatch = rel.match(/^src\/modules\/(mod-[a-z-]+)\//);
   const own = moduleMatch?.[1];
-  const isContainer = rel === "src/shared/di/container.ts";
+  const privateImportAllowed = sharedPrivateImportFiles.has(rel);
+  const scanned = scanSource(file);
 
-  for (const { spec } of importedSpecifiers(file)) {
+  if (scanned.dynamicImports.length) {
+    fail(`${rel}: import() dinámico no permitido (usa un string literal): ${scanned.dynamicImports.join(" | ")}`);
+  }
+
+  // El agregado `container.api` no deja rastro estático de qué módulo se llama:
+  // dentro de un módulo se usa `container.<alias>` propio o el port público.
+  if (own) {
+    if (scanned.containerKeys.includes("api")) {
+      fail(`${rel}: usa container.api dentro de ${own}; usa container.<alias> o el port de public.ts`);
+    }
+    for (const key of new Set(scanned.containerKeys)) {
+      const targetModule = CONTAINER_KEY_MODULE[key];
+      if (!targetModule || targetModule === own) continue;
+      const declared = (manifestsById.get(own)?.dependsOn ?? []).includes(targetModule);
+      const key2 = `${own}->${targetModule}`;
+      if (declared) continue;
+      if (allowed.has(key2)) {
+        warnings.add(`${rel}: container.${key} → ${targetModule} (excepción documentada)`);
+      } else {
+        fail(`${rel}: container.${key} llama a ${targetModule} sin declararlo en dependsOn`);
+      }
+    }
+  }
+
+  for (const { spec } of scanned.imports) {
     const target = resolveSpec(file, spec);
     if (!target || !target.startsWith("src/")) continue;
 
@@ -192,14 +252,82 @@ for (const file of sourceFiles) {
     } else if (targetModule) {
       // shared/ y app/ pueden componer módulos, pero solo por su public.ts.
       const isPublic = target.replace(/\.(ts|tsx)$/, "") === `src/modules/${targetModule}/public`;
-      if (!isPublic && !isContainer) {
+      if (!isPublic && !privateImportAllowed) {
         fail(`${rel}: shared/app importa ${targetModule} por dentro (${spec}); usa public.ts`);
       }
     }
   }
 }
 
-// 5) Reporte.
+// 5) Contrato backend↔frontend: cada endpoint del manifiesto debe existir en
+//    el openapi.json del backend y llevar el tag del mismo id de módulo.
+const openapiPath = process.env.OPENAPI_PATH
+  ? path.resolve(process.env.OPENAPI_PATH)
+  : path.join(root, "../G3-Chatbot-backend/docs/openapi.json");
+const hoy = new Date().toISOString().slice(0, 10);
+
+function normalizarRuta(ruta) {
+  return ruta.replace(/^\/api\/v1(?=\/|$)/, "").replace(/\{[^}]+\}/g, "{}");
+}
+
+const pendingByKey = new Map(
+  (exceptions.contractPending ?? []).map((e) => [`${e.module}:${normalizarRuta(e.path)}`, e])
+);
+const tagExceptionByKey = new Map(
+  (exceptions.contractTagExceptions ?? []).map((e) => [`${e.module}:${normalizarRuta(e.path)}`, e])
+);
+for (const [key, exc] of [...pendingByKey, ...tagExceptionByKey]) {
+  if (exc.reviewBy && exc.reviewBy < hoy) {
+    fail(`${key}: allowlist de contrato vencida (reviewBy ${exc.reviewBy}); resuélvela o renueva la fecha`);
+  }
+}
+
+if (!fs.existsSync(openapiPath)) {
+  if (process.env.OPENAPI_PATH) {
+    fail(`OPENAPI_PATH no existe: ${openapiPath}`);
+  } else {
+    warnings.add(
+      `contrato no validado: falta ${path.relative(root, openapiPath)} (exporta OPENAPI_PATH para exigirlo)`
+    );
+  }
+} else {
+  const openapi = JSON.parse(fs.readFileSync(openapiPath, "utf8"));
+  const openapiPaths = new Map();
+  for (const [ruta, operaciones] of Object.entries(openapi.paths ?? {})) {
+    const tags = new Set();
+    for (const operacion of Object.values(operaciones ?? {})) {
+      if (operacion && Array.isArray(operacion.tags)) operacion.tags.forEach((t) => tags.add(t));
+    }
+    openapiPaths.set(normalizarRuta(ruta), tags);
+  }
+
+  for (const manifest of manifests) {
+    for (const endpoint of manifest.endpoints ?? []) {
+      const key = `${manifest.id}:${normalizarRuta(endpoint)}`;
+      const tags = openapiPaths.get(normalizarRuta(endpoint));
+      if (!tags) {
+        const exc = pendingByKey.get(key);
+        if (exc) {
+          warnings.add(`${manifest.id}: ${endpoint} pendiente en backend (${exc.todo}; revisar ${exc.reviewBy})`);
+        } else {
+          fail(`${manifest.id}: ${endpoint} no existe en ${path.basename(openapiPath)}`);
+        }
+        continue;
+      }
+      if (!tags.has(manifest.id)) {
+        const exc = tagExceptionByKey.get(key);
+        const etiquetas = [...tags].join(", ") || "sin tag";
+        if (exc) {
+          warnings.add(`${manifest.id}: ${endpoint} etiquetado [${etiquetas}] en openapi (${exc.todo})`);
+        } else {
+          fail(`${manifest.id}: ${endpoint} tiene tag [${etiquetas}] y no ${manifest.id}`);
+        }
+      }
+    }
+  }
+}
+
+// 6) Reporte.
 if (warnings.size) {
   console.warn(`Avisos (${warnings.size}):`);
   for (const w of warnings) console.warn(`  - ${w}`);

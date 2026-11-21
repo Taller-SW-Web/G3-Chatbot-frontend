@@ -10,8 +10,7 @@ import { SesionIndicator } from "@/shared/auth/SesionIndicator";
 import { useChatStore } from "@/shared/auth/chatStore";
 import { container } from "@/shared/di/container";
 import { clienteDesdePerfil, clienteDesdeUsuario } from "@/shared/auth/sesion";
-import { useCarrito } from "@/modules/mod-cart/public";
-import { conversacionParaCarrito } from "@/shared/commerce/carrito";
+import { conversacionParaCarrito, useCarrito } from "@/modules/mod-cart/public";
 import { Sidebar } from "@/modules/mod-chat/public";
 
 export type ScreenKind =

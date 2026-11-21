@@ -2,7 +2,7 @@
 
 - **Owner:** @SOoOnny
 - **Frontend:** carpeta `mod-catalog`, rutas `[/]`
-- **Depende de:** ninguno (ver excepciones de frontera)
+- **Depende de:** ninguno
 - **Contrato:** `/catalogo/*`
 
 ## Responsabilidad
@@ -13,7 +13,7 @@ Home con ofertas, tarjetas de producto, detalle, variantes, disponibilidad y pro
 
 | Tipo | Archivo | Qué expone |
 |---|---|---|
-| Frontend | `public.ts` | `HomePage`, `ProductCard`, `DetalleProducto`, `CarruselProductos`, `SelectorVariante`, `ListaPromociones`, helpers de `CatalogoUI`/`PromocionesUI` y casos de uso |
+| Frontend | `public.ts` | `HomePage` (+ `HomePageProps`/`HomeAgregarInput`), `ProductCard`, `DetalleProducto`, `CarruselProductos`, `SelectorVariante`, `ListaPromociones`, helpers de `CatalogoUI`/`PromocionesUI` y casos de uso |
 
 ## Rutas
 
@@ -29,9 +29,12 @@ Home con ofertas, tarjetas de producto, detalle, variantes, disponibilidad y pro
 
 Ninguna.
 
-## Excepciones de frontera
+## Composición
 
-`ui/HomePage.tsx` importa `mod-cart/public` y `mod-chat/public` para que la tarjeta agregue al carrito y el compositor abra la conversación. El DAG declara `cart → catalog` y `chat → catalog`, así que esta arista inversa está registrada en `scripts/module-boundaries.exceptions.json`; la corrección (slots de carrito/chat inyectados desde `app/page.tsx`) queda para Fase 4.
+`HomePage` no conoce el carrito ni el chat: recibe `onAgregar`, `onAbrirChat` y
+`mensajeMaxCaracteres`. El composition root `app/page.tsx` los cablea con
+`useHomeActions` (carrito, conversación anónima y navegación al chat). Sin
+excepciones de frontera.
 
 ## Pruebas
 

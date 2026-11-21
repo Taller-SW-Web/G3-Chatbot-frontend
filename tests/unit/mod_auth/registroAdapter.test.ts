@@ -35,7 +35,7 @@ axios.defaults.adapter = adapter;
 const { container } = await import("@/shared/di/container");
 const chatbotApi = container.api;
 const { useChatStore } = await import("@/shared/auth/chatStore");
-const { clearPoliticaContrasenaCache } = await import("@/shared/auth/passwordPolicy");
+const { clearPoliticaContrasenaCache } = await import("@/modules/mod-auth/application/politicaContrasenaCache");
 
 const countOf = (url: string) => calls.filter((c) => c.url === url).length;
 const bodyOf = (url: string) =>

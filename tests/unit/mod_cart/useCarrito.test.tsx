@@ -7,7 +7,7 @@ import { useCarrito } from "@/modules/mod-cart/application/useCarrito";
 import { useChatStore } from "@/shared/auth/chatStore";
 
 const listarCarrito = vi.hoisted(() => vi.fn());
-vi.mock("@/shared/di/container", () => ({ container: { api: { listarCarrito } } }));
+vi.mock("@/shared/di/container", () => ({ container: { carrito: { listarCarrito } } }));
 
 const conversacion = "0f9a1c2e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
 const carritoVacio = { lineas: [], subtotal: 0, descuentos: [], costoEnvio: null, total: 0, avisos: [] };

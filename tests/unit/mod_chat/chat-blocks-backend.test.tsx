@@ -11,7 +11,7 @@ import type { Bloque } from "@/modules/mod-chat/domain/entities/Bloque";
 const h = vi.hoisted(() => ({ push: vi.fn(), detalle: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: h.push }) }));
-vi.mock("@/shared/di/container", () => ({ container: { api: {} } }));
+vi.mock("@/shared/di/container", () => ({ container: { catalogo: {} } }));
 vi.mock("@/modules/mod-catalog/application/verDetalleProductoUseCase", () => ({
   verDetalleProductoUseCase: h.detalle,
 }));
