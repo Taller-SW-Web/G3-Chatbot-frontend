@@ -2,8 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { DevolucionPage } from "@/adapters/inbound/pages/DevolucionPage";
-import { useChatStore } from "@/application/state/chatStore";
+import { DevolucionPage } from "@/modules/mod-postventa/ui/DevolucionPage";
+import { useChatStore } from "@/shared/auth/chatStore";
 
 const push = vi.hoisted(() => vi.fn());
 const params = vi.hoisted(() => ({ value: new URLSearchParams() }));
@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => params.value,
 }));
 
-vi.mock("@/infrastructure/di/container", () => ({
+vi.mock("@/shared/di/container", () => ({
   container: {
     api: { obtenerPedido, crearDevolucion, subirEvidencia },
   },

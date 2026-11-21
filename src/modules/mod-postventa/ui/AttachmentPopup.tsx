@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { XIcon, PhotoIcon, CameraIcon } from "./icons";
+import { XIcon, PhotoIcon, CameraIcon } from "@/shared/ui/icons";
 
 /**
  * Popup para agregar imagen desde el composer (galería o cámara),

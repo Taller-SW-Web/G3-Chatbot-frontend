@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CheckIcon } from "../components/icons";
-import { DevolucionForm } from "../components/forms/DevolucionForm";
-import { container } from "@/infrastructure/di/container";
-import { useChatStore } from "@/application/state/chatStore";
-import type { DevolucionInput } from "@/domain/schemas/devolucion.schema";
-import { isUnavailable, problemCode } from "@/domain/utils/httpError";
+import { CheckIcon } from "@/shared/ui/icons";
+import { DevolucionForm } from "@/modules/mod-postventa/ui/forms/DevolucionForm";
+import { container } from "@/shared/di/container";
+import { useChatStore } from "@/shared/auth/chatStore";
+import type { DevolucionInput } from "@/modules/mod-postventa/domain/schemas/devolucion.schema";
+import { isUnavailable, problemCode } from "@/shared/api/httpError";
 
 /** `/devolucion?pedidoId=...`: solicitud real de cambio/devolución (SPEC-21). */
 export function DevolucionPage() {

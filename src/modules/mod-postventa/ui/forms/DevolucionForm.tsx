@@ -8,8 +8,8 @@ import {
   DEVOLUCION_MOTIVOS,
   type DevolucionInput,
   type DevolucionLinea,
-} from "@/domain/schemas/devolucion.schema";
-import { PhotoIcon, RefreshIcon, CheckIcon } from "../icons";
+} from "@/modules/mod-postventa/domain/schemas/devolucion.schema";
+import { PhotoIcon, RefreshIcon, CheckIcon } from "@/shared/ui/icons";
 
 /**
  * SPEC-21: línea, tipo cambio/devolución, 6 motivos, descripción,

@@ -2,8 +2,8 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { reclamoSchema, RECLAMO_MOTIVOS, type ReclamoInput } from "@/domain/schemas/reclamo.schema";
-import { FileAlertIcon } from "../icons";
+import { reclamoSchema, RECLAMO_MOTIVOS, type ReclamoInput } from "@/modules/mod-postventa/domain/schemas/reclamo.schema";
+import { FileAlertIcon } from "@/shared/ui/icons";
 
 /**
  * SPEC-19: pedido, tipo, 8 motivos, descripción 20-1000, documento, teléfono

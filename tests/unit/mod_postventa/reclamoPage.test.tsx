@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReclamoPage } from "@/adapters/inbound/pages/ReclamoPage";
+import { ReclamoPage } from "@/modules/mod-postventa/ui/ReclamoPage";
 
 const push = vi.hoisted(() => vi.fn());
 const params = vi.hoisted(() => ({ value: new URLSearchParams() }));
@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => params.value,
 }));
 
-vi.mock("@/infrastructure/di/container", () => ({
+vi.mock("@/shared/di/container", () => ({
   container: {
     api: { fetchProfile, crearReclamo },
   },

@@ -1,5 +1,5 @@
-import { StatusBadge } from "../StatusBadge";
-import { FileAlertIcon } from "../icons";
+import { StatusBadge } from "@/shared/ui/StatusBadge";
+import { FileAlertIcon } from "@/shared/ui/icons";
 
 /** CONSTANCIA/ESTADO_RECLAMO + LISTA. Plazo 15 días hábiles. SPEC-19,20 */
 export function ConstanciaReclamo({ codigo }: { codigo: string }) {

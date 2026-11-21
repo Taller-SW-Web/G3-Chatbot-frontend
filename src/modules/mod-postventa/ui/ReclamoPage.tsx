@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CheckIcon } from "../components/icons";
-import { ReclamoForm } from "../components/forms/ReclamoForm";
-import { container } from "@/infrastructure/di/container";
-import type { ReclamoInput } from "@/domain/schemas/reclamo.schema";
-import { isUnavailable, problemCode } from "@/domain/utils/httpError";
+import { CheckIcon } from "@/shared/ui/icons";
+import { ReclamoForm } from "@/modules/mod-postventa/ui/forms/ReclamoForm";
+import { container } from "@/shared/di/container";
+import type { ReclamoInput } from "@/modules/mod-postventa/domain/schemas/reclamo.schema";
+import { isUnavailable, problemCode } from "@/shared/api/httpError";
 
 /** `/reclamo?pedidoId=...`: registro real en el Libro de Reclamaciones (SPEC-19). */
 export function ReclamoPage() {

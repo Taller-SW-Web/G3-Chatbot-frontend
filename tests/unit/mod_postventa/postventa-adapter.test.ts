@@ -24,7 +24,9 @@ vi.mock("axios", () => ({
   },
 }));
 
-import { chatbotApi } from "@/adapters/outbound/ChatbotApiAxiosAdapter";
+import { container } from "@/shared/di/container";
+
+const chatbotApi = container.api;
 
 const DEVOLUCION = {
   pedidoId: "PED-2026-00002",

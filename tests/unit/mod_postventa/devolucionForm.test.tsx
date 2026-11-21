@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { DevolucionForm } from "@/adapters/inbound/components/forms/DevolucionForm";
+import { DevolucionForm } from "@/modules/mod-postventa/ui/forms/DevolucionForm";
 
 const onOk = vi.fn();
 const onCancelar = vi.fn();
