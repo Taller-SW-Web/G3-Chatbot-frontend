@@ -4,6 +4,7 @@ import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { createElement } from "react";
 import { AuthGuard } from "@/shared/auth/AuthGuard";
 import { useChatStore } from "@/shared/auth/chatStore";
+import { limpiarCierreVoluntario, marcarCierreVoluntario } from "@/shared/auth/cierreVoluntario";
 import { SESION_COOKIE_NAME, sincronizarCookieSesion } from "@/shared/auth/sesion";
 
 const navMock = vi.hoisted(() => ({
@@ -38,6 +39,7 @@ function resetStore() {
   navMock.push.mockClear();
   navMock.pathname = "/cuenta";
   sincronizarCookieSesion(false);
+  limpiarCierreVoluntario();
 }
 
 describe("AuthGuard (H4-S5)", () => {
@@ -65,6 +67,15 @@ describe("AuthGuard (H4-S5)", () => {
     expect(navMock.replace).not.toHaveBeenCalled();
     expect(useChatStore.getState().authOpen).toBe(false);
     expect(apiMock.refreshSession).not.toHaveBeenCalled();
+  });
+
+  it("no abre el modal ni redirige si la sesión falla tras un cierre de sesión voluntario", async () => {
+    marcarCierreVoluntario();
+    render(createElement(AuthGuard, null, createElement("div", null, "No visible")));
+    await waitFor(() => expect(apiMock.refreshSession).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(navMock.replace).not.toHaveBeenCalled();
+    expect(useChatStore.getState().authOpen).toBe(false);
   });
 
   it("bloquea el contenido y redirige al login si no hay token de sesión", async () => {

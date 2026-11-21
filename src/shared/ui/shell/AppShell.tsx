@@ -12,6 +12,7 @@ import { container } from "@/shared/di/container";
 import { clienteDesdePerfil, clienteDesdeUsuario } from "@/shared/auth/sesion";
 import { conversacionParaCarrito, useCarrito } from "@/modules/mod-cart/public";
 import { Sidebar } from "@/modules/mod-chat/public";
+import { safeInternalPath } from "@/shared/security/safeInternalPath";
 
 export type ScreenKind =
   | "home" | "chat" | "carrito" | "checkout" | "exito"
@@ -64,11 +65,11 @@ export function AppShell({
     const params = new URLSearchParams(window.location.search);
     if (params.get("abrirLogin") !== "1") return;
     useChatStore.getState().setAuthOpen(true);
-    const destino = params.get("destino");
+    const destino = safeInternalPath(params.get("destino"));
     if (destino) {
       useChatStore.getState().setAccionPendiente(destino);
-      params.delete("destino");
     }
+    params.delete("destino");
     params.delete("abrirLogin");
     const query = params.toString();
     window.history.replaceState(

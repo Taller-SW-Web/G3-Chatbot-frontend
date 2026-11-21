@@ -150,6 +150,25 @@ describe("AppShell", () => {
     expect(screen.getByText("Inicia sesión")).toBeDefined();
   });
 
+  it.each(["//evil.com", "https://evil.example", "javascript:alert(1)", "/\\evil.com"])(
+    "descarta el destino externo %s",
+    (destino) => {
+      window.history.replaceState(null, "", `/?abrirLogin=1&destino=${encodeURIComponent(destino)}`);
+      montar(shell("home"));
+
+      expect(useChatStore.getState().authOpen).toBe(true);
+      expect(useChatStore.getState().accionPendiente).toBeNull();
+      expect(window.location.search).toBe("");
+    },
+  );
+
+  it("conserva un destino interno con query string", () => {
+    window.history.replaceState(null, "", `/?abrirLogin=1&destino=${encodeURIComponent("/pedidos?x=1")}`);
+    montar(shell("home"));
+
+    expect(useChatStore.getState().accionPendiente).toBe("/pedidos?x=1");
+  });
+
   it("abre el modal sin destino y limpia el parámetro de la URL", () => {
     window.history.replaceState(null, "", "/?abrirLogin=1&otros=1");
     montar(shell("home"));

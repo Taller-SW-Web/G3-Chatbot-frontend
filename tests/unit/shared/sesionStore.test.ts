@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useChatStore } from "@/shared/auth/chatStore";
+import { queryClient } from "@/shared/di/queryClient";
 
 function reset() {
   useChatStore.setState({
@@ -42,5 +43,13 @@ describe("chatStore session (SPEC-03)", () => {
     expect(after.accessToken).toBeNull();
     expect(after.cliente).toBeNull();
     expect(after.accionPendiente).toBeNull();
+  });
+
+  it("logout drops user-scoped cached queries but keeps the public catalog", () => {
+    queryClient.setQueryData(["pedidos"], [1]);
+    queryClient.setQueryData(["catalogo", "ofertas"], [2]);
+    useChatStore.getState().logout();
+    expect(queryClient.getQueryData(["pedidos"])).toBeUndefined();
+    expect(queryClient.getQueryData(["catalogo", "ofertas"])).toEqual([2]);
   });
 });

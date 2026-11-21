@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react
 import { usePathname, useRouter } from "next/navigation";
 import { useChatStore } from "@/shared/auth/chatStore";
 import { container } from "@/shared/di/container";
+import { hayCierreVoluntarioReciente } from "@/shared/auth/cierreVoluntario";
 
 export type AuthGuardProps = {
   children: ReactNode;
@@ -83,6 +84,8 @@ export function AuthGuard({
     if (!mounted) return;
 
     if (estado === "fallo") {
+      // Cierre de sesión pedido por el usuario: quien lo inició navega a "/"; no es un vencimiento.
+      if (hayCierreVoluntarioReciente()) return;
       const search = typeof window !== "undefined" ? window.location.search : "";
       const fullPath = pathname ? `${pathname}${search}` : "/";
 
