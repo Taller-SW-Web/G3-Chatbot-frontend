@@ -1,5 +1,5 @@
-import { AppShell } from "@/adapters/inbound/pages/AppShell";
-import { CartPage } from "@/adapters/inbound/pages/CartPage";
+import { AppShell } from "@/shared/ui/shell/AppShell";
+import { CartPage } from "@/modules/mod-cart/public";
 
 export default function CarritoRoute() {
   return (

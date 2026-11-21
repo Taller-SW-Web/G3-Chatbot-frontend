@@ -1,0 +1,62 @@
+"use client";
+
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema, type LoginInput } from "@/modules/mod-auth/domain/schemas/login.schema";
+import { PasswordVisibilityButton } from "@/modules/mod-auth/ui/forms/PasswordVisibilityButton";
+
+/** SPEC-03 Req. 1: email + password with generic errors and helper links. */
+export function LoginForm({
+  onOk,
+  onReenviar,
+  correoInicial,
+  error,
+  cargando,
+}: {
+  onOk: (d: LoginInput) => void;
+  onReenviar?: () => void;
+  correoInicial?: string;
+  error?: string | null;
+  cargando?: boolean;
+}) {
+  const [verContrasena, setVerContrasena] = useState(false);
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { correo: correoInicial ?? "" },
+  });
+  return (
+    <form onSubmit={handleSubmit(onOk)} className="flex flex-col gap-2">
+      <input {...register("correo")} placeholder="Correo" aria-label="Correo"
+        autoComplete="email" aria-invalid={!!errors.correo}
+        aria-describedby={errors.correo ? "correo-login-error" : undefined}
+        className="wf-input px-3 py-2.5 text-sm outline-none" />
+      {errors.correo && <span id="correo-login-error" className="text-[12px] text-error-default">{errors.correo.message}</span>}
+      <div className="relative">
+        <input {...register("password")} type={verContrasena ? "text" : "password"} placeholder="Contraseña"
+          aria-label="Contraseña" autoComplete="current-password"
+          className="wf-input w-full px-3 py-2.5 pr-12 text-sm outline-none" />
+        <PasswordVisibilityButton visible={verContrasena} onToggle={() => setVerContrasena((v) => !v)} />
+      </div>
+      {error && (
+        <p role="alert" className="text-[12px] text-error-default">{error}</p>
+      )}
+      <button type="submit" disabled={cargando}
+        className="wf-btn py-3 text-[12px] font-bold bg-action-primary text-surface-ink disabled:opacity-60">
+        {cargando ? "INGRESANDO…" : "ENTRAR"}
+      </button>
+      <div className="flex flex-col gap-1 text-left">
+        <button type="button" className="text-[12px] font-semibold underline text-text-secondary text-left">
+          ¿Olvidaste tu contraseña?
+        </button>
+        <button
+          type="button"
+          onClick={onReenviar}
+          className="text-[12px] font-semibold underline text-text-secondary text-left"
+        >
+          ¿No verificaste tu correo? Reenviar verificación
+        </button>
+      </div>
+    </form>
+  );
+}

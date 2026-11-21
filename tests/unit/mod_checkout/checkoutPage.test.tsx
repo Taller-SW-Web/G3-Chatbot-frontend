@@ -1,0 +1,455 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import { createElement } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { CheckoutPage } from "@/modules/mod-checkout/ui/CheckoutPage";
+import { useChatStore } from "@/shared/auth/chatStore";
+
+const navMock = vi.hoisted(() => ({
+  push: vi.fn(),
+  replace: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: navMock.push,
+    replace: navMock.replace,
+  }),
+}));
+
+const mockApi = {
+  listarCarrito: vi.fn(),
+  iniciarCheckout: vi.fn(),
+  pagarCheckout: vi.fn(),
+  // SPEC-12: la dirección se cotiza contra Despacho antes de confirmar.
+  cotizarEnvio: vi.fn(),
+};
+
+vi.mock("@/shared/di/container", () => ({
+  container: {
+    api: {
+      listarCarrito: (...args: unknown[]) => mockApi.listarCarrito(...args),
+      iniciarCheckout: (...args: unknown[]) => mockApi.iniciarCheckout(...args),
+      pagarCheckout: (...args: unknown[]) => mockApi.pagarCheckout(...args),
+      cotizarEnvio: (...args: unknown[]) => mockApi.cotizarEnvio(...args),
+    },
+  },
+}));
+
+function resetStore() {
+  useChatStore.setState({
+    cliente: {
+      id: "cli-1",
+      nombreCompleto: "Diego Comprador",
+      correo: "diego@test.pe",
+      celularVerificado: true,
+    },
+    carrito: {
+      lineas: [
+        {
+          item_id: "linea-1",
+          sku: "SKU-ZAP-1",
+          cantidad: 1,
+          producto: {
+            sku: "SKU-ZAP-1",
+            nombre: "Zapatilla Runner",
+            precio: 120.0,
+            categoria: "Calzado",
+            talla: "42",
+            color: "Negro",
+          },
+        },
+      ],
+      subtotal: 120.0,
+      count: 1,
+    },
+    ultimoPedido: null,
+  });
+
+  navMock.push.mockClear();
+  navMock.replace.mockClear();
+  mockApi.iniciarCheckout.mockReset();
+  mockApi.listarCarrito.mockReset();
+  mockApi.listarCarrito.mockResolvedValue({
+    lineas: [{ item_id: "linea-1", sku: "SKU-ZAP-1", nombre: "Zapatilla Runner", variante: "42 / Negro", cantidad: 1, precio: 120, disponible: true }],
+    subtotal: 120,
+    descuentos: [],
+    total: 120,
+    avisos: [],
+  });
+  mockApi.pagarCheckout.mockReset();
+  mockApi.cotizarEnvio.mockReset();
+  mockApi.cotizarEnvio.mockResolvedValue({
+    coberturaDisponible: true,
+    costoEnvio: 12.5,
+    moneda: "PEN",
+    plazoEstimadoDias: 1,
+    distrito: "Miraflores",
+  });
+}
+
+function llenarDireccionValida() {
+  fireEvent.change(screen.getByLabelText("Nombre completo"), {
+    target: { value: "Diego Comprador" },
+  });
+  fireEvent.change(screen.getByLabelText("Dirección exacta"), {
+    target: { value: "Av. Las Palmeras 123" },
+  });
+  fireEvent.change(screen.getByLabelText("Distrito de entrega"), {
+    target: { value: "Miraflores" },
+  });
+  fireEvent.change(screen.getByLabelText("Número de documento"), {
+    target: { value: "12345678" },
+  });
+}
+
+/** El checkout cotiza el envío con React Query (SPEC-12): necesita su provider. */
+function renderCheckout() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(CheckoutPage)
+    )
+  );
+}
+
+describe("CheckoutPage (SPEC-14, H4-F3)", () => {
+  beforeEach(resetStore);
+  afterEach(cleanup);
+
+  it("renderiza paso 1 con el total del servidor", async () => {
+    renderCheckout();
+
+    expect(screen.getByText("Paso 1 de 2")).toBeDefined();
+    expect(screen.getByText("Total a pagar:")).toBeDefined();
+    expect(await screen.findByText("Continuar al pago · S/ 120.00")).toBeDefined();
+    expect(screen.getByText("Completa la dirección y el documento para continuar.")).toBeDefined();
+  });
+
+  it("incluye el descuento del carrito del servidor y la cotización de envío", async () => {
+    mockApi.listarCarrito.mockResolvedValueOnce({
+      lineas: [{ item_id: "linea-1", sku: "SKU-ZAP-1", nombre: "Zapatilla Runner", cantidad: 1, precio: 229, disponible: true }],
+      subtotal: 229,
+      descuentos: [{ nombre: "Cupón", monto: 40 }],
+      total: 189,
+      avisos: [],
+    });
+    renderCheckout();
+    expect(await screen.findByText("Continuar al pago · S/ 189.00")).toBeDefined();
+    llenarDireccionValida();
+    expect(await screen.findByText("Continuar al pago · S/ 201.50")).toBeDefined();
+    expect(screen.getByText("S/ 201.50")).toBeDefined();
+  });
+
+  it("desactiva el avance y descarta la cotización si la dirección deja de ser válida", async () => {
+    renderCheckout();
+    llenarDireccionValida();
+    const button = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+
+    fireEvent.change(screen.getByLabelText("Dirección exacta"), { target: { value: "" } });
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(true));
+    expect(screen.getByText("Envío: se calcula al elegir la dirección")).toBeDefined();
+    expect(screen.getByText("Completa la dirección y el documento para continuar.")).toBeDefined();
+  });
+
+  it("permite reintentar si falla la consulta del total", async () => {
+    mockApi.listarCarrito.mockRejectedValueOnce(new Error("Sin conexión"));
+    renderCheckout();
+    expect(await screen.findByText("Total no disponible")).toBeDefined();
+    expect(screen.getByText(/No pudimos obtener el total del carrito/)).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+    expect(await screen.findByText("Continuar al pago · S/ 120.00")).toBeDefined();
+  });
+
+  it("inicia checkout en backend al confirmar dirección y avanza al paso 2", async () => {
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-uuid-1",
+      cartId: "cart-uuid-1",
+      status: "PENDING_PAYMENT",
+      total: 132.5,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    renderCheckout();
+
+    llenarDireccionValida();
+
+    const submitBtn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => {
+      expect(submitBtn.hasAttribute("disabled")).toBe(false);
+    });
+
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(mockApi.iniciarCheckout).toHaveBeenCalled();
+      expect(mockApi.iniciarCheckout).toHaveBeenCalledWith(
+        expect.objectContaining({
+          direccion: expect.objectContaining({ distrito: "Miraflores" }),
+          contacto: expect.objectContaining({ email: "diego@test.pe" }),
+        }),
+        expect.any(String)
+      );
+      // The server computes lines and amounts: none of them may be sent.
+      const body = mockApi.iniciarCheckout.mock.calls[0][0];
+      expect(Object.keys(body).sort()).toEqual(["contacto", "direccion"]);
+      for (const k of ["lineas", "subtotal", "costoEnvio", "descuento", "total"]) {
+        expect(body).not.toHaveProperty(k);
+      }
+      expect(screen.getByText("Paso 2 de 2")).toBeDefined();
+      expect(screen.getByText(/Pago simulado – entorno académico/i)).toBeDefined();
+      expect(screen.getByText(/Intentos 3\/3/i)).toBeDefined();
+    });
+  });
+
+  it("omite contacto.email cuando el correo del cliente está vacío", async () => {
+    useChatStore.setState((state) => ({ cliente: { ...state.cliente!, correo: "  " } }));
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-uuid-1",
+      total: 132.5,
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const submitBtn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(submitBtn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => expect(mockApi.iniciarCheckout).toHaveBeenCalled());
+    expect(mockApi.iniciarCheckout.mock.calls[0][0].contacto).not.toHaveProperty("email");
+  });
+
+  it("completa pago aprobado con tarjeta de prueba y redirige a /exito", async () => {
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-uuid-1",
+      cartId: "cart-uuid-1",
+      status: "PENDING_PAYMENT",
+      total: 132.5,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    mockApi.pagarCheckout.mockResolvedValueOnce({
+      id: "att-uuid-1",
+      checkoutId: "chk-uuid-1",
+      resultado: "APROBADO",
+      marca: "VISA",
+      ultimos4: "1111",
+      monto: 132.5,
+      idTransaccion: "SIM-12345",
+    });
+
+    renderCheckout();
+
+    // Avanzar a paso 2
+    llenarDireccionValida();
+
+    const confirmarBtn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(confirmarBtn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(confirmarBtn);
+
+    await waitFor(() => expect(screen.getByText("Paso 2 de 2")).toBeDefined());
+
+    // Llenar tarjeta
+    fireEvent.change(screen.getByPlaceholderText("Nombre del titular de la tarjeta"), {
+      target: { value: "Diego Comprador" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Número de tarjeta/i), {
+      target: { value: "4111 1111 1111 1111" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("MM/AA"), {
+      target: { value: "12/28" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/CVV/i), {
+      target: { value: "123" },
+    });
+
+    const pagarBtn = screen.getByRole("button", { name: /PAGAR S\//i });
+    await waitFor(() => expect(pagarBtn.hasAttribute("disabled")).toBe(false));
+
+    fireEvent.click(pagarBtn);
+
+    await waitFor(() => {
+      expect(mockApi.pagarCheckout).toHaveBeenCalledWith(
+        "chk-uuid-1",
+        expect.objectContaining({
+          numeroTarjeta: "4111111111111111",
+          titular: "Diego Comprador",
+          vencimiento: "12/28",
+          cvv: "123",
+        }),
+        expect.any(String)
+      );
+      expect(navMock.push).toHaveBeenCalledWith("/exito");
+      expect(useChatStore.getState().ultimoPedido).not.toBeNull();
+    });
+  });
+
+  it("muestra error y descuenta intentos al recibir 402 PAGO_RECHAZADO", async () => {
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-uuid-2",
+      cartId: "cart-uuid-2",
+      status: "PENDING_PAYMENT",
+      total: 132.5,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    const rejectedError = {
+      response: {
+        status: 402,
+        data: {
+          code: "PAGO_RECHAZADO",
+          motivo: "FONDOS_INSUFICIENTES",
+          intentosRestantes: 2,
+          detail: "Tu tarjeta fue rechazada por fondos insuficientes.",
+        },
+      },
+    };
+    mockApi.pagarCheckout.mockRejectedValueOnce(rejectedError);
+
+    renderCheckout();
+
+    // Paso 1 -> 2
+    llenarDireccionValida();
+
+    const confirmarBtn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(confirmarBtn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(confirmarBtn);
+
+    await waitFor(() => expect(screen.getByText("Paso 2 de 2")).toBeDefined());
+
+    // Tarjeta con fondos insuficientes
+    fireEvent.change(screen.getByPlaceholderText("Nombre del titular de la tarjeta"), {
+      target: { value: "Diego Comprador" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Número de tarjeta/i), {
+      target: { value: "4000 0000 0000 0002" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("MM/AA"), {
+      target: { value: "12/28" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/CVV/i), {
+      target: { value: "123" },
+    });
+
+    const pagarBtn = screen.getByRole("button", { name: /PAGAR S\//i });
+    await waitFor(() => expect(pagarBtn.hasAttribute("disabled")).toBe(false));
+
+    fireEvent.click(pagarBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeDefined();
+      expect(screen.getByText(/fondos insuficientes/i)).toBeDefined();
+      expect(screen.getByText(/Intentos 2\/3/i)).toBeDefined();
+    });
+  });
+
+  it("bloquea el avance y muestra error si iniciarCheckout falla en el servidor (PR #33 crítico 1)", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({
+      response: {
+        status: 500,
+        data: { detail: "Error interno al crear sesión de checkout" },
+      },
+    });
+
+    renderCheckout();
+
+    llenarDireccionValida();
+
+    const confirmarBtn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(confirmarBtn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(confirmarBtn);
+
+    await waitFor(() => {
+      // Debe mantenerse en Paso 1 de 2
+      expect(screen.getByText("Paso 1 de 2")).toBeDefined();
+      // Debe mostrar el error en pantalla
+      expect(screen.getByRole("alert")).toBeDefined();
+      expect(screen.getByText(/Error interno al crear sesión de checkout/i)).toBeDefined();
+      // No debe avanzar a paso 2
+      expect(screen.queryByText("Paso 2 de 2")).toBeNull();
+    });
+  });
+
+  it("muestra el summary del 409 CARRITO_DESACTUALIZADO y pide confirmar de nuevo", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({
+      response: {
+        status: 409,
+        data: {
+          code: "CARRITO_DESACTUALIZADO",
+          summary: {
+            lineas: [{ sku: "SKU-ZAP-1", cantidad: 1, precioUnitario: 110 }],
+            subtotal: 110,
+            descuento: 10,
+            costoEnvio: 12.5,
+            total: 112.5,
+          },
+        },
+      },
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("resumen-actualizado")).toBeDefined();
+      expect(screen.getByText("Total: S/ 112.50")).toBeDefined();
+      expect(screen.getByText(/confirma nuevamente/i)).toBeDefined();
+      expect(screen.getByText("Paso 1 de 2")).toBeDefined();
+    });
+  });
+
+  it("muestra mensaje ante 422 SIN_COBERTURA", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({
+      response: { status: 422, data: { code: "SIN_COBERTURA" } },
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    await waitFor(() => expect(screen.getByText(/cobertura de envío/i)).toBeDefined());
+  });
+
+  it("reutiliza la Idempotency-Key al reintentar el mismo envío", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({ response: { status: 503, data: {} } });
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-uuid-1",
+      total: 132.5,
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+
+    fireEvent.click(screen.getByRole("button", { name: /Continuar al pago/i }));
+    await waitFor(() => expect(mockApi.iniciarCheckout).toHaveBeenCalledTimes(2));
+
+    const [first, second] = mockApi.iniciarCheckout.mock.calls;
+    expect(first[1]).toEqual(expect.any(String));
+    expect(second[1]).toBe(first[1]);
+  });
+});

@@ -1,5 +1,5 @@
-import { AppShell } from "@/adapters/inbound/pages/AppShell";
-import { VerificarCorreoPage } from "@/adapters/inbound/pages/VerificarCorreoPage";
+import { AppShell } from "@/shared/ui/shell/AppShell";
+import { VerificarCorreoPage } from "@/modules/mod-auth/public";
 
 /** `/verificar-correo?token=…`: el token se lee en el servidor y se pasa a la página client. */
 export default async function VerificarCorreoRoute({

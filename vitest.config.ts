@@ -5,7 +5,7 @@ export default defineConfig({
   resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
   test: {
     environment: "node",
-    setupFiles: ["./tests/unit/setup.ts"],
+    setupFiles: ["./src/shared/testing/setup.ts"],
     include: ["tests/unit/**/*.test.{ts,tsx}"],
     coverage: {
       provider: "v8",

@@ -1,6 +1,6 @@
-import { AppShell } from "@/adapters/inbound/pages/AppShell";
-import { OrderHistoryPage } from "@/adapters/inbound/pages/OrderHistoryPage";
-import { AuthGuard } from "@/adapters/inbound/components/AuthGuard";
+import { AppShell } from "@/shared/ui/shell/AppShell";
+import { OrderHistoryPage } from "@/modules/mod-orders/public";
+import { AuthGuard } from "@/shared/auth/AuthGuard";
 
 const TABS = ["proceso", "entregados", "reembolso", "reclamos"] as const;
 type Tab = (typeof TABS)[number];

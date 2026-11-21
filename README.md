@@ -1,6 +1,14 @@
 # G3 Chatbot Frontend
 
-Frontend de Next.js del canal chatbot. La arquitectura está descrita en `arquitectura-frontend.md`.
+Frontend de Next.js del canal chatbot. La arquitectura está descrita en `arquitectura-frontend.md` y el corte por capacidad en `docs/adr/ADR-0024-modularizacion.md`.
+
+## Estructura (ADR-0024)
+
+- `src/shared/` — kernel: api/http, auth/sesión, config, DI, testing y primitivas UI. Sin reglas de negocio.
+- `src/modules/mod-*/` — 8 módulos por capacidad (`domain`, `application`, `ports`, `adapters`, `ui`) con `MODULE.md`, `module.manifest.ts` y `public.ts`.
+- `src/app/` — rutas Next; cada `page.tsx` es un wrapper que compone `AppShell` + `AuthGuard` + la página del módulo.
+
+Regla: un módulo solo importa `shared/*`, su propio árbol y el `public.ts` de los módulos de su `dependsOn`. `pnpm modules:check` lo verifica.
 
 ## Requisitos
 
@@ -16,6 +24,8 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm modules:sync   # regenera src/modules/registry.generated.ts
+pnpm modules:check  # ids, registry, estructura y fronteras
 ```
 
 ## Variables de entorno

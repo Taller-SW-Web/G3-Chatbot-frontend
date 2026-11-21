@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import { AppShell } from "@/adapters/inbound/pages/AppShell";
-import { AuthGuard } from "@/adapters/inbound/components/AuthGuard";
-import { SeguimientoPage } from "@/adapters/inbound/pages/SeguimientoPage";
+import { AppShell } from "@/shared/ui/shell/AppShell";
+import { AuthGuard } from "@/shared/auth/AuthGuard";
+import { SeguimientoPage } from "@/modules/mod-orders/public";
 
 export default function SeguimientoRoute() {
   return (

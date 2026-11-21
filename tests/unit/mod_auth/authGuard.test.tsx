@@ -1,0 +1,179 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { createElement } from "react";
+import { AuthGuard } from "@/shared/auth/AuthGuard";
+import { useChatStore } from "@/shared/auth/chatStore";
+import { SESION_COOKIE_NAME, sincronizarCookieSesion } from "@/shared/auth/sesion";
+
+const navMock = vi.hoisted(() => ({
+  replace: vi.fn(),
+  push: vi.fn(),
+  pathname: "/cuenta",
+}));
+
+const apiMock = vi.hoisted(() => ({ refreshSession: vi.fn() }));
+
+vi.mock("@/shared/di/container", () => ({ container: { api: apiMock } }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    replace: navMock.replace,
+    push: navMock.push,
+  }),
+  usePathname: () => navMock.pathname,
+}));
+
+function resetStore() {
+  useChatStore.setState({
+    accessToken: null,
+    expiraEn: null,
+    cliente: null,
+    accionPendiente: null,
+    authOpen: false,
+  });
+  apiMock.refreshSession.mockReset();
+  apiMock.refreshSession.mockRejectedValue(new Error("sin refresh"));
+  navMock.replace.mockClear();
+  navMock.push.mockClear();
+  navMock.pathname = "/cuenta";
+  sincronizarCookieSesion(false);
+}
+
+describe("AuthGuard (H4-S5)", () => {
+  beforeEach(resetStore);
+  afterEach(cleanup);
+
+  it("permite renderizar el contenido protegido si el usuario tiene sesión activa", async () => {
+    useChatStore.getState().applySession("jwt-valido-123", 900, {
+      id: "cli-1",
+      nombreCompleto: "Diego Dev",
+      correo: "diego@ejemplo.pe",
+      celularVerificado: true,
+    });
+
+    render(
+      createElement(
+        AuthGuard,
+        null,
+        createElement("div", { "data-testid": "contenido-privado" }, "Pantalla privada")
+      )
+    );
+
+    expect(await screen.findByTestId("contenido-privado")).toBeDefined();
+    expect(screen.getByText("Pantalla privada")).toBeDefined();
+    expect(navMock.replace).not.toHaveBeenCalled();
+    expect(useChatStore.getState().authOpen).toBe(false);
+    expect(apiMock.refreshSession).not.toHaveBeenCalled();
+  });
+
+  it("bloquea el contenido y redirige al login si no hay token de sesión", async () => {
+    navMock.pathname = "/checkout";
+
+    render(
+      createElement(
+        AuthGuard,
+        null,
+        createElement("div", { "data-testid": "contenido-privado" }, "No visible")
+      )
+    );
+
+    expect(screen.queryByTestId("contenido-privado")).toBeNull();
+    expect(screen.getByTestId("auth-guard-loading")).toBeDefined();
+
+    await waitFor(() => {
+      expect(navMock.replace).toHaveBeenCalledWith("/?abrirLogin=1");
+    });
+
+    const store = useChatStore.getState();
+    expect(store.authOpen).toBe(true);
+    expect(store.accionPendiente).toBe("/checkout");
+  });
+
+  it("respeta rutas con parámetros y destinos personalizados", async () => {
+    navMock.pathname = "/pedidos/reclamos";
+
+    render(
+      createElement(
+        AuthGuard,
+        { redirectTo: "/?abrirLogin=1&origen=pedidos" },
+        createElement("div", null, "Privado")
+      )
+    );
+
+    await waitFor(() => {
+      expect(navMock.replace).toHaveBeenCalledWith("/?abrirLogin=1&origen=pedidos");
+    });
+
+    expect(useChatStore.getState().accionPendiente).toBe("/pedidos/reclamos");
+    expect(useChatStore.getState().authOpen).toBe(true);
+  });
+
+  it("sincroniza la cookie indicadora de sesión en applySession y la limpia en logout", () => {
+    expect(document.cookie).not.toContain(`${SESION_COOKIE_NAME}=1`);
+
+    useChatStore.getState().applySession("jwt-token", 900);
+    expect(document.cookie).toContain(`${SESION_COOKIE_NAME}=1`);
+
+    useChatStore.getState().logout();
+    expect(document.cookie).not.toContain(`${SESION_COOKIE_NAME}=1`);
+  });
+
+  it("bloquea el acceso y redirige si el token venció y la renovación falla", async () => {
+    useChatStore.setState({
+      accessToken: "token-expirado",
+      expiraEn: Date.now() - 5000,
+    });
+    navMock.pathname = "/cuenta";
+
+    render(
+      createElement(
+        AuthGuard,
+        null,
+        createElement("div", { "data-testid": "contenido-privado" }, "No debe verse")
+      )
+    );
+
+    expect(screen.queryByTestId("contenido-privado")).toBeNull();
+    await waitFor(() => {
+      expect(navMock.replace).toHaveBeenCalledWith("/?abrirLogin=1");
+    });
+    expect(apiMock.refreshSession).toHaveBeenCalledTimes(1);
+    expect(useChatStore.getState().accionPendiente).toBe("/cuenta");
+  });
+
+  it("renueva la sesión en silencio si el token rehidratado no trae expiraEn", async () => {
+    useChatStore.setState({ accessToken: "token-rehidratado", expiraEn: null });
+    apiMock.refreshSession.mockResolvedValue({ accessToken: "token-nuevo", expiresIn: 900 });
+
+    render(
+      createElement(
+        AuthGuard,
+        null,
+        createElement("div", { "data-testid": "contenido-privado" }, "Privado")
+      )
+    );
+
+    expect(await screen.findByTestId("contenido-privado")).toBeDefined();
+    expect(apiMock.refreshSession).toHaveBeenCalledTimes(1);
+    expect(useChatStore.getState().accessToken).toBe("token-nuevo");
+    expect(navMock.replace).not.toHaveBeenCalled();
+  });
+
+  it("renueva la sesión en silencio si el token venció", async () => {
+    useChatStore.setState({ accessToken: "token-expirado", expiraEn: Date.now() - 5000 });
+    apiMock.refreshSession.mockResolvedValue({ accessToken: "token-nuevo", expiresIn: 900 });
+
+    render(
+      createElement(
+        AuthGuard,
+        null,
+        createElement("div", { "data-testid": "contenido-privado" }, "Privado")
+      )
+    );
+
+    expect(await screen.findByTestId("contenido-privado")).toBeDefined();
+    expect(apiMock.refreshSession).toHaveBeenCalledTimes(1);
+    expect(navMock.replace).not.toHaveBeenCalled();
+  });
+});
