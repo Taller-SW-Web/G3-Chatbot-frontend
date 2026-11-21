@@ -111,7 +111,9 @@ export const useChatStore = create<ChatState>()(
       logout: () => {
         sincronizarCookieSesion(false);
         // Pedidos y carrito cacheados en memoria pertenecen al usuario que sale.
-        queryClient.clear();
+        // El catálogo es público: borrarlo también cancelaría su carga en curso al arrancar
+        // (el refresh de arranque de un visitante anónimo termina en logout) y dejaría la home cargando.
+        queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== "catalogo" });
         return set({
           accessToken: null,
           expiraEn: null,
