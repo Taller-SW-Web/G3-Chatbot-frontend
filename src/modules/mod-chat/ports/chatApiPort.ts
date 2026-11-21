@@ -31,6 +31,23 @@ export type ResultadoAccionChat = {
   bloques: Bloque[];
 };
 
+/** Reacción a un mensaje del asistente (SPEC-24 Req. 1). */
+export type ReaccionMensaje = "POSITIVE" | "NEGATIVE";
+
+/** Formulario de sugerencia o bug (SPEC-24 Req. 4). */
+export type NuevaSugerenciaInput = {
+  tipo: "SUGERENCIA" | "BUG";
+  titulo: string;
+  descripcion: string;
+  correoContacto: string;
+  /** Captura opcional (JPG/PNG ≤ 5 MB), subida por el backend al bucket privado. */
+  captura?: File;
+};
+
+export type SugerenciaCreada = {
+  codigoSeguimiento: string;
+};
+
 /** Tamaño de página del listado y la búsqueda (backend: CONVERSATIONS_PAGE_SIZE). */
 export const CONVERSACIONES_POR_PAGINA = 20;
 
@@ -62,4 +79,8 @@ export interface ChatApiPort {
     urlImagen?: string | null;
     expiraEn?: string | null;
   }>;
+  /** SPEC-24 Req. 1: registra o cambia la reacción de un mensaje. */
+  enviarReaccion(mensajeId: string, reaccion: ReaccionMensaje): Promise<void>;
+  /** SPEC-24 Req. 4: registra la sugerencia o bug, con captura opcional. */
+  enviarSugerencia(input: NuevaSugerenciaInput): Promise<SugerenciaCreada>;
 }

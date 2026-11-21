@@ -1,6 +1,7 @@
 "use client";
 
 import { http } from "@/shared/api/http";
+import { newIdempotencyKey } from "@/shared/api/idempotency";
 import { apiConfig } from "@/shared/config/apiConfig";
 import type { Bloque } from "@/modules/mod-chat/domain/entities/Bloque";
 import type { AdjuntoMensaje } from "@/modules/mod-chat/domain/entities/Adjunto";
@@ -69,6 +70,24 @@ export const chatApi: ChatApiPort = {
   async obtenerUrlAdjunto(adjuntoId) {
     const { data } = await http.get(`/chat/adjuntos/${encodeURIComponent(adjuntoId)}`);
     return data as { urlMiniatura?: string | null; urlImagen?: string | null; expiraEn?: string | null };
+  },
+  async enviarReaccion(mensajeId, reaccion) {
+    await http.post(`/mensajes/${encodeURIComponent(mensajeId)}/reaccion`, { reaccion });
+  },
+  async enviarSugerencia(input) {
+    const form = new FormData();
+    form.append("tipo", input.tipo);
+    form.append("titulo", input.titulo);
+    form.append("descripcion", input.descripcion);
+    form.append("correoContacto", input.correoContacto);
+    if (input.captura) form.append("captura", input.captura);
+    const { data } = await http.post("/sugerencias", form, {
+      headers: { "Idempotency-Key": newIdempotencyKey() },
+    });
+    const body = (data ?? {}) as Record<string, unknown>;
+    return {
+      codigoSeguimiento: String(body.codigoSeguimiento ?? body.codigo ?? body.id ?? ""),
+    };
   },
 };
 

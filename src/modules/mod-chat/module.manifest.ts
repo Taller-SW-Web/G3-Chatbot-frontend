@@ -16,6 +16,8 @@ export const manifest = {
     "/chat/conversaciones/{conversacionId}/adjuntos",
     "/chat/conversaciones/{conversacionId}/adjuntos/{adjuntoId}",
     "/chat/adjuntos/{adjuntoId}",
+    "/mensajes/{mensajeId}/reaccion",
+    "/sugerencias",
   ],
   dependsOn: [
     "mod-auth",

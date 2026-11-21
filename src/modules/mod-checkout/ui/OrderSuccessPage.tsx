@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { CheckIcon } from "@/shared/ui/icons";
-import { RatingPopup } from "@/modules/mod-checkout/ui/RatingPopup";
+import {
+  RatingPopup,
+  calificacionCompraDescartada,
+} from "@/modules/mod-checkout/ui/RatingPopup";
 import { useChatStore } from "@/shared/auth/chatStore";
 import { maskEmail } from "@/shared/security/sanitize";
+
+const sinSuscripcion = () => () => {};
 
 /** Aviso textual sobre el envío del correo de confirmación (SPEC-16). */
 export function avisoConfirmacion(correoEnmascarado?: string, fallbackEmail?: string): string {
@@ -34,6 +39,12 @@ export function OrderSuccessPage() {
   const orderId = pedido?.orderId || "PED-2026-00891";
   const total = pedido?.total ?? pedido?.subtotal ?? 0;
   const aviso = avisoConfirmacion(pedido?.correoEnmascarado, correo);
+  // SPEC-24: "Ahora no" se recuerda por pedido en este navegador.
+  const descartada = useSyncExternalStore(
+    sinSuscripcion,
+    () => calificacionCompraDescartada(orderId),
+    () => false
+  );
 
   return (
     <div className="relative min-h-full p-6 flex flex-col items-center gap-3 text-center">
@@ -60,7 +71,9 @@ export function OrderSuccessPage() {
       <button onClick={() => router.push("/")} className="wf-btn w-full py-3 text-sm font-bold tracking-wide bg-white border border-border-default">SEGUIR COMPRANDO</button>
       <button onClick={() => setShowRating(true)} className="text-[12px] font-semibold underline text-text-secondary">Calificar mi compra</button>
 
-      {showRating && <RatingPopup onClose={() => setShowRating(false)} />}
+      {showRating && !descartada && (
+        <RatingPopup pedidoId={orderId} onClose={() => setShowRating(false)} />
+      )}
     </div>
   );
 }

@@ -37,6 +37,24 @@
       "path": "/chat/adjuntos/{adjuntoId}",
       "todo": "TODO(SPEC-23): el backend aún no publica la emisión de URLs firmadas.",
       "reviewBy": "2026-12-19"
+    },
+    {
+      "module": "mod-chat",
+      "path": "/mensajes/{mensajeId}/reaccion",
+      "todo": "TODO(SPEC-24): el backend aún no publica la reacción por mensaje.",
+      "reviewBy": "2026-12-19"
+    },
+    {
+      "module": "mod-chat",
+      "path": "/sugerencias",
+      "todo": "TODO(SPEC-24): el backend aún no publica el alta de sugerencias con captura.",
+      "reviewBy": "2026-12-19"
+    },
+    {
+      "module": "mod-checkout",
+      "path": "/pedidos/{pedidoId}/valoracion-compra",
+      "todo": "TODO(SPEC-24): el backend aún no publica la valoración de compra; confirmar tag (mod-checkout o mod-orders) y nombres de campos.",
+      "reviewBy": "2026-12-19"
     }
   ],
   "contractTagExceptions": [

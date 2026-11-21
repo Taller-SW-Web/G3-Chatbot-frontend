@@ -20,6 +20,8 @@ type ProblemShape = {
   intentosRestantes?: number;
   motivo?: string;
   summary?: ResumenServidor;
+  /** Número enmascarado que devuelve el 403 CELULAR_NO_VERIFICADO. */
+  celularEnmascarado?: string;
   /** Detalle por línea del 409 CARRITO_DESACTUALIZADO (convención pendiente de backend). */
   lineas?: unknown;
   detalle?: unknown;
@@ -83,6 +85,7 @@ export function CheckoutPage() {
   const [guardarDireccion, setGuardarDireccion] = useState(false);
   // SPEC-04: el backend bloquea el checkout con 403 CELULAR_NO_VERIFICADO.
   const [otpRequerido, setOtpRequerido] = useState(false);
+  const [celularOtp, setCelularOtp] = useState<string | undefined>();
   const [pagando, setPagando] = useState(false);
   const [creandoCheckout, setCreandoCheckout] = useState(false);
 
@@ -185,6 +188,7 @@ export function CheckoutPage() {
         // SPEC-04: se ofrece la verificación en ese momento y se recuerda la acción pendiente.
         checkoutKeyRef.current = null;
         setAccionPendiente("INICIAR_CHECKOUT");
+        setCelularOtp(data?.celularEnmascarado);
         setOtpRequerido(true);
         setErrorPago(null);
       } else if (status === 409 && data?.code === "CARRITO_DESACTUALIZADO") {
@@ -300,10 +304,10 @@ export function CheckoutPage() {
             <div data-testid="checkout-otp-celular">
               <p className="text-[13px] font-semibold text-text-primary">
                 Para coordinar la entrega necesitamos confirmar tu celular{" "}
-                {cliente?.celularEnmascarado ?? ""}
+                {celularOtp ?? cliente?.celularEnmascarado ?? ""}
               </p>
               <OtpCelularFlow
-                celularEnmascarado={cliente?.celularEnmascarado}
+                celularEnmascarado={celularOtp ?? cliente?.celularEnmascarado}
                 onVerificado={() => {
                   setOtpRequerido(false);
                   setAccionPendiente(null);

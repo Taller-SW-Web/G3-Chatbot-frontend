@@ -74,6 +74,35 @@ describe("adjuntos del chat en el adapter REST (SPEC-23)", () => {
     });
   });
 
+  it("registra la reacción del mensaje (SPEC-24)", async () => {
+    handler = (config) => reply(config, 204, undefined);
+
+    await container.chat.enviarReaccion("m-1", "POSITIVE");
+
+    expect(calls[0]).toMatchObject({ method: "post", url: "/mensajes/m-1/reaccion" });
+    expect(JSON.parse(String(calls[0].data))).toEqual({ reaccion: "POSITIVE" });
+  });
+
+  it("envía la sugerencia con su captura en multipart (SPEC-24)", async () => {
+    handler = (config) => reply(config, 201, { codigoSeguimiento: "SUG-2026-0001" });
+
+    const resultado = await container.chat.enviarSugerencia({
+      tipo: "BUG",
+      titulo: "No carga",
+      descripcion: "La pantalla queda en blanco",
+      correoContacto: "ana@ejemplo.pe",
+      captura: archivo,
+    });
+
+    expect(resultado.codigoSeguimiento).toBe("SUG-2026-0001");
+    expect(calls[0].url).toBe("/sugerencias");
+    const form = calls[0].data as FormData;
+    expect(form.get("tipo")).toBe("BUG");
+    expect(form.get("titulo")).toBe("No carga");
+    expect(form.get("correoContacto")).toBe("ana@ejemplo.pe");
+    expect(form.get("captura")).toBeInstanceOf(File);
+  });
+
   it("elimina el pendiente y emite una URL firmada nueva", async () => {
     handler = (config) => reply(config, config.method === "delete" ? 204 : 200, {
       urlMiniatura: "https://firmada/nueva",

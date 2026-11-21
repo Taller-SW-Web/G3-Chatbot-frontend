@@ -58,4 +58,6 @@ export interface CheckoutPort {
   obtenerCheckout(checkoutId: string): Promise<CheckoutSesionData>;
   /** SPEC-14: Simula el pago con tarjeta determinista contra el simulador de backend. */
   pagarCheckout(checkoutId: string, input: ProcesarPagoInput, idempotencyKey?: string): Promise<ResultadoPago>;
+  /** SPEC-24 Req. 7: valora la experiencia de compra (una por pedido, propia del chatbot). */
+  calificarCompra(pedidoId: string, estrellas: 1 | 2 | 3 | 4 | 5, comentario?: string): Promise<void>;
 }

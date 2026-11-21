@@ -33,11 +33,6 @@ export function ChatWindow({
   onReintentar?: () => void;
   onQuickAction?: (accion: AccionRapidaChat) => void;
 }) {
-  let lastBot = -1;
-  items.forEach((m, i) => {
-    if (m.rol === "bot" && !m.streaming) lastBot = i;
-  });
-
   // Mantiene visible lo último que llegó (mensaje, token, aviso o indicador).
   const finRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -51,7 +46,7 @@ export function ChatWindow({
           Nuevo chat. Escribe abajo para empezar.
         </p>
       )}
-      {items.map((m, i) => {
+      {items.map((m) => {
         if (m.rol === "user") return <MessageBubble key={m.clave} rol="user" texto={m.texto} adjuntos={m.adjuntos} />;
         return (
           <div key={m.clave} className="self-start w-full max-w-[85%] flex flex-col gap-1.5">
@@ -66,7 +61,7 @@ export function ChatWindow({
               onQuickAction={onQuickAction}
               actionsBusy={actionsBusy}
             />
-            {i === lastBot && m.texto && <BotFeedback text={m.texto} />}
+            {!m.streaming && <BotFeedback text={m.texto} mensajeId={m.clave} />}
           </div>
         );
       })}

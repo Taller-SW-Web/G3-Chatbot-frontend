@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { ThumbUpIcon, ThumbDownIcon, CopyIcon, CheckIcon } from "@/shared/ui/icons";
+import { useReaccion } from "@/modules/mod-chat/application/useReaccion";
 
-/** Feedback bajo la última respuesta del bot (iconos Lucide vía Iconify). */
-export function BotFeedback({ text }: { text: string }) {
-  const [vote, setVote] = useState<"up" | "down" | null>(null);
+/** Reacciones y copia bajo cada respuesta del bot (SPEC-24 Req. 1). */
+export function BotFeedback({ text, mensajeId }: { text: string; mensajeId: string }) {
+  const { reaccion, votar } = useReaccion(mensajeId);
   const [copied, setCopied] = useState(false);
 
   async function copiar() {
@@ -23,10 +24,22 @@ export function BotFeedback({ text }: { text: string }) {
 
   return (
     <div className="flex items-center gap-1.5" aria-label="Calificar respuesta">
-      <button aria-label="Me sirvió" title="Me sirvió" onClick={() => setVote((v) => (v === "up" ? null : "up"))} className={btn(vote === "up")}>
+      <button
+        aria-label="Me sirvió"
+        title="Me sirvió"
+        aria-pressed={reaccion === "POSITIVE"}
+        onClick={() => votar("POSITIVE")}
+        className={btn(reaccion === "POSITIVE")}
+      >
         <ThumbUpIcon size={16} />
       </button>
-      <button aria-label="No me sirvió" title="No me sirvió" onClick={() => setVote((v) => (v === "down" ? null : "down"))} className={btn(vote === "down")}>
+      <button
+        aria-label="No me sirvió"
+        title="No me sirvió"
+        aria-pressed={reaccion === "NEGATIVE"}
+        onClick={() => votar("NEGATIVE")}
+        className={btn(reaccion === "NEGATIVE")}
+      >
         <ThumbDownIcon size={16} />
       </button>
       <button aria-label="Copiar respuesta" title={copied ? "¡Copiado!" : "Copiar"} onClick={copiar} className={btn(copied)}>
