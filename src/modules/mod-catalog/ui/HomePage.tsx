@@ -18,6 +18,12 @@ import {
 import { buscarProductosUseCase } from "@/modules/mod-catalog/application/buscarProductosUseCase";
 import { verDetalleProductoUseCase } from "@/modules/mod-catalog/application/verDetalleProductoUseCase";
 import { consultarDisponibilidadUseCase } from "@/modules/mod-catalog/application/consultarDisponibilidadUseCase";
+import {
+  ORDEN_CATALOGO_POR_DEFECTO,
+  ordenParaApi,
+  type OrdenCatalogo,
+} from "@/modules/mod-catalog/domain/entities/OrdenCatalogo";
+import { SelectorOrden } from "@/modules/mod-catalog/ui/SelectorOrden";
 import { container } from "@/shared/di/container";
 
 /** Producto y variante elegidos para agregar desde la home. */
@@ -43,6 +49,7 @@ export type HomePageProps = {
 /** `/`: banner ofertas, grid en oferta, campo chat inferior. SPEC-05 Req.2, SPEC-06,08,09 */
 export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomePageProps) {
   const [banner, setBanner] = useState(0);
+  const [orden, setOrden] = useState<OrdenCatalogo>(ORDEN_CATALOGO_POR_DEFECTO);
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [composer, setComposer] = useState("");
   const [creando, setCreando] = useState(false);
@@ -57,8 +64,14 @@ export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomeP
 
   // Grid con datos reales (SPEC-06). Sin fallback a mocks en este flujo.
   const catalogo = useQuery({
-    queryKey: ["catalogo", "ofertas"],
-    queryFn: () => buscarProductosUseCase(container.catalogo, { pagina: 1, tamanio: 10, soloOfertas: true }),
+    queryKey: ["catalogo", "ofertas", orden],
+    queryFn: () =>
+      buscarProductosUseCase(container.catalogo, {
+        pagina: 1,
+        tamanio: 10,
+        soloOfertas: true,
+        ...(ordenParaApi(orden) ? { orden } : {}),
+      }),
   });
   const productos: CatalogCardItem[] = catalogo.data?.items ?? [];
 
@@ -177,6 +190,11 @@ export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomeP
           <h2 className="font-heading text-[24px] leading-[32px]">PRODUCTOS EN OFERTA</h2>
           <button className="text-[12px] font-semibold underline text-text-secondary" disabled={creando} onClick={() => void irChat("Ver todo en oferta")}>Ver todo</button>
         </div>
+        <SelectorOrden
+          value={orden}
+          onChange={setOrden}
+          disabled={catalogo.isFetching || catalogo.isPending}
+        />
 
         {catalogo.isPending && <p role="status" className="text-[13px] text-text-secondary">Cargando productos…</p>}
         {catalogo.isError && (

@@ -138,6 +138,20 @@ describe("HomePage (catálogo + slots)", () => {
     expect(h.buscar).toHaveBeenCalledWith({}, { pagina: 1, tamanio: 10, soloOfertas: true });
   });
 
+  it("conecta el selector de orden con la búsqueda del catálogo", async () => {
+    montar();
+    await screen.findByText("Zapatilla Volta");
+
+    fireEvent.change(screen.getByLabelText("Ordenar por"), { target: { value: "precio_asc" } });
+
+    await waitFor(() =>
+      expect(h.buscar).toHaveBeenCalledWith(
+        {},
+        { pagina: 1, tamanio: 10, soloOfertas: true, orden: "precio_asc" }
+      )
+    );
+  });
+
   it("avisa cuando no hay ofertas", async () => {
     h.buscar.mockResolvedValue({ items: [], total: 0 });
     montar();
