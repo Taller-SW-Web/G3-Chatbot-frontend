@@ -26,6 +26,8 @@ Solicitudes de cambio/devolución con evidencias, Libro de Reclamaciones (reclam
 
 `POST /evidencias`, `POST /devoluciones`, `GET /devoluciones`, `GET /devoluciones/{devolucionId}`, `POST /reclamos`, `GET /reclamos`, `GET /reclamos/{codigoSeguimiento}`.
 
+- `409 RECLAMO_DUPLICADO` y `409 DEVOLUCION_DUPLICADA`: la pantalla muestra el código existente y el botón "Registrar igual", que reenvía la misma solicitud con `forzar: true`. La evidencia ya subida se reutiliza (no se sube dos veces).
+
 ## Dependencias externas
 
 `mod-orders`: `DevolucionPage` consulta el pedido con `pedidosPort` de su

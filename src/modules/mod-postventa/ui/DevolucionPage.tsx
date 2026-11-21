@@ -9,7 +9,21 @@ import { pedidosPort } from "@/modules/mod-orders/public";
 import { container } from "@/shared/di/container";
 import { useChatStore } from "@/shared/auth/chatStore";
 import type { DevolucionInput } from "@/modules/mod-postventa/domain/schemas/devolucion.schema";
+import type { DevolucionEvidenciaInput } from "@/modules/mod-postventa/ports/postventaPort";
+import {
+  esDevolucionDuplicada,
+  solicitudDuplicada,
+  type SolicitudDuplicada,
+} from "@/modules/mod-postventa/domain/utils/duplicados";
+import { DuplicateNotice } from "@/modules/mod-postventa/ui/blocks/DuplicateNotice";
 import { isUnavailable, problemCode } from "@/shared/api/httpError";
+
+type EnvioDevolucion = {
+  input: DevolucionInput;
+  archivo?: File;
+  /** URL ya subida: "Registrar igual" no vuelve a subir la evidencia. */
+  evidencia?: DevolucionEvidenciaInput;
+};
 
 /** `/devolucion?pedidoId=...`: solicitud real de cambio/devolución (SPEC-21). */
 export function DevolucionPage() {
@@ -18,6 +32,8 @@ export function DevolucionPage() {
   const pedidoId = params.get("pedidoId") ?? "";
   const [codigo, setCodigo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [duplicado, setDuplicado] = useState<SolicitudDuplicada | null>(null);
+  const [ultimoEnvio, setUltimoEnvio] = useState<EnvioDevolucion | null>(null);
   const conversacionId = useChatStore((s) => s.ultimaConversacionId);
 
   const pedido = useQuery({
@@ -28,26 +44,34 @@ export function DevolucionPage() {
   });
 
   const crear = useMutation({
-    mutationFn: async (input: DevolucionInput & { evidenciaArchivo?: File }) => {
-      const evidencia = input.evidenciaArchivo
-        ? await container.postventa.subirEvidencia(input.evidenciaArchivo, conversacionId ?? undefined)
-        : null;
+    mutationFn: async ({ envio, forzar }: { envio: EnvioDevolucion; forzar?: boolean }) => {
+      const evidenciaSubida = envio.evidencia
+        ? envio.evidencia
+        : envio.archivo
+          ? await container.postventa.subirEvidencia(envio.archivo, conversacionId ?? undefined)
+          : null;
+      if (evidenciaSubida) setUltimoEnvio({ ...envio, evidencia: { tipo: evidenciaSubida.tipo, url: evidenciaSubida.url } });
       return container.postventa.crearDevolucion({
         pedidoId,
-        tipo: input.tipo,
-        motivo: input.motivo,
-        descripcion: input.descripcion,
-        items: [{ productoId: input.linea, cantidad: 1 }],
-        evidencias: evidencia ? [{ tipo: evidencia.tipo, url: evidencia.url }] : [],
+        tipo: envio.input.tipo,
+        motivo: envio.input.motivo,
+        descripcion: envio.input.descripcion,
+        items: [{ productoId: envio.input.linea, cantidad: 1 }],
+        evidencias: evidenciaSubida ? [{ tipo: evidenciaSubida.tipo, url: evidenciaSubida.url }] : [],
+        ...(forzar ? { forzar: true } : {}),
       });
     },
     onSuccess: (data) => {
       setError(null);
+      setDuplicado(null);
       setCodigo(data.devolucionId);
     },
     onError: (err) => {
       const code = problemCode(err);
-      if (isUnavailable(err)) setError("El servicio de postventa no está disponible. Intenta de nuevo.");
+      if (esDevolucionDuplicada(err)) {
+        setError(null);
+        setDuplicado(solicitudDuplicada(err));
+      } else if (isUnavailable(err)) setError("El servicio de postventa no está disponible. Intenta de nuevo.");
       else if (code === "PLAZO_VENCIDO") setError("El plazo de 7 días para solicitar el cambio o devolución ya venció.");
       else if (code === "PEDIDO_NO_ENTREGADO") setError("Solo puedes solicitar un cambio o devolución de un pedido entregado.");
       else if (code === "EVIDENCIA_REQUERIDA") setError("Este motivo exige adjuntar al menos una evidencia.");
@@ -122,11 +146,23 @@ export function DevolucionPage() {
         Solicitar devolución / cambio · {pedidoId}
       </p>
       {error ? <p className="text-[12px] text-error-default">{error}</p> : null}
+      {duplicado && (
+        <DuplicateNotice
+          duplicado={duplicado}
+          cargando={crear.isPending}
+          onForzar={() => {
+            if (!ultimoEnvio) return;
+            void crear.mutateAsync({ envio: ultimoEnvio, forzar: true }).catch(() => undefined);
+          }}
+        />
+      )}
       <DevolucionForm
         lineas={lineas}
         onOk={async (input) => {
+          const envio = { input, archivo: input.evidenciaArchivo };
+          setUltimoEnvio(envio);
           try {
-            await crear.mutateAsync(input);
+            await crear.mutateAsync({ envio });
           } catch {
             // onError already maps the API error to the visible message.
           }

@@ -8,6 +8,13 @@ import { ReclamoForm } from "@/modules/mod-postventa/ui/forms/ReclamoForm";
 import { container } from "@/shared/di/container";
 import { usePerfil } from "@/shared/auth/usePerfil";
 import type { ReclamoInput } from "@/modules/mod-postventa/domain/schemas/reclamo.schema";
+import type { CrearReclamoInput } from "@/modules/mod-postventa/ports/postventaPort";
+import {
+  esReclamoDuplicado,
+  solicitudDuplicada,
+  type SolicitudDuplicada,
+} from "@/modules/mod-postventa/domain/utils/duplicados";
+import { DuplicateNotice } from "@/modules/mod-postventa/ui/blocks/DuplicateNotice";
 import { isUnavailable, problemCode } from "@/shared/api/httpError";
 
 /** `/reclamo?pedidoId=...`: registro real en el Libro de Reclamaciones (SPEC-19). */
@@ -18,37 +25,47 @@ export function ReclamoPage() {
   const [codigo, setCodigo] = useState<string | null>(null);
   const [plazo, setPlazo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [duplicado, setDuplicado] = useState<SolicitudDuplicada | null>(null);
+  const [ultimoEnvio, setUltimoEnvio] = useState<CrearReclamoInput | null>(null);
 
   const perfil = usePerfil();
 
   const crear = useMutation({
-    mutationFn: (input: ReclamoInput) =>
-      container.postventa.crearReclamo({
-        pedidoId: input.pedidoId,
-        tipo: input.tipo,
-        motivo: input.motivo,
-        detalle: input.descripcion + (input.solucion ? `\n\nSolución esperada: ${input.solucion}` : ""),
-        consumidor: {
-          nombreCompleto: perfil.data?.nombreCompleto ?? "",
-          documento: input.documento,
-          email: perfil.data?.correo ?? "",
-          telefono: input.telefono,
-        },
-        solucionEsperada: input.solucion,
-      }),
+    mutationFn: ({ input, forzar }: { input: CrearReclamoInput; forzar?: boolean }) =>
+      container.postventa.crearReclamo({ ...input, ...(forzar ? { forzar: true } : {}) }),
     onSuccess: (data) => {
       setError(null);
+      setDuplicado(null);
       setCodigo(data.codigoSeguimiento);
       setPlazo(data.fechaLimiteSLA ? new Date(data.fechaLimiteSLA).toLocaleDateString("es-PE") : null);
     },
     onError: (err) => {
       const code = problemCode(err);
-      if (isUnavailable(err)) setError("El servicio de reclamos no está disponible. Intenta de nuevo.");
+      if (esReclamoDuplicado(err)) {
+        setError(null);
+        setDuplicado(solicitudDuplicada(err));
+      } else if (isUnavailable(err)) setError("El servicio de reclamos no está disponible. Intenta de nuevo.");
       else if (code === "RECURSO_NO_ENCONTRADO") setError("No encontré ese pedido en tu cuenta.");
       else if (code === "DATOS_INVALIDOS" || code === "VALIDACION") setError("Revisa los datos del formulario e intenta de nuevo.");
       else setError("No pudimos registrar tu reclamo. Intenta de nuevo en unos minutos.");
     },
   });
+
+  function payloadDe(input: ReclamoInput): CrearReclamoInput {
+    return {
+      pedidoId: input.pedidoId,
+      tipo: input.tipo,
+      motivo: input.motivo,
+      detalle: input.descripcion + (input.solucion ? `\n\nSolución esperada: ${input.solucion}` : ""),
+      consumidor: {
+        nombreCompleto: perfil.data?.nombreCompleto ?? "",
+        documento: input.documento,
+        email: perfil.data?.correo ?? "",
+        telefono: input.telefono,
+      },
+      solucionEsperada: input.solucion,
+    };
+  }
 
   if (!pedidoId) {
     return (
@@ -83,12 +100,24 @@ export function ReclamoPage() {
   return (
     <div className="p-4 flex flex-col gap-3">
       {error ? <p className="text-[12px] text-error-default">{error}</p> : null}
+      {duplicado && (
+        <DuplicateNotice
+          duplicado={duplicado}
+          cargando={crear.isPending}
+          onForzar={() => {
+            if (!ultimoEnvio) return;
+            void crear.mutateAsync({ input: ultimoEnvio, forzar: true }).catch(() => undefined);
+          }}
+        />
+      )}
       <ReclamoForm
         pedidoId={pedidoId}
         telefonoInicial={perfil.data?.celular ?? ""}
         onOk={async (input) => {
+          const payload = payloadDe(input);
+          setUltimoEnvio(payload);
           try {
-            await crear.mutateAsync(input);
+            await crear.mutateAsync({ input: payload });
           } catch {
             // onError already maps the API error to the visible message.
           }
