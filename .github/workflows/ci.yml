@@ -96,7 +96,13 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Descargar contrato del backend
+        # El checker valida paths y tags de cada módulo contra el OpenAPI real.
+        # El repo de backend es público: se lee su development sin token.
+        run: curl -fsS -o "$RUNNER_TEMP/openapi.json" https://raw.githubusercontent.com/Taller-SW-Web/G3-Chatbot-backend/development/docs/openapi.json
       - name: Check module boundaries
+        env:
+          OPENAPI_PATH: ${{ runner.temp }}/openapi.json
         run: pnpm modules:check
 
   # Advisory during Fase 2: a finding is reported but does not block the gate yet.
