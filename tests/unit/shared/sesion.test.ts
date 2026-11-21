@@ -8,6 +8,7 @@ import {
   describeLoginFailure,
   describeMfaResendFailure,
   describeOtpFailure,
+  describeRegistroFailure,
   isTokenExpiringSoon,
 } from "@/shared/auth/sesion";
 import { createSingleFlight } from "@/shared/api/singleFlight";
@@ -63,6 +64,34 @@ describe("login error mapping (SPEC-03 Req. 1)", () => {
 
   it("maps 429 to a rate-limit message", () => {
     expect(describeLoginFailure(429).message).toContain("Demasiados intentos");
+  });
+});
+
+describe("registro error mapping (SPEC-01 Req. 4)", () => {
+  it("maps BFF fields to the neutral form fields without importing mod-auth types", () => {
+    const r = describeRegistroFailure(400, "VALIDACION", [
+      { campo: "email", mensaje: "Correo inválido" },
+      { campo: "phone", mensaje: "Celular inválido" },
+    ]);
+    expect(r.erroresCampo).toEqual({
+      correo: "Correo inválido",
+      celular: "Celular inválido",
+    });
+  });
+
+  it("never reveals whether the email exists", () => {
+    const r = describeRegistroFailure(409, "CORREO_NO_DISPONIBLE");
+    expect(r.ofrecerLogin).toBe(true);
+    expect(r.message).toContain("Si el correo es válido");
+  });
+
+  it("joins policy rule messages for the password field", () => {
+    const r = describeRegistroFailure(422, "POLITICA_INCUMPLIDA", [
+      { campo: "password", regla: "MAYUSCULA", mensaje: "" },
+      { campo: "password", regla: "DIGITO", mensaje: "" },
+    ]);
+    expect(r.erroresCampo?.contrasena).toContain("mayúscula");
+    expect(r.erroresCampo?.contrasena).toContain("número");
   });
 });
 

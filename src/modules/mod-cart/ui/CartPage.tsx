@@ -8,7 +8,7 @@ import { AvisoCelularModal } from "@/shared/auth/AvisoCelularModal";
 import { BloqueError } from "@/shared/ui/BloqueError";
 import { useChatStore } from "@/shared/auth/chatStore";
 import { useCarrito } from "@/modules/mod-cart/application/useCarrito";
-import { conversacionParaCarrito } from "@/shared/commerce/carrito";
+import { conversacionParaCarrito } from "@/modules/mod-cart/domain/utils/conversacionParaCarrito";
 import { ProductImage } from "@/modules/mod-catalog/public";
 import { container } from "@/shared/di/container";
 import { problemCode, problemField } from "@/shared/api/httpError";

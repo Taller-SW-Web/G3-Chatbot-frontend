@@ -6,11 +6,10 @@ import {
   registroSchema,
 } from "@/modules/mod-auth/domain/schemas/registro.schema";
 import {
-  evaluarPolitica,
   POLITICA_POR_DEFECTO,
-  politicaCumplida,
   type PoliticaContrasena,
 } from "@/shared/auth/passwordPolicy";
+import { evaluarPolitica, politicaCumplida } from "@/modules/mod-auth/domain/passwordPolicy";
 import {
   describeRegistroFailure,
   describeReenvioFailure,

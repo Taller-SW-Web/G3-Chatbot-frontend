@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { problemCode, problemFaltantes } from "@/shared/api/httpError";
 import { useChatStore } from "@/shared/auth/chatStore";
-import { conversacionParaCarrito } from "@/shared/commerce/carrito";
 import { container } from "@/shared/di/container";
 import type { HomeAgregarInput, HomeAgregarResultado } from "@/modules/mod-catalog/public";
 import {
   agregarCarritoAnonimoUseCase,
   agregarProductoAlCarritoUseCase,
+  conversacionParaCarrito,
   mensajeCarrito,
 } from "@/modules/mod-cart/public";
 import { crearConversacionUseCase } from "@/modules/mod-chat/public";
