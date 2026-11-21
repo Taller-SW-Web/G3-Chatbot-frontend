@@ -1,10 +1,46 @@
-/** CSP estricta anti-XSS (token en LocalStorage R7). */
-export const cspDirectives = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data: blob:",
-  "connect-src 'self' http://localhost:8080 https://*.api",
-  "frame-ancestors 'none'",
-].join("; ");
+/** CSP anti-XSS (token en LocalStorage, ADR-0008). Importable desde `next.config.ts`: sin alias `@/`. */
+
+export type CspOptions = {
+  /** Desarrollo: React necesita `eval` y el HMR usa websockets. */
+  isDev?: boolean;
+  /**
+   * Origen absoluto del API si `NEXT_PUBLIC_API_BASE_URL` apunta fuera del mismo origen.
+   * Un valor relativo (`/api/v1`) o vacío se ignora: ya lo cubre `'self'`.
+   */
+  apiBaseUrl?: string | null;
+};
+
+/** Devuelve el origen (`https://host`) de una URL absoluta http(s), o `null`. */
+export function apiOrigin(apiBaseUrl: string | null | undefined): string | null {
+  if (!apiBaseUrl) return null;
+  try {
+    const url = new URL(apiBaseUrl);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Construye la política. Los scripts inline de arranque de Next exigen `'unsafe-inline'`
+ * mientras no haya nonces (requieren render dinámico en todas las rutas): se endurecerá
+ * después de observar los reportes. Las imágenes de catálogo y las URLs firmadas de
+ * adjuntos (Supabase) vienen de hosts https variables, por eso `img-src` admite `https:`.
+ */
+export function buildCsp({ isDev = false, apiBaseUrl = null }: CspOptions = {}): string {
+  const origin = apiOrigin(apiBaseUrl);
+  const connect = ["'self'", ...(origin ? [origin] : []), ...(isDev ? ["ws:", "http://localhost:*"] : [])];
+  const directives = [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    `connect-src ${connect.join(" ")}`,
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ];
+  return directives.join("; ");
+}
