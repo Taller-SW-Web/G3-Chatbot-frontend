@@ -2,9 +2,9 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { TruckIcon } from "../components/icons";
-import { EstadoPedido } from "../components/blocks/EstadoPedido";
-import { container } from "@/infrastructure/di/container";
+import { TruckIcon } from "@/shared/ui/icons";
+import { EstadoPedido } from "@/modules/mod-orders/ui/blocks/EstadoPedido";
+import { container } from "@/shared/di/container";
 
 const DATE_TIME = new Intl.DateTimeFormat("es-PE", {
   day: "2-digit",

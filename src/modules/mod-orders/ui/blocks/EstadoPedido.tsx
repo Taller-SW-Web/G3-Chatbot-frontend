@@ -1,4 +1,4 @@
-import { CheckIcon, TruckIcon } from "../icons";
+import { CheckIcon, TruckIcon } from "@/shared/ui/icons";
 
 /** ESTADO_PEDIDO + timeline Ventas/Despacho. SPEC-17,18 */
 export function EstadoPedido({

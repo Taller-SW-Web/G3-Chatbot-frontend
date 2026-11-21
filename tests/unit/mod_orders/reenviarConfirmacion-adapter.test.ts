@@ -17,8 +17,10 @@ vi.mock("axios", () => ({
   },
 }));
 
-import { chatbotApi } from "@/adapters/outbound/ChatbotApiAxiosAdapter";
-import { reenviarConfirmacionUseCase } from "@/application/use_cases/reenviarConfirmacionUseCase";
+import { container } from "@/shared/di/container";
+
+const chatbotApi = container.api;
+import { reenviarConfirmacionUseCase } from "@/modules/mod-orders/application/reenviarConfirmacionUseCase";
 
 const RESPUESTA = {
   ok: true,

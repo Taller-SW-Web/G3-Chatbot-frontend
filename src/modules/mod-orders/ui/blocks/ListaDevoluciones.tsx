@@ -1,5 +1,5 @@
-import { StatusBadge } from "../StatusBadge";
-import { RefreshIcon, CheckIcon } from "../icons";
+import { StatusBadge } from "@/shared/ui/StatusBadge";
+import { RefreshIcon, CheckIcon } from "@/shared/ui/icons";
 
 /** LISTA_DEVOLUCIONES */
 export function ListaDevoluciones({

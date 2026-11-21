@@ -1,5 +1,5 @@
-import { StatusBadge } from "../StatusBadge";
-import { FileAlertIcon } from "../icons";
+import { StatusBadge } from "@/shared/ui/StatusBadge";
+import { FileAlertIcon } from "@/shared/ui/icons";
 
 /** LISTA_RECLAMOS */
 export function ListaReclamos({

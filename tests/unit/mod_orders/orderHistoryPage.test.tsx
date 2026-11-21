@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { OrderHistoryPage } from "@/adapters/inbound/pages/OrderHistoryPage";
+import { OrderHistoryPage } from "@/modules/mod-orders/ui/OrderHistoryPage";
 
 const push = vi.hoisted(() => vi.fn());
 const listarPedidos = vi.hoisted(() => vi.fn());
@@ -11,7 +11,7 @@ const listarReclamos = vi.hoisted(() => vi.fn());
 const calificarPedido = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-vi.mock("@/infrastructure/di/container", () => ({
+vi.mock("@/shared/di/container", () => ({
   container: {
     api: { listarPedidos, listarDevoluciones, listarReclamos, calificarPedido },
   },

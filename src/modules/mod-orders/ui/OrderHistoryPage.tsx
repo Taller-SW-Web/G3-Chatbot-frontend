@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon } from "../components/icons";
-import { StatusBadge } from "../components/StatusBadge";
-import { DeliveryRating } from "../components/DeliveryRating";
-import { ListaReclamos } from "../components/blocks/ListaReclamos";
-import { ListaDevoluciones } from "../components/blocks/ListaDevoluciones";
-import { container } from "@/infrastructure/di/container";
+import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon } from "@/shared/ui/icons";
+import { StatusBadge } from "@/shared/ui/StatusBadge";
+import { DeliveryRating } from "@/modules/mod-orders/ui/DeliveryRating";
+import { ListaReclamos } from "@/modules/mod-orders/ui/blocks/ListaReclamos";
+import { ListaDevoluciones } from "@/modules/mod-orders/ui/blocks/ListaDevoluciones";
+import { container } from "@/shared/di/container";
 
 type Tab = "proceso" | "entregados" | "reembolso" | "reclamos";
 

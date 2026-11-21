@@ -6,12 +6,12 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { ConfirmacionPedido } from "@/adapters/inbound/components/blocks/ConfirmacionPedido";
-import { avisoConfirmacion, correoParaChat } from "@/domain/utils/confirmacionCorreo";
+import { ConfirmacionPedido } from "@/modules/mod-orders/ui/blocks/ConfirmacionPedido";
+import { avisoConfirmacion, correoParaChat } from "@/modules/mod-orders/domain/utils/confirmacionCorreo";
 
 const h = vi.hoisted(() => ({ reenviar: vi.fn() }));
 
-vi.mock("@/infrastructure/di/container", () => ({
+vi.mock("@/shared/di/container", () => ({
   container: { api: { reenviarConfirmacion: h.reenviar } },
 }));
 

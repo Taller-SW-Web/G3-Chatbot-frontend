@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CheckIcon } from "./icons";
-import { MoodHappyIcon } from "./icons/MoodHappyIcon";
-import { MoodNeutralIcon } from "./icons/MoodNeutralIcon";
-import { MoodSadIcon } from "./icons/MoodSadIcon";
+import { CheckIcon } from "@/shared/ui/icons";
+import { MoodHappyIcon } from "@/shared/ui/icons/MoodHappyIcon";
+import { MoodNeutralIcon } from "@/shared/ui/icons/MoodNeutralIcon";
+import { MoodSadIcon } from "@/shared/ui/icons/MoodSadIcon";
 
 export type DeliveryMood = "mal" | "regular" | "bien";
 

@@ -1,15 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { container } from "@/infrastructure/di/container";
-import { reenviarConfirmacionUseCase } from "@/application/use_cases/reenviarConfirmacionUseCase";
-import { mensajeReenvio } from "@/application/errors/confirmacionMensajes";
-import { httpStatus, problemCode } from "@/domain/utils/httpError";
+import { container } from "@/shared/di/container";
+import { reenviarConfirmacionUseCase } from "@/modules/mod-orders/application/reenviarConfirmacionUseCase";
+import { mensajeReenvio } from "@/modules/mod-orders/application/errors/confirmacionMensajes";
+import { httpStatus, problemCode } from "@/shared/api/httpError";
 import {
   avisoConfirmacion,
   correoParaChat,
   textoReenviosRestantes,
-} from "@/domain/utils/confirmacionCorreo";
+} from "@/modules/mod-orders/domain/utils/confirmacionCorreo";
 
 type EstadoReenvio =
   | { fase: "inicial" }

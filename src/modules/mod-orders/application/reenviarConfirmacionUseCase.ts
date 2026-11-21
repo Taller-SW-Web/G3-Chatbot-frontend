@@ -1,4 +1,4 @@
-import type { ChatbotApiPort, ReenvioConfirmacion } from "@/ports/outbound/ChatbotApiPort";
+import type { PedidosPort, ReenvioConfirmacion } from "@/modules/mod-orders/ports/pedidosPort";
 
 /** Reenvía el correo de confirmación del pedido (SPEC-16 Req. 3, máx. 2 por pedido).
  *
@@ -6,7 +6,7 @@ import type { ChatbotApiPort, ReenvioConfirmacion } from "@/ports/outbound/Chatb
  * misma respuesta sin reenviar (contratos-integracion §2.5.2).
  */
 export async function reenviarConfirmacionUseCase(
-  api: ChatbotApiPort,
+  api: PedidosPort,
   input: { pedidoId: string; idempotencyKey?: string }
 ): Promise<ReenvioConfirmacion> {
   const pedidoId = input.pedidoId.trim();
