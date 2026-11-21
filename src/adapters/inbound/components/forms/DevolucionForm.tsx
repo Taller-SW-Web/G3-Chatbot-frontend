@@ -80,8 +80,8 @@ export function DevolucionForm({
       </div>
       {tipo === "CAMBIO" && (
         <select aria-label="Talla o color deseado" className="wf-input px-3 py-2.5 text-sm">
-          <option>Talla 42 · Negro (Disponible)</option>
-          <option>Talla 43 · Negro (Pocas unidades)</option>
+          <option>Talla 42 · Negro</option>
+          <option>Talla 43 · Negro</option>
         </select>
       )}
       <select {...register("motivo")} aria-label="Motivo" className="wf-input px-3 py-2.5 text-sm">

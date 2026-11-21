@@ -125,14 +125,6 @@ http.interceptors.response.use(
   }
 );
 
-async function conFallback<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
-  try {
-    return await fn();
-  } catch {
-    return fallback;
-  }
-}
-
 export const chatbotApi: ChatbotApiPort = {
   async login(email, password) {
     const { data } = await http.post("/sesion/login", { email, password });
@@ -347,26 +339,10 @@ export const chatbotApi: ChatbotApiPort = {
     return data as DisponibilidadPuntual[];
   },
   async validarContactoCelular(codigo) {
-    return conFallback(async () => {
-      const { data } = await http.post(`/contacto/celular/verificar`, {
-        codigo,
-      });
-      return data as { verificado: boolean };
-    }, { verificado: /^\d{6}$/.test(codigo) });
-  },
-  async cotizar() {
-    return conFallback(async () => {
-      const { data } = await http.get(`/checkout/cotizacion`);
-      return data as { total: number };
-    }, { total: 0 });
-  },
-  async crearCheckout(input) {
-    return conFallback(async () => {
-      const { data } = await http.post(`/checkout`, input, {
-        timeout: apiConfig.timeouts.pago,
-      });
-      return data as { pedidoId: string };
-    }, { pedidoId: "#A-1043" });
+    const { data } = await http.post(`/contacto/celular/verificar-otp`, {
+      codigo,
+    });
+    return data as { verificado: boolean };
   },
   // Real backend, no fallback: a fake "ok" would tell the customer the e-mail was resent.
   async reenviarConfirmacion(pedidoId, idempotencyKey) {

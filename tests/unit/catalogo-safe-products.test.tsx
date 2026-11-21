@@ -85,7 +85,7 @@ describe("productos sin variantes con el contrato real de G6", () => {
   it.each(["failed", "invalid", "AGOTADO"])("no permite agregar si la consulta puntual queda %s", async (state) => {
     const consultar = state === "failed" ? vi.fn().mockRejectedValue(new Error("timeout")) : vi.fn().mockResolvedValue(state === "invalid" ? "DESCONOCIDO" : "AGOTADO");
     const onAdd = modal(messiClub, consultar);
-    await screen.findByText(state === "failed" ? "No pudimos consultar la disponibilidad ahora." : state === "invalid" ? "Disponibilidad no confirmada" : "Agotado");
+    await screen.findByText(state === "AGOTADO" ? "Agotado" : "No pudimos consultar la disponibilidad ahora.");
     expect((screen.getByRole("button", { name: "AGREGAR AL CARRITO" }) as HTMLButtonElement).disabled).toBe(true);
     expect(onAdd).not.toHaveBeenCalled();
   });
@@ -94,7 +94,8 @@ describe("productos sin variantes con el contrato real de G6", () => {
     const onAdd = modal({ ...messiClub, availability: "INDETERMINADO" }, consulta ? vi.fn().mockResolvedValue("INDETERMINADO") : undefined);
     const button = screen.getByRole("button", { name: "AGREGAR AL CARRITO" }) as HTMLButtonElement;
     await waitFor(() => expect(button.disabled).toBe(false));
-    expect(screen.getByText("Disponibilidad no confirmada")).toBeTruthy();
+    expect(screen.queryByTestId("badge-indeterminado")).toBeNull();
+    expect(screen.queryByText(/Quedan pocas unidades/)).toBeNull();
     expect(screen.getByText("No pudimos confirmar el stock en este momento; lo verificaremos antes del pago")).toBeTruthy();
     expect(screen.queryByTestId("badge-disponible")).toBeNull();
     fireEvent.click(button);
@@ -116,6 +117,8 @@ describe("productos sin variantes con el contrato real de G6", () => {
     fireEvent.click(screen.getByRole("button", { name: "Agregar adidas Messi Club" }));
     expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ payload: { product_id: messiClub.product_id } }));
     expect(screen.queryByTestId("badge-disponible")).toBeNull();
+    expect(screen.queryByTestId("badge-indeterminado")).toBeNull();
+    expect(screen.queryByText(/Quedan pocas unidades/)).toBeNull();
   });
 
   it("la tarjeta permite abrir el selector con INDETERMINADO válido", () => {
@@ -124,6 +127,7 @@ describe("productos sin variantes con el contrato real de G6", () => {
     fireEvent.click(screen.getByRole("button", { name: "Elegir talla y color de adidas Messi Club" }));
     expect(onDetalle).toHaveBeenCalledOnce();
     expect(screen.queryByTestId("badge-disponible")).toBeNull();
+    expect(screen.queryByTestId("badge-indeterminado")).toBeNull();
   });
 });
 
@@ -131,14 +135,17 @@ describe("datos no obtenidos y payloads inválidos", () => {
   it("distingue el INDETERMINADO válido del dato no obtenido", () => {
     const onAdd = vi.fn();
     const { unmount } = render(<ProductCard producto={mapCarouselItem({ ...messiClub, availability: "INDETERMINADO" }, 1)} onDetalle={vi.fn()} onAdd={onAdd} />);
-    expect(screen.getByText("Disponibilidad no confirmada")).toBeTruthy();
+    expect(screen.queryByTestId("badge-indeterminado")).toBeNull();
+    expect(screen.queryByText(/Quedan pocas unidades/)).toBeNull();
     fireEvent.click(screen.getByTestId("btn-agregar"));
     expect(onAdd).toHaveBeenCalledOnce();
     unmount();
     render(<ProductCard producto={mapCarouselItem({ ...messiClub, missing_data: ["availability"] }, 1)} onDetalle={vi.fn()} onAdd={vi.fn()} />);
-    expect(screen.getByText("No pudimos consultar la disponibilidad ahora.")).toBeTruthy();
+    expect(screen.queryByTestId("badge-indeterminado")).toBeNull();
+    expect(screen.queryByText("No pudimos consultar la disponibilidad ahora.")).toBeNull();
     expect(screen.queryByTestId("badge-disponible")).toBeNull();
     expect((screen.getByTestId("btn-agregar") as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId("btn-detalle")).toBeTruthy();
   });
 
   it.each(["price", "availability"])("el detalle SSE y el modal conservan missing_data %s", (field) => {
@@ -207,16 +214,16 @@ describe("compatibilidad con un backend anterior a los campos nuevos", () => {
     return row as typeof messiClub;
   };
 
-  it("una fila con variantes sin `variants` no es un fallo y abre el flujo de selección", () => {
+  it("una fila con variantes sin `variants` no es un fallo y conserva el acceso al detalle", () => {
     const onDetalle = vi.fn();
     const onAdd = vi.fn();
     const card = mapCarouselItem(legacyVariantRow(), 1);
     expect(card.missingData).toEqual([]);
-    expect(card.availability).toBe("INDETERMINADO");
+    expect(card.availability).toBe("SIN_DATO");
     expect(card.sku).toBeUndefined();
-    expect(canAddCard(card)).toBe(true);
+    expect(canAddCard(card)).toBe(false);
     render(<ProductCard producto={card} onDetalle={onDetalle} onAdd={onAdd} />);
-    fireEvent.click(screen.getByRole("button", { name: /Elegir talla y color/ }));
+    fireEvent.click(screen.getByTestId("btn-detalle"));
     expect(onDetalle).toHaveBeenCalledTimes(1);
     expect(onAdd).not.toHaveBeenCalled();
   });
@@ -226,12 +233,12 @@ describe("compatibilidad con un backend anterior a los campos nuevos", () => {
     expect(card).toMatchObject({ availability: "DISPONIBLE", missingData: [] });
   });
 
-  it("una fila sin `availability` es INDETERMINADO sin missing_data", () => {
+  it("una fila sin `availability` es SIN_DATO sin missing_data y no agrega", () => {
     const row: Record<string, unknown> = { ...messiClub };
     delete row.availability;
     const card = mapCarouselItem(row as typeof messiClub, 1);
-    expect(card).toMatchObject({ availability: "INDETERMINADO", missingData: [] });
-    expect(canAddCard(card)).toBe(true);
+    expect(card).toMatchObject({ availability: "SIN_DATO", missingData: [] });
+    expect(canAddCard(card)).toBe(false);
   });
 
   it("sigue bloqueando variantes mal formadas o vacías, y `availability` inválida", () => {

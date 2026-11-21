@@ -8,6 +8,7 @@ import { ProductImage } from "../ProductImage";
 import {
   findVariantSku,
   canAddWithAvailability,
+  toAvailabilityState,
   type AvailabilityState,
   type CatalogDetail,
 } from "@/domain/entities/CatalogoUI";
@@ -126,7 +127,12 @@ export function DetalleProducto({ p, showAvailability = true }: { p: CatalogDeta
         <p className="text-[13px] text-text-secondary">{sanitize(p.shortDescription)}</p>
       )}
       <div className="text-[14px] text-text-secondary"><PriceTag {...p} /></div>
-      {showAvailability && <AvailabilityBadge state={p.availability} missing={p.missingData?.includes("availability")} className="w-fit" />}
+      {showAvailability && <AvailabilityBadge state={p.availability} className="w-fit" />}
+      {showAvailability && p.availability === "SIN_DATO" && (
+        <p role="status" className="text-[13px] text-text-secondary">
+          No pudimos consultar la disponibilidad ahora.
+        </p>
+      )}
     </div>
   );
 }
@@ -165,11 +171,18 @@ export function ProductDetailModal({
     retry: false,
   });
 
-  const skuState: AvailabilityState | undefined = disponibilidad.data;
+  const skuState: AvailabilityState | undefined =
+    disponibilidad.data === undefined ? undefined : toAvailabilityState(disponibilidad.data);
   const puedeAgregar = varianteCompleta && haySku && Boolean(p.product_id.trim()) &&
     p.price !== null && !p.missingData?.length && canAddWithAvailability(p.availability) &&
     (!consultarDisponibilidad || (!disponibilidad.isFetching && !disponibilidad.isError &&
       skuState != null && canAddWithAvailability(skuState)));
+  const disponibilidadMostrada: AvailabilityState =
+    consultarDisponibilidad && haySku && canAddWithAvailability(p.availability) && !p.missingData?.includes("availability")
+      ? (disponibilidad.isFetching || disponibilidad.isError ? "SIN_DATO" : skuState ?? "SIN_DATO")
+      : p.availability;
+  const sinDato = !disponibilidad.isFetching &&
+    (disponibilidadMostrada === "SIN_DATO" || p.missingData?.includes("availability") === true);
 
   return (
     <ModalShell title="Detalle de producto" onClose={onClose}>
@@ -181,14 +194,14 @@ export function ProductDetailModal({
       />
       <DetalleProducto p={p} showAvailability={false} />
       <AvailabilityBadge
-        state={consultarDisponibilidad && haySku && canAddWithAvailability(p.availability) && !p.missingData?.includes("availability")
-          ? (disponibilidad.isFetching || disponibilidad.isError ? "INDETERMINADO" : skuState ?? "INDETERMINADO")
-          : p.availability}
-        missing={p.missingData?.includes("availability") || disponibilidad.isError}
+        state={disponibilidadMostrada}
         className="w-fit"
       />
       {puedeAgregar && (p.availability === "INDETERMINADO" || skuState === "INDETERMINADO") && (
         <p role="status" className="text-[13px] text-text-secondary">No pudimos confirmar el stock en este momento; lo verificaremos antes del pago</p>
+      )}
+      {sinDato && (
+        <p role="status" className="text-[13px] text-text-secondary">No pudimos consultar la disponibilidad ahora.</p>
       )}
       {p.hasVariants && p.colores.length > 0 && (
         <div className="flex flex-col gap-1.5">
