@@ -1,0 +1,12 @@
+[
+  {
+    "from": "mod-catalog",
+    "to": "mod-cart",
+    "reason": "HomePage es la pantalla de entrada del canal: la tarjeta de catálogo agrega al carrito. Extraer el slot en Fase 4."
+  },
+  {
+    "from": "mod-catalog",
+    "to": "mod-chat",
+    "reason": "HomePage abre la conversación desde el compositor inferior. El DAG declara chat→catalog, así que se documenta como excepción hasta extraer el compositor a un slot."
+  }
+]

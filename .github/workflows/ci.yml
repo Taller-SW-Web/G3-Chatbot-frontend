@@ -79,6 +79,27 @@ jobs:
       - name: Build
         run: pnpm run build
 
+  # Fase 3 de ADR-0024: valida ids, registry, estructura y fronteras de módulos.
+  # Advisory durante la migración: no bloquea el gate todavía.
+  modules:
+    name: Module boundaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check module boundaries
+        run: pnpm modules:check
+
   # Advisory during Fase 2: a finding is reported but does not block the gate yet.
   security:
     name: Dependency audit
@@ -248,7 +269,7 @@ jobs:
     name: check
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [lint, test, build, security, dependency-review, sonar, e2e]
+    needs: [lint, test, build, security, dependency-review, sonar, e2e, modules]
     if: always()
     steps:
       - name: Require every job to succeed

@@ -1,5 +1,16 @@
 # Arquitectura Frontend — Canal Chatbot
 
+> [!important] Actualización ADR-0024 (monolito modular)
+> Este documento describe el corte **hexagonal por capas** original. Desde ADR-0024 el árbol
+> vigente es `src/shared/` (kernel) + `src/modules/mod-{auth,catalog,cart,shipping,checkout,orders,postventa,chat}/`
+> con `domain/`, `application/`, `ports/`, `adapters/` y `ui/` **dentro de cada módulo**.
+> Las rutas de `src/app/**/page.tsx` no cambian: son wrappers que componen
+> `AppShell` + `AuthGuard` + la página del módulo. Para el detalle por módulo, lee
+> `src/modules/<id>/MODULE.md`, `src/shared/README.md` y `scripts/check-modules.mjs`.
+> El mapeo capa → módulo es: `pages/components → mod-*/ui`, `use_cases/state → mod-*/application`,
+> `domain → mod-*/domain`, `ports → mod-*/ports`, `adapters → mod-*/adapters`,
+> `infrastructure → shared/{api,auth,config,di,security}`.
+
 > **SPA hexagonal Next.js App Router (solo frontend).** Estado: **fase 0 — 70 ficheros en `src/`, todos en `0 bytes`**, `tests/` solo `.gitkeep`, `package.json` y `tsconfig.json` vacíos. Alineada a `../../PROYECTO CHATBOT/ARQUITECTURA-ICEPANEL.md §7`, `G3-Chatbot-specs/README.md §1.1, §1.4, §2`, `docs/arquitectura/c4.md L2` y `ADR-0002, 0004, 0008, 0021, 0023`.
 > Regla: si contradice a una spec, manda la spec. Next.js no es BFF: sin Route Handlers/Server Actions; pantallas sesión/chat/carrito en `'use client'`; token en LocalStorage.
 
