@@ -5,6 +5,19 @@ export type CrearCheckoutInput = {
   cartId?: string;
   direccion?: Record<string, unknown>;
   contacto?: Record<string, unknown>;
+  /** SPEC-12: guarda la dirección en el perfil para próximas compras. */
+  guardarDireccion?: boolean;
+};
+
+/** Línea que el backend reporta como desactualizada en un `409 CARRITO_DESACTUALIZADO`. */
+export type LineaDesactualizada = {
+  sku: string;
+  nombre?: string;
+  cantidad?: number;
+  /** `AGOTADO`, `STOCK_INSUFICIENTE`, `PRECIO_CAMBIADO`, … */
+  motivo?: string;
+  disponible?: number | null;
+  mensaje?: string;
 };
 
 export type CheckoutSesionData = {

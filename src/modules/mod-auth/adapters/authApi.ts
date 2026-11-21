@@ -93,6 +93,7 @@ export const authApi: AuthPort = {
     const { data } = await http.post(`/contacto/celular/verificar-otp`, {
       codigo,
     });
-    return data as { verificado: boolean };
+    const respuesta = data as Partial<VerificacionOtpCelular> & { verificado?: boolean };
+    return { verificado: Boolean(respuesta.celularVerificado ?? respuesta.verificado) };
   },
 };

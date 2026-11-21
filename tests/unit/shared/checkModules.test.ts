@@ -112,7 +112,7 @@ describe("check-modules.mjs", () => {
   it.skipIf(!hayBackend)("valida el contrato real: paths y tag del módulo", () => {
     const r = ejecutar(copiarRepo(), { OPENAPI_PATH: openapiReal });
     expect(r.status).toBe(0);
-    expect(r.salida).toContain("pendiente en backend");
+    expect(r.salida).toContain("OK: 8 módulos");
     expect(r.salida).toContain("etiquetado [mod-postventa]");
   });
 
@@ -138,7 +138,7 @@ describe("check-modules.mjs", () => {
     expect(r.salida).toContain("mod-cart: /carrito tiene tag [mod-catalog] y no mod-cart");
   });
 
-  it.skipIf(!hayBackend)("la allowlist es lo que mantiene verde el OTP pendiente", () => {
+  it.skipIf(!hayBackend)("falla si el OTP de celular desaparece del openapi", () => {
     const dir = copiarRepo();
     const exceptions = path.join(dir, "scripts/module-boundaries.exceptions.json");
     const json = JSON.parse(fs.readFileSync(exceptions, "utf8"));
@@ -146,8 +146,11 @@ describe("check-modules.mjs", () => {
       (e: { path: string }) => e.path !== "/contacto/celular/verificar-otp"
     );
     fs.writeFileSync(exceptions, JSON.stringify(json, null, 2));
+    const openapi = copiarOpenapi(dir, (o) => {
+      delete o.paths["/api/v1/contacto/celular/verificar-otp"];
+    });
 
-    const r = ejecutar(dir, { OPENAPI_PATH: openapiReal });
+    const r = ejecutar(dir, { OPENAPI_PATH: openapi });
     expect(r.status).not.toBe(0);
     expect(r.salida).toContain("mod-auth: /contacto/celular/verificar-otp no existe");
   });

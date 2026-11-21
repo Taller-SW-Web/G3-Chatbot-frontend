@@ -30,11 +30,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   useChatStore.setState({ cliente: null, accessToken: null });
   api.solicitarOtpCelular.mockResolvedValue({
-    ok: true,
+    enviado: true,
     celularEnmascarado: "*****321",
-    expiraEnSegundos: 300,
+    expiraEn: new Date(Date.now() + 300_000).toISOString(),
   });
-  api.verificarOtpCelular.mockResolvedValue({ verificado: true });
+  api.verificarOtpCelular.mockResolvedValue({
+    celularVerificado: true,
+    celularEnmascarado: "*****321",
+  });
   api.validarContactoCelular.mockResolvedValue({ verificado: true });
 });
 
@@ -80,7 +83,10 @@ describe("MiCuentaPage", () => {
   });
 
   it("conserva el celular sin verificar si el código no es válido", async () => {
-    api.verificarOtpCelular.mockResolvedValue({ verificado: false });
+    api.verificarOtpCelular.mockResolvedValue({
+      celularVerificado: false,
+      celularEnmascarado: "*****321",
+    });
     useChatStore.setState({ cliente: cliente() });
     render(<MiCuentaPage />);
 

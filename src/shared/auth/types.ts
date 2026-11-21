@@ -14,18 +14,16 @@ export type PerfilCliente = UsuarioSesion & {
 
 /** Respuesta de `POST /contacto/celular/solicitar-otp` (SPEC-04 Req. 2). */
 export type SolicitudOtpCelular = {
-  ok: boolean;
-  celularEnmascarado?: string;
-  expiraEnSegundos?: number;
-  reenviosRestantes?: number;
+  enviado: boolean;
+  celularEnmascarado: string;
+  /** Fecha ISO de vencimiento del código. */
+  expiraEn: string;
   /** Solo en entornos de prueba (`MODO_QA`), nunca en producción. */
-  codigoQa?: string;
+  codigo?: string | null;
 };
 
 /** Respuesta de `POST /contacto/celular/verificar-otp` (SPEC-04 Req. 2). */
 export type VerificacionOtpCelular = {
-  verificado: boolean;
-  celular?: string;
-  /** Acción que el backend ejecutó al verificar (`INICIAR_CHECKOUT`, …). */
-  accionPendiente?: string | null;
+  celularVerificado: boolean;
+  celularEnmascarado: string;
 };

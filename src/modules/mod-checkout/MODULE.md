@@ -26,6 +26,9 @@ Checkout en dos pasos (dirección → tarjeta), temporizador de 15 minutos, inte
 
 `POST /checkout`, `GET /checkout/{checkoutId}`, `POST /checkout/{checkoutId}/pago`.
 
+- `POST /checkout` acepta `guardarDireccion` (checkbox "Guardar esta dirección") y responde `409 CARRITO_DESACTUALIZADO` con el detalle por línea; la pantalla muestra cada cambio y el CTA "VOLVER AL CARRITO" (SPEC-10, SPEC-12).
+- Ante `403 CELULAR_NO_VERIFICADO` (SPEC-04), el checkout muestra el flujo `OtpCelularFlow` de `shared/auth`, guarda `accionPendiente = INICIAR_CHECKOUT` y reintenta el checkout al verificar.
+
 ## Dependencias externas
 
 `mod-cart` (`useCarrito`) y `mod-shipping` (`useCotizacionEnvio`, `CotizacionEnvio`), siempre por `public.ts`.

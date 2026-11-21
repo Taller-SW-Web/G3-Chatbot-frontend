@@ -23,11 +23,14 @@ beforeEach(() => {
     } as never,
   });
   api.solicitarOtpCelular.mockResolvedValue({
-    ok: true,
+    enviado: true,
     celularEnmascarado: "+51 9****4321",
-    expiraEnSegundos: 300,
+    expiraEn: new Date(Date.now() + 300_000).toISOString(),
   });
-  api.verificarOtpCelular.mockResolvedValue({ verificado: true });
+  api.verificarOtpCelular.mockResolvedValue({
+    celularVerificado: true,
+    celularEnmascarado: "+51 9****4321",
+  });
 });
 
 afterEach(cleanup);
@@ -52,7 +55,10 @@ describe("OtpCelularFlow (SPEC-04)", () => {
     fireEvent.click(screen.getByRole("button", { name: "VERIFICAR" }));
 
     await waitFor(() => expect(api.verificarOtpCelular).toHaveBeenCalledWith("123456"));
-    expect(onVerificado).toHaveBeenCalledWith({ verificado: true });
+    expect(onVerificado).toHaveBeenCalledWith({
+      celularVerificado: true,
+      celularEnmascarado: "+51 9****4321",
+    });
     expect(await screen.findByTestId("otp-verificado")).toBeDefined();
     expect(screen.getByText("¡Listo! Tu celular quedó verificado.")).toBeDefined();
   });

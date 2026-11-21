@@ -25,6 +25,17 @@ export type ResultadoSolicitudOtp = {
   expiraEnSegundos?: number;
 };
 
+/** Convierte `expiraEn` (ISO) en segundos restantes; nunca negativo. */
+function segundosHasta(expiraEn: string | undefined): number {
+  if (!expiraEn) return OTP_CELULAR_VIGENCIA_SEGUNDOS;
+  const ms = new Date(expiraEn).getTime() - Date.now();
+  if (!Number.isFinite(ms)) return OTP_CELULAR_VIGENCIA_SEGUNDOS;
+  return Math.min(
+    OTP_CELULAR_VIGENCIA_SEGUNDOS + 60,
+    Math.max(0, Math.ceil(ms / 1000))
+  );
+}
+
 /**
  * Estado del flujo OTP del celular (SPEC-04).
  *
@@ -66,14 +77,15 @@ export function useOtpCelular(onVerificado?: (resultado: VerificacionOtpCelular)
     try {
       const data = await container.auth.solicitarOtpCelular();
       if (!montado.current) return {};
+      const segundos = segundosHasta(data.expiraEn);
       setCelularEnmascarado(data.celularEnmascarado);
-      setSegundosVigencia(data.expiraEnSegundos ?? OTP_CELULAR_VIGENCIA_SEGUNDOS);
+      setSegundosVigencia(segundos);
       setSegundosReenvio(0);
       setIntentosRestantes(null);
       setEstado("enviado");
       return {
         celularEnmascarado: data.celularEnmascarado,
-        expiraEnSegundos: data.expiraEnSegundos,
+        expiraEnSegundos: segundos,
       };
     } catch (e) {
       if (montado.current) {
@@ -90,14 +102,14 @@ export function useOtpCelular(onVerificado?: (resultado: VerificacionOtpCelular)
       const limpio = normalizarCodigoOtp(codigo);
       if (!codigoOtpValido(limpio)) {
         setError("Ingresa el código de 6 dígitos.");
-        return { verificado: false };
+        return { celularVerificado: false, celularEnmascarado: celularEnmascarado ?? "" };
       }
       setEstado("verificando");
       setError(null);
       try {
         const data = await container.auth.verificarOtpCelular(limpio);
         if (!montado.current) return data;
-        if (data.verificado) {
+        if (data.celularVerificado) {
           setEstado("verificado");
           setError(null);
           onVerificado?.(data);
@@ -117,7 +129,7 @@ export function useOtpCelular(onVerificado?: (resultado: VerificacionOtpCelular)
         throw e;
       }
     },
-    [onVerificado]
+    [celularEnmascarado, onVerificado]
   );
 
   const reiniciar = useCallback(() => {

@@ -9,9 +9,10 @@ import { DireccionForm } from "@/modules/mod-checkout/ui/forms/DireccionForm";
 import { PagoForm } from "@/modules/mod-checkout/ui/forms/PagoForm";
 import type { DireccionInput } from "@/modules/mod-checkout/domain/schemas/direccion.schema";
 import type { PagoInput } from "@/modules/mod-checkout/domain/schemas/pago.schema";
-import type { CheckoutSesionData } from "@/modules/mod-checkout/ports/checkoutPort";
+import type { CheckoutSesionData, LineaDesactualizada } from "@/modules/mod-checkout/ports/checkoutPort";
 import { useCarrito } from "@/modules/mod-cart/public";
 import { CotizacionEnvio, useCotizacionEnvio } from "@/modules/mod-shipping/public";
+import { OtpCelularFlow } from "@/shared/auth/OtpCelularFlow";
 
 type ProblemShape = {
   code?: string;
@@ -19,7 +20,38 @@ type ProblemShape = {
   intentosRestantes?: number;
   motivo?: string;
   summary?: ResumenServidor;
+  /** Detalle por línea del 409 CARRITO_DESACTUALIZADO (convención pendiente de backend). */
+  lineas?: unknown;
+  detalle?: unknown;
 };
+
+const MOTIVOS_STOCK: Record<string, string> = {
+  AGOTADO: "se agotó mientras elegías",
+  SIN_STOCK: "se agotó mientras elegías",
+  STOCK_INSUFICIENTE: "ya no tiene stock suficiente",
+  INSUFICIENTE: "ya no tiene stock suficiente",
+  PRECIO_CAMBIADO: "cambió de precio",
+  NO_DISPONIBLE: "ya no está disponible",
+};
+
+/** Normaliza el detalle por línea sin confiar en la forma exacta del backend. */
+function lineasDesactualizadas(data: ProblemShape | undefined): LineaDesactualizada[] {
+  const raw = Array.isArray(data?.lineas)
+    ? data.lineas
+    : Array.isArray(data?.detalle)
+      ? data.detalle
+      : [];
+  return raw.filter(
+    (linea): linea is LineaDesactualizada =>
+      typeof linea === "object" && linea !== null && typeof (linea as { sku?: unknown }).sku === "string"
+  );
+}
+
+function textoLinea(linea: LineaDesactualizada): string {
+  const nombre = linea.nombre ?? linea.sku;
+  if (linea.motivo && MOTIVOS_STOCK[linea.motivo]) return `${nombre} ${MOTIVOS_STOCK[linea.motivo]}`;
+  return linea.mensaje ? `${nombre}: ${linea.mensaje}` : `${nombre} cambió mientras elegías`;
+}
 
 type ResumenServidor = {
   lineas?: Array<{ sku: string; cantidad: number; precioUnitario: number }>;
@@ -43,10 +75,14 @@ export function CheckoutPage() {
   const carrito = useChatStore((s) => s.carrito);
   const cliente = useChatStore((s) => s.cliente);
   const setUltimoPedido = useChatStore((s) => s.setUltimoPedido);
+  const setAccionPendiente = useChatStore((s) => s.setAccionPendiente);
 
   const [paso, setPaso] = useState<1 | 2>(1);
   const [dir, setDir] = useState<DireccionInput | null>(null);
   const [pago, setPago] = useState<PagoInput | null>(null);
+  const [guardarDireccion, setGuardarDireccion] = useState(false);
+  // SPEC-04: el backend bloquea el checkout con 403 CELULAR_NO_VERIFICADO.
+  const [otpRequerido, setOtpRequerido] = useState(false);
   const [pagando, setPagando] = useState(false);
   const [creandoCheckout, setCreandoCheckout] = useState(false);
 
@@ -61,6 +97,8 @@ export function CheckoutPage() {
 
   // Summary returned with 409 CARRITO_DESACTUALIZADO: the server-side amounts the user must re-confirm.
   const [resumenActualizado, setResumenActualizado] = useState<ResumenServidor | null>(null);
+  // SPEC-10: detalle por línea cuando el stock cambió desde que se agregó.
+  const [lineasCambiadas, setLineasCambiadas] = useState<LineaDesactualizada[]>([]);
   // Idempotency-Key of the checkout attempt: reused while the submitted body is unchanged.
   const checkoutKeyRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
@@ -117,6 +155,7 @@ export function CheckoutPage() {
           numeroDocumento: dir.docNum,
           ...(customerEmail ? { email: customerEmail } : {}),
         },
+        ...(guardarDireccion ? { guardarDireccion: true } : {}),
       };
       const fingerprint = JSON.stringify(payload);
       if (checkoutKeyRef.current?.fingerprint !== fingerprint) {
@@ -125,6 +164,9 @@ export function CheckoutPage() {
       const sesion = await container.checkout.iniciarCheckout(payload, checkoutKeyRef.current.key);
       checkoutKeyRef.current = null;
       setResumenActualizado(null);
+      setLineasCambiadas([]);
+      setOtpRequerido(false);
+      setAccionPendiente(null);
 
       setCheckoutSesion(sesion);
       setIntentosRestantes(sesion.intentosRestantes ?? 3);
@@ -139,10 +181,17 @@ export function CheckoutPage() {
       const status = errorAxios?.response?.status;
       const data = errorAxios?.response?.data;
 
-      if (status === 409 && data?.code === "CARRITO_DESACTUALIZADO") {
+      if (status === 403 && data?.code === "CELULAR_NO_VERIFICADO") {
+        // SPEC-04: se ofrece la verificación en ese momento y se recuerda la acción pendiente.
+        checkoutKeyRef.current = null;
+        setAccionPendiente("INICIAR_CHECKOUT");
+        setOtpRequerido(true);
+        setErrorPago(null);
+      } else if (status === 409 && data?.code === "CARRITO_DESACTUALIZADO") {
         // The cart changed: new attempt, new key, and the user confirms the updated summary.
         checkoutKeyRef.current = null;
         setResumenActualizado(data.summary ?? null);
+        setLineasCambiadas(lineasDesactualizadas(data));
         setErrorPago("El carrito cambió en el servidor. Revisa el resumen actualizado y confirma nuevamente.");
       } else if (status === 409) {
         setErrorPago(data?.detail ?? "No se pudo crear el checkout con el carrito actual. Revisa tu carrito.");
@@ -247,6 +296,26 @@ export function CheckoutPage() {
 
       {paso === 1 ? (
         <>
+          {otpRequerido && (
+            <div data-testid="checkout-otp-celular">
+              <p className="text-[13px] font-semibold text-text-primary">
+                Para coordinar la entrega necesitamos confirmar tu celular{" "}
+                {cliente?.celularEnmascarado ?? ""}
+              </p>
+              <OtpCelularFlow
+                celularEnmascarado={cliente?.celularEnmascarado}
+                onVerificado={() => {
+                  setOtpRequerido(false);
+                  setAccionPendiente(null);
+                  void confirmarDireccion();
+                }}
+                onCancelar={() => {
+                  setOtpRequerido(false);
+                  setAccionPendiente(null);
+                }}
+              />
+            </div>
+          )}
           {errorPago && (
             <div
               role="alert"
@@ -274,7 +343,30 @@ export function CheckoutPage() {
               <p className="font-bold">Total: {money(resumenActualizado.total)}</p>
             </div>
           )}
-          <DireccionForm onValid={setDir} />
+          {lineasCambiadas.length > 0 && (
+            <div
+              data-testid="detalle-stock"
+              role="alert"
+              className="rounded-md bg-error-background border border-error-default p-3 text-[13px] flex flex-col gap-2"
+            >
+              <p className="font-semibold">El stock cambió mientras elegías</p>
+              {lineasCambiadas.map((linea) => (
+                <p key={linea.sku}>{textoLinea(linea)}</p>
+              ))}
+              <button
+                type="button"
+                onClick={() => router.push("/carrito")}
+                className="wf-btn self-start px-4 py-2 text-[12px] font-bold bg-white border border-border-default"
+              >
+                VOLVER AL CARRITO
+              </button>
+            </div>
+          )}
+          <DireccionForm
+            onValid={setDir}
+            guardarDireccion={guardarDireccion}
+            onGuardarChange={setGuardarDireccion}
+          />
           <CotizacionEnvio
             cotizacion={cotizacion}
             cotizando={cotizando}

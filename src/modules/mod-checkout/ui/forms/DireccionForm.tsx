@@ -15,7 +15,16 @@ function tipoValido(value: unknown): value is TipoDocumento {
 }
 
 /** SPEC-12,14 documento A14 */
-export function DireccionForm({ onValid }: { onValid: (d: DireccionInput | null) => void }) {
+export function DireccionForm({
+  onValid,
+  guardarDireccion = false,
+  onGuardarChange,
+}: {
+  onValid: (d: DireccionInput | null) => void;
+  /** SPEC-12: el cliente decide si la dirección queda guardada en su perfil. */
+  guardarDireccion?: boolean;
+  onGuardarChange?: (guardar: boolean) => void;
+}) {
   const cliente = useChatStore((s) => s.cliente);
   const tipoPerfil = tipoValido(cliente?.ultimoDocumento?.tipo)
     ? cliente.ultimoDocumento.tipo
@@ -104,6 +113,18 @@ export function DireccionForm({ onValid }: { onValid: (d: DireccionInput | null)
           {docNumError && <span id="direccion-doc-num-error" className="text-[12px] text-error-default">{docNumError}</span>}
         </div>
       </div>
+      {onGuardarChange && (
+        <label htmlFor="direccion-guardar" className="flex items-start gap-2 text-[12px] text-text-secondary">
+          <input
+            id="direccion-guardar"
+            type="checkbox"
+            checked={guardarDireccion}
+            onChange={(e) => onGuardarChange(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>Guardar esta dirección para próximas compras</span>
+        </label>
+      )}
     </form>
   );
 }
