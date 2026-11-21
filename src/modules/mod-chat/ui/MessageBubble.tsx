@@ -31,6 +31,7 @@ import { AccionesRapidas } from "@/modules/mod-chat/ui/blocks/AccionesRapidas";
 import { AvisoDegradado } from "@/modules/mod-chat/ui/blocks/AvisoDegradado";
 import { BloqueError as BloqueErrorView } from "@/shared/ui/BloqueError";
 import { CarritoChat, FormularioRegistroChat, SelectorVarianteChat } from "@/modules/mod-chat/ui/blocks/BloquesContenedores";
+import { OtpCelularChatBlock } from "@/modules/mod-chat/ui/blocks/OtpCelularChatBlock";
 import { CarruselProductos } from "@/modules/mod-catalog/public";
 import { ConfirmacionPedido } from "@/modules/mod-orders/public";
 import { DetalleProducto } from "@/modules/mod-catalog/public";
@@ -183,7 +184,15 @@ export function renderBloque(
       );
     }
     case "FORMULARIO": {
-      if (!esFormularioRegistro(bloque as BloqueFormulario)) return null;
+      const formulario = bloque as BloqueFormulario;
+      if (formulario.formulario === "OTP_CELULAR") {
+        return (
+          <div key={clave} className="mt-2" data-testid="bloque-otp-celular">
+            <OtpCelularChatBlock celularEnmascarado={formulario.celularEnmascarado} />
+          </div>
+        );
+      }
+      if (!esFormularioRegistro(formulario)) return null;
       return (
         <div key={clave} className="mt-2">
           <FormularioRegistroChat />

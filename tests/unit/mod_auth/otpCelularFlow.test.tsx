@@ -92,13 +92,13 @@ describe("OtpCelularFlow (SPEC-04)", () => {
 
   it("muestra el límite de reenvíos y pide esperar", async () => {
     api.solicitarOtpCelular.mockRejectedValue({
-      response: { status: 429, data: { code: "LIMITE_ENVIOS", esperaSegundos: 90 } },
+      response: { status: 429, data: { code: "LIMITE_REENVIOS", reintentarEn: 90 } },
     });
     render(<OtpCelularFlow onVerificado={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "ENVIAR CÓDIGO" }));
 
     expect(await screen.findByText("Espera unos minutos antes de pedir otro código.")).toBeDefined();
-    expect(screen.getByRole("button", { name: "ENVIAR CÓDIGO" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "ESPERA 01:30" })).toBeDefined();
   });
 
   it("explica que el cambio de número se hace en el perfil", async () => {

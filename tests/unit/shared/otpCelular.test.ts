@@ -28,8 +28,14 @@ describe("reglas visibles del OTP de celular (SPEC-04)", () => {
     expect(mensajeOtpCelular(error("CODIGO_INCORRECTO", { intentosRestantes: 1 }))).toBe(
       "Código incorrecto. Te quedan 1 intento."
     );
+    expect(mensajeOtpCelular(error("CODIGO_INVALIDO", { intentosRestantes: 2 }))).toBe(
+      "Código incorrecto. Te quedan 2 intentos."
+    );
     expect(mensajeOtpCelular(error("CODIGO_VENCIDO"))).toBe("El código venció. Pide uno nuevo.");
     expect(mensajeOtpCelular(error("LIMITE_ENVIOS"))).toBe(
+      "Espera unos minutos antes de pedir otro código."
+    );
+    expect(mensajeOtpCelular(error("LIMITE_REENVIOS"))).toBe(
       "Espera unos minutos antes de pedir otro código."
     );
     expect(mensajeOtpCelular(error("DEMASIADAS_SOLICITUDES"))).toBe(
@@ -39,6 +45,7 @@ describe("reglas visibles del OTP de celular (SPEC-04)", () => {
   });
 
   it("usa los segundos del backend o el valor por defecto para el reenvío", () => {
+    expect(esperaDeReenvio({ response: { data: { reintentarEn: 60 } } })).toBe(60);
     expect(esperaDeReenvio({ response: { data: { esperaSegundos: 45 } } })).toBe(45);
     expect(esperaDeReenvio({ response: { data: { retryAfter: "30" } } })).toBe(30);
     expect(esperaDeReenvio(new Error("sin datos"))).toBe(15 * 60);

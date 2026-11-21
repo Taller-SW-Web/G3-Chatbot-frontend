@@ -17,7 +17,8 @@ const MENSAJE_GENERICO = "No pudimos completar la verificación. Inténtalo de n
 /** Código visible de error del flujo OTP (nunca se ramifica por texto). */
 export function mensajeOtpCelular(error: unknown): string {
   switch (problemCode(error)) {
-    case "CODIGO_INCORRECTO": {
+    case "CODIGO_INCORRECTO":
+    case "CODIGO_INVALIDO": {
       const intentos = problemNumber(error, "intentosRestantes");
       return intentos === undefined
         ? "Código incorrecto. Inténtalo de nuevo."
@@ -25,7 +26,10 @@ export function mensajeOtpCelular(error: unknown): string {
     }
     case "CODIGO_VENCIDO":
       return "El código venció. Pide uno nuevo.";
+    case "OTP_INTENTOS_AGOTADOS":
+      return "Agotaste los intentos. Pide un código nuevo.";
     case "LIMITE_ENVIOS":
+    case "LIMITE_REENVIOS":
       return "Espera unos minutos antes de pedir otro código.";
     case "DEMASIADAS_SOLICITUDES":
       return "Vas muy rápido, espera un momento.";
@@ -43,6 +47,7 @@ export function mensajeOtpCelular(error: unknown): string {
 /** Segundos que el backend pide esperar antes de otro envío (`Retry-After` incluido). */
 export function esperaDeReenvio(error: unknown): number {
   return (
+    problemNumber(error, "reintentarEn") ??
     problemNumber(error, "esperaSegundos") ??
     problemNumber(error, "retryAfter") ??
     problemNumber(error, "segundos") ??

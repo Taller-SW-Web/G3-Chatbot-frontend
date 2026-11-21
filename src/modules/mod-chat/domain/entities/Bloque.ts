@@ -43,10 +43,11 @@ export type BloqueSelectorVariante = BloqueBase & {
   datos: { product_id: string; faltantes: string[]; seleccion?: Record<string, string> };
 };
 
-/** Form request; the backend sends only the form kind, no data. */
+/** Form request; the backend sends the form kind and, for OTP, the masked phone. */
 export type BloqueFormulario = BloqueBase & {
   tipo: "FORMULARIO";
   formulario: string;
+  celularEnmascarado?: string;
 };
 
 export type BloqueAcciones = BloqueBase & {

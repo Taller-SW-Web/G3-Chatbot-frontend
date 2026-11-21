@@ -103,10 +103,14 @@ export function OtpCelularFlow({
         <button
           type="button"
           onClick={() => void pedir()}
-          disabled={otp.estado === "solicitando"}
+          disabled={otp.estado === "solicitando" || otp.segundosReenvio > 0}
           className="wf-btn py-3 text-[12px] font-bold bg-action-primary text-surface-ink disabled:opacity-60"
         >
-          {otp.estado === "solicitando" ? "ENVIANDO…" : "ENVIAR CÓDIGO"}
+          {otp.estado === "solicitando"
+            ? "ENVIANDO…"
+            : otp.segundosReenvio > 0
+              ? `ESPERA ${otp.temporizadorReenvio}`
+              : "ENVIAR CÓDIGO"}
         </button>
         <button
           type="button"
@@ -115,7 +119,14 @@ export function OtpCelularFlow({
         >
           Ese no es mi número
         </button>
-        {ayudaNumero && <p className="text-[12px] text-text-secondary">{AYUDA_CELULAR_AJENO}</p>}
+        {ayudaNumero && (
+          <p className="text-[12px] text-text-secondary">
+            {AYUDA_CELULAR_AJENO}{" "}
+            <a href="/cuenta" className="underline font-semibold text-text-primary">
+              Ir a mi cuenta
+            </a>
+          </p>
+        )}
         {onCancelar && (
           <button
             type="button"
@@ -191,7 +202,14 @@ export function OtpCelularFlow({
           Ese no es mi número
         </button>
       </div>
-      {ayudaNumero && <p className="text-[12px] text-text-secondary">{AYUDA_CELULAR_AJENO}</p>}
+      {ayudaNumero && (
+        <p className="text-[12px] text-text-secondary">
+          {AYUDA_CELULAR_AJENO}{" "}
+          <a href="/cuenta" className="underline font-semibold text-text-primary">
+            Ir a mi cuenta
+          </a>
+        </p>
+      )}
       {onCancelar && (
         <button
           type="button"
