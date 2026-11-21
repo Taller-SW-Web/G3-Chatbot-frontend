@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckIcon, LockIcon } from "@/shared/ui/icons";
 import { OtpCelularFlow } from "@/shared/auth/OtpCelularFlow";
 import { useChatStore } from "@/shared/auth/chatStore";
+import { container } from "@/shared/di/container";
 
 /**
  * `/cuenta`: datos de sesión, verificación de celular (SPEC-04),
@@ -17,6 +18,18 @@ export function MiCuentaPage() {
   const setCliente = useChatStore((s) => s.setCliente);
   const logout = useChatStore((s) => s.logout);
   const [otp, setOtp] = useState(false);
+
+  // El logout debe revocar la cookie de refresh en el backend; si falla, igual se limpia el estado local.
+  async function cerrarSesion() {
+    try {
+      await container.auth.logout();
+    } catch {
+      // sin red o API caída: se limpia localmente de todos modos
+    } finally {
+      logout();
+    }
+    router.push("/");
+  }
 
   if (!cliente) {
     return (
@@ -56,7 +69,7 @@ export function MiCuentaPage() {
         <button onClick={() => router.push("/pedidos")} className="wf-btn py-3 text-[12px] font-bold tracking-wide bg-white border border-border-default text-text-primary">MIS PEDIDOS</button>
         <button onClick={() => router.push("/pedidos/reclamos")} className="wf-btn py-3 text-[12px] font-bold tracking-wide bg-white border border-border-default text-text-primary">MIS RECLAMOS</button>
         <button onClick={() => router.push("/sugerencias")} className="wf-btn py-3 text-[12px] font-bold tracking-wide bg-surface-ink text-text-inverse">ENVIAR SUGERENCIA / REPORTAR BUG</button>
-        <button onClick={() => { logout(); router.push("/"); }} className="wf-btn py-3 text-[12px] font-bold tracking-wide bg-white border border-border-default text-error-default">CERRAR SESIÓN</button>
+        <button onClick={cerrarSesion} className="wf-btn py-3 text-[12px] font-bold tracking-wide bg-white border border-border-default text-error-default">CERRAR SESIÓN</button>
       </div>
 
       <div className="flex flex-col gap-1">

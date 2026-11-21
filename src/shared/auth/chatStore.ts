@@ -6,6 +6,7 @@ import type { Cliente } from "@/shared/auth/Cliente";
 import type { CarritoUI } from "@/modules/mod-cart/public";
 import { isTokenExpiringSoon, sincronizarCookieSesion } from "@/shared/auth/sesion";
 import { maskCelular } from "@/shared/security/sanitize";
+import { queryClient } from "@/shared/di/queryClient";
 
 type ChatState = {
   accessToken: string | null;
@@ -109,12 +110,17 @@ export const useChatStore = create<ChatState>()(
       setPrimerMensaje: (primerMensaje) => set({ primerMensaje }),
       logout: () => {
         sincronizarCookieSesion(false);
+        // Pedidos y carrito cacheados en memoria pertenecen al usuario que sale.
+        queryClient.clear();
         return set({
           accessToken: null,
           expiraEn: null,
           cliente: null,
           carrito: carritoVacio,
           accionPendiente: null,
+          ultimoPedido: null,
+          ultimaConversacionId: null,
+          chatSid: null,
         });
       },
     }),
