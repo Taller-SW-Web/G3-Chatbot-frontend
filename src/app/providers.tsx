@@ -1,7 +1,7 @@
 "use client";
 
-import { QueryClientProvider } from "@/application/providers/queryProvider";
-import { queryClient } from "@/application/providers/queryClient";
+import { QueryClientProvider } from "@/shared/ui/QueryProvider";
+import { queryClient } from "@/shared/di/queryClient";
 
 /**
  * Providers cliente bajo el layout servidor.
