@@ -3,6 +3,7 @@
  * Otros módulos solo pueden importar desde aquí; nunca su domain/application/adapters.
  */
 export { HomePage } from "./ui/HomePage";
+export type { HomeAgregarInput, HomeAgregarResultado, HomePageProps } from "./ui/HomePage";
 export { ProductCard } from "./ui/ProductCard";
 export { AvailabilityBadge } from "./ui/AvailabilityBadge";
 export { ProductImage } from "./ui/ProductImage";
