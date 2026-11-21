@@ -163,7 +163,15 @@ describe("check-modules.mjs", () => {
     const dir = copiarRepo();
     const exceptions = path.join(dir, "scripts/module-boundaries.exceptions.json");
     const json = JSON.parse(fs.readFileSync(exceptions, "utf8"));
-    json.contractPending[0].reviewBy = "2020-01-01";
+    // La allowlist del repo puede estar vacía: el caso crea su propia entrada vencida.
+    json.contractPending = [
+      {
+        module: "mod-cart",
+        path: "/carrito",
+        todo: "TODO: fixture de prueba",
+        reviewBy: "2020-01-01",
+      },
+    ];
     fs.writeFileSync(exceptions, JSON.stringify(json, null, 2));
 
     const r = ejecutar(dir, { OPENAPI_PATH: openapiReal });
