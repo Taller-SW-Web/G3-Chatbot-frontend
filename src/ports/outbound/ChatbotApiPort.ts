@@ -177,6 +177,152 @@ export type ReenvioConfirmacion = {
   correoEnmascarado: string;
 };
 
+/** Fila de pedido (`GET /pedidos` y `GET /pedidos/me`, SPEC-17). */
+export type PedidoResumen = {
+  pedidoId: string;
+  canal: string;
+  estado: string;
+  estadoEtiqueta: string;
+  total: number;
+  moneda: string;
+  fechaCreacion: string;
+};
+
+export type PedidoLinea = {
+  productoId: string;
+  sku: string;
+  descripcion: string;
+  cantidad: number;
+  precioUnitario: number;
+};
+
+export type PedidoDetalle = PedidoResumen & {
+  items: PedidoLinea[];
+  envio: Record<string, unknown> | null;
+  historial: { estado: string; etiqueta: string; fecha: string; completado: boolean }[];
+  seguimientoDisponible?: boolean;
+};
+
+/** Seguimiento del despacho (`GET /pedidos/{id}/seguimiento`, SPEC-18). */
+export type SeguimientoPedido = {
+  pedidoId: string;
+  estado: string;
+  estadoEtiqueta: string;
+  fechaProgramada?: string | null;
+  distrito?: string | null;
+  hitos: { titulo: string; fecha: string; completado: boolean }[];
+  recibidoPor?: string | null;
+  detalleDisponible: boolean;
+  mensaje?: string | null;
+};
+
+export type PaginaPedidos = {
+  items: PedidoResumen[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+/** Evidencia devuelta por `POST /evidencias` (proxy a G5 F3 §2.1). */
+export type EvidenciaSubida = {
+  tipo: "IMAGEN" | "DOCUMENTO";
+  url: string;
+  nombreArchivoOriginal: string;
+  tamanioBytes: number;
+  fechaSubida: string;
+};
+
+export type DevolucionItemInput = {
+  productoId: string;
+  cantidad: number;
+};
+
+export type DevolucionEvidenciaInput = {
+  tipo: "IMAGEN" | "DOCUMENTO";
+  url: string;
+};
+
+export type CrearDevolucionInput = {
+  pedidoId: string;
+  tipo: "CAMBIO" | "DEVOLUCION_DINERO";
+  motivo: string;
+  descripcion?: string;
+  items: DevolucionItemInput[];
+  evidencias?: DevolucionEvidenciaInput[];
+};
+
+export type DevolucionResumen = {
+  devolucionId: string;
+  pedidoId: string;
+  tipo: string;
+  estado: string;
+  motivo: string;
+  estadoReembolso?: string | null;
+  fechaRegistro: string;
+};
+
+export type DevolucionDetalle = DevolucionResumen & {
+  descripcion?: string | null;
+  items: DevolucionItemInput[];
+  resolucion?: Record<string, unknown> | null;
+  evidencias: DevolucionEvidenciaInput[];
+  historial: Record<string, unknown>[];
+  recepciones: Record<string, unknown>[];
+};
+
+export type PaginaDevoluciones = {
+  items: DevolucionResumen[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type ReclamoConsumidorInput = {
+  nombreCompleto: string;
+  documento: string;
+  email: string;
+  telefono: string;
+};
+
+export type CrearReclamoInput = {
+  pedidoId?: string;
+  tipo: "RECLAMO" | "QUEJA";
+  motivo: string;
+  detalle: string;
+  consumidor: ReclamoConsumidorInput;
+  solucionEsperada?: string;
+};
+
+export type ReclamoResumen = {
+  reclamoId: string;
+  codigoSeguimiento: string;
+  pedidoId?: string | null;
+  tipo: string;
+  motivo: string;
+  estado: string;
+  fechaRegistro: string;
+  fechaLimiteSLA?: string | null;
+  estadoSla?: string | null;
+  diasHabilesRestantes?: number | null;
+};
+
+export type ReclamoDetalle = ReclamoResumen & {
+  canal: string;
+  detalle: string;
+  plazoDiasHabiles: number;
+  fechaLimiteSLA: string;
+  fechaAtencion?: string | null;
+  respuestaVisibleCliente?: string | null;
+  slaCumplido?: boolean | null;
+};
+
+export type PaginaReclamos = {
+  items: ReclamoResumen[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 /** Body of `POST /checkout`: the server computes lines and amounts (contratos-integracion §2.8). */
 export type CrearCheckoutInput = {
   cartId?: string;
@@ -276,6 +422,28 @@ export interface ChatbotApiPort {
   verDetalleProducto(productId: string): Promise<unknown>;
   consultarDisponibilidad(sku: string, cantidad?: number): Promise<DisponibilidadPuntual[]>;
   validarContactoCelular(codigo: string): Promise<{ verificado: boolean }>;
+  /** SPEC-17: pedidos del cliente autenticado. */
+  listarPedidos(input?: { page?: number; pageSize?: number; estado?: string }): Promise<PaginaPedidos>;
+  /** SPEC-17: detalle, estado e historial de un pedido propio. */
+  obtenerPedido(pedidoId: string): Promise<PedidoDetalle>;
+  /** SPEC-18: hitos del despacho de un pedido propio. */
+  obtenerSeguimientoPedido(pedidoId: string): Promise<SeguimientoPedido>;
+  /** SPEC-21: sube evidencia a G5 y devuelve la URL que se usa en la devolución. */
+  subirEvidencia(file: File, conversacionId?: string): Promise<EvidenciaSubida>;
+  /** SPEC-21: registra la solicitud de cambio/devolución. */
+  crearDevolucion(input: CrearDevolucionInput, idempotencyKey?: string): Promise<DevolucionDetalle>;
+  /** SPEC-22: devoluciones del cliente autenticado. */
+  listarDevoluciones(input?: { page?: number; pageSize?: number; estado?: string; tipo?: string }): Promise<PaginaDevoluciones>;
+  /** SPEC-22: detalle de una devolución propia. */
+  obtenerDevolucion(devolucionId: string): Promise<DevolucionDetalle>;
+  /** SPEC-19: registra un reclamo del Libro de Reclamaciones. */
+  crearReclamo(input: CrearReclamoInput, idempotencyKey?: string): Promise<ReclamoDetalle>;
+  /** SPEC-20: reclamos del cliente autenticado. */
+  listarReclamos(input?: { page?: number; pageSize?: number; estado?: string }): Promise<PaginaReclamos>;
+  /** SPEC-20: detalle de un reclamo propio por código de seguimiento. */
+  obtenerReclamo(codigoSeguimiento: string): Promise<ReclamoDetalle>;
+  /** SPEC-24: califica la entrega de un pedido ENTREGADO. */
+  calificarPedido(pedidoId: string, puntuacion: 1 | 3 | 5, comentario?: string): Promise<void>;
   /** SPEC-16 Req. 3: reenvía el correo de confirmación (máx. 2). Propaga 429 LIMITE_REENVIOS_EXCEDIDO. */
   reenviarConfirmacion(pedidoId: string, idempotencyKey: string): Promise<ReenvioConfirmacion>;
   /** SPEC-14: Inicia sesión de checkout en backend con vigencia de 15 min. */

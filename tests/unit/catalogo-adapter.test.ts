@@ -46,7 +46,7 @@ describe("adapter Axios de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {
           tamanio: 5,
           pagina: 1,
         }),
-        timeout: 12000,
+        timeout: 20000,
       })
     );
   });
@@ -59,7 +59,7 @@ describe("adapter Axios de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {
     expect(peticiones.get).toHaveBeenNthCalledWith(
       1,
       "/catalogo/productos/a%2Fb",
-      expect.objectContaining({ timeout: 4000 })
+      expect.objectContaining({ timeout: 10000 })
     );
     await chatbotApi.consultarDisponibilidad("X", 2);
     expect(peticiones.get).toHaveBeenNthCalledWith(
@@ -82,7 +82,7 @@ describe("adapter Axios de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {
     expect(peticiones.post).toHaveBeenCalledWith(
       "/carrito/items",
       { sku: "X", cantidad: 1 },
-      expect.objectContaining({ timeout: 4000 })
+      expect.objectContaining({ timeout: 10000 })
     );
   });
 

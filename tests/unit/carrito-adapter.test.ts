@@ -62,7 +62,7 @@ describe("adapter Axios del carrito (SPEC-10, SPEC-11)", () => {
     await chatbotApi.listarCarrito("conv-1");
     expect(peticiones.get).toHaveBeenCalledWith(
       "/carrito",
-      expect.objectContaining({ params: { conversacionId: "conv-1" }, timeout: 4000 })
+      expect.objectContaining({ params: { conversacionId: "conv-1" }, timeout: 10000 })
     );
   });
 

@@ -71,7 +71,7 @@ describe("acciones rápidas de chat", () => {
     expect(postMock).toHaveBeenCalledWith(
       "/chat/conversaciones/conv%2F1/mensajes",
       { accion: { tipo: "VER_CARRITO", payload: { origen: "chat" } } },
-      { timeout: 8000 }
+      { timeout: 20000 }
     );
   });
 
@@ -89,7 +89,7 @@ describe("acciones rápidas de chat", () => {
     expect(postMock).toHaveBeenLastCalledWith(
       "/chat/conversaciones/conv-1/mensajes",
       { accion: { tipo: "VER_OFERTAS", payload: {} } },
-      { timeout: 12000 }
+      { timeout: 20000 }
     );
   });
 
@@ -98,7 +98,7 @@ describe("acciones rápidas de chat", () => {
     const accion = { tipo: "AGREGAR_AL_CARRITO", payload: { sku: "s", product_id: "p" } };
     await chatbotApi.ejecutarAccion("conv-1", accion);
     expect(postMock).toHaveBeenLastCalledWith(
-      "/chat/conversaciones/conv-1/mensajes", { accion }, { timeout: 12000 }
+      "/chat/conversaciones/conv-1/mensajes", { accion }, { timeout: 20000 }
     );
   });
 });

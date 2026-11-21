@@ -2,89 +2,170 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon } from "../components/icons";
 import { StatusBadge } from "../components/StatusBadge";
 import { DeliveryRating } from "../components/DeliveryRating";
-import { EstadoPedido } from "../components/blocks/EstadoPedido";
 import { ListaReclamos } from "../components/blocks/ListaReclamos";
 import { ListaDevoluciones } from "../components/blocks/ListaDevoluciones";
+import { container } from "@/infrastructure/di/container";
 
 type Tab = "proceso" | "entregados" | "reembolso" | "reclamos";
 
-/** `/pedidos` pestañas En proceso/Entregados/Reembolsos(+Reclamos). SPEC-17,18,21,22 */
+const TABS: Tab[] = ["proceso", "entregados", "reembolso", "reclamos"];
+const TAB_LABEL: Record<Tab, string> = {
+  proceso: "En proceso",
+  entregados: "Entregados",
+  reembolso: "Reembolso/Cambio",
+  reclamos: "Reclamos",
+};
+
+const DATE = new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "short", year: "numeric" });
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : DATE.format(date);
+}
+
+/** `/pedidos` pestañas En proceso/Entregados/Reembolsos/Reclamos. SPEC-17,18,21,22 */
 export function OrderHistoryPage({ initialTab = "proceso" }: { initialTab?: Tab }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const router = useRouter();
+
+  const pedidos = useQuery({
+    queryKey: ["pedidos", "historial"],
+    queryFn: () => container.api.listarPedidos({ page: 1, pageSize: 20 }),
+    enabled: tab === "proceso" || tab === "entregados",
+    retry: false,
+  });
+
+  const devoluciones = useQuery({
+    queryKey: ["devoluciones", "historial"],
+    queryFn: () => container.api.listarDevoluciones({ page: 1, pageSize: 20 }),
+    enabled: tab === "reembolso",
+    retry: false,
+  });
+
+  const reclamos = useQuery({
+    queryKey: ["reclamos", "historial"],
+    queryFn: () => container.api.listarReclamos({ page: 1, pageSize: 20 }),
+    enabled: tab === "reclamos",
+    retry: false,
+  });
+
+  const calificar = useMutation({
+    mutationFn: ({ pedidoId, puntuacion }: { pedidoId: string; puntuacion: 1 | 3 | 5 }) =>
+      container.api.calificarPedido(pedidoId, puntuacion),
+  });
+
+  const allOrders = pedidos.data?.items ?? [];
+  const inProcess = allOrders.filter((o) => o.estado !== "ENTREGADO" && o.estado !== "ANULADO");
+  const delivered = allOrders.filter((o) => o.estado === "ENTREGADO" || o.estado === "ANULADO");
+  const visibleOrders = tab === "proceso" ? inProcess : delivered;
+
   return (
     <div className="p-4 flex flex-col gap-3">
       <div className="grid grid-cols-4 gap-1 bg-white border border-border-default rounded-md p-1">
-        {(["proceso", "entregados", "reembolso", "reclamos"] as Tab[]).map((t) => (
-          <button key={t} onClick={() => setTab(t)}
+        {TABS.map((t) => (
+          <button key={t} onClick={() => setTab(t)} aria-pressed={tab === t}
             className={`rounded-sm py-2 text-[10px] font-bold tracking-wide transition-colors ${tab === t ? "bg-surface-ink text-text-inverse" : "text-text-secondary"}`}>
-            {t === "proceso" ? "En proceso" : t === "entregados" ? "Entregados" : t === "reembolso" ? "Reembolso/ Cambio" : "Reclamos"}
+            {TAB_LABEL[t]}
           </button>
         ))}
       </div>
 
-      {tab === "proceso" && (
-        <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-1 wf-card">
-          <div className="flex justify-between items-center">
-            <span className="text-[13px] text-text-secondary">Pedido #A-1042</span>
-            <StatusBadge status="EN_CAMINO" icon={<TruckIcon size={16} />}>EN CAMINO</StatusBadge>
-          </div>
-          <EstadoPedido hitos={[
-            { titulo: "Pago confirmado", fecha: "10 sep · 10:02", done: true },
-            { titulo: "En preparación", fecha: "11 sep · 09:00", done: true },
-            { titulo: "En centro de despacho", fecha: "12 sep · 14:00", done: true },
-            { titulo: "En camino", fecha: "18 sep · estimado", done: false },
-          ]} />
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            <button onClick={() => router.push("/seguimiento")}
-              className="wf-btn py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink inline-flex items-center justify-center gap-1"><TruckIcon size={16} />VER SEGUIMIENTO</button>
-            <button disabled title="Próximamente" aria-label="Preguntar en el chat (próximamente)"
-              className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary disabled:opacity-45 disabled:cursor-not-allowed">PREGUNTAR EN EL CHAT</button>
-          </div>
-        </div>
-      )}
-
-      {tab === "entregados" && (
-        <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-1 wf-card">
-          <div className="flex justify-between items-center">
-            <span className="text-[13px] text-text-secondary">Pedido PED-2026-00891</span>
-            <StatusBadge status="ENTREGADO" icon={<CheckIcon size={16} />}>ENTREGADO</StatusBadge>
-          </div>
-          <div className="flex justify-between text-[14px]"><span className="text-text-secondary">Entrega</span><span className="text-right">Calle Los Olivos 120, Lima</span></div>
-          <div className="flex justify-between text-[14px]"><span className="text-text-secondary">Entregado el</span><span>2 sep 2026</span></div>
-          <div className="mt-2">
-            <DeliveryRating orderId="PED-2026-00891" />
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            <button onClick={() => router.push("/reclamo")} className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-1"><FileAlertIcon size={16} />REPORTAR UN PROBLEMA</button>
-            <button onClick={() => router.push("/devolucion")} className="wf-btn py-2.5 px-3 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-2 text-center"><RefreshIcon size={16} className="shrink-0 ml-1" />SOLICITAR CAMBIO O DEVOLUCIÓN</button>
-          </div>
-          <button disabled title="Próximamente" aria-label="Preguntar en el chat (próximamente)"
-              className="wf-btn py-2.5 text-[11px] font-bold mt-2 w-full bg-surface-ink text-text-inverse disabled:opacity-45 disabled:cursor-not-allowed">PREGUNTAR EN EL CHAT</button>
+      {(tab === "proceso" || tab === "entregados") && (
+        <div className="flex flex-col gap-3">
+          {pedidos.isLoading ? <p className="text-[14px] text-text-secondary">Cargando pedidos…</p> : null}
+          {pedidos.isError ? <p className="text-[14px] text-error-default">No puedo consultar tus pedidos en este momento.</p> : null}
+          {!pedidos.isLoading && !pedidos.isError && visibleOrders.length === 0 ? (
+            <p className="text-[14px] text-text-secondary">Aún no tienes pedidos en esta pestaña.</p>
+          ) : null}
+          {visibleOrders.map((order) => (
+            <div key={order.pedidoId} className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2 wf-card">
+              <div className="flex justify-between items-center">
+                <span className="text-[13px] text-text-secondary">Pedido {order.pedidoId}</span>
+                <StatusBadge
+                  variant={order.estado === "ENTREGADO" ? "success" : order.estado === "ANULADO" ? "error" : "warning"}
+                  icon={order.estado === "ENTREGADO" ? <CheckIcon size={16} /> : <TruckIcon size={16} />}
+                >
+                  {order.estadoEtiqueta}
+                </StatusBadge>
+              </div>
+              <div className="flex justify-between text-[14px]">
+                <span className="text-text-secondary">Total</span>
+                <span>S/ {order.total.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-[14px]">
+                <span className="text-text-secondary">Creado</span>
+                <span>{formatDate(order.fechaCreacion)}</span>
+              </div>
+              {tab === "entregados" && order.estado === "ENTREGADO" ? (
+                <DeliveryRating
+                  orderId={order.pedidoId}
+                  onRate={(orderId, mood) =>
+                    calificar.mutate({
+                      pedidoId: orderId,
+                      puntuacion: mood === "bien" ? 5 : mood === "regular" ? 3 : 1,
+                    })
+                  }
+                />
+              ) : null}
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <button onClick={() => router.push(`/seguimiento?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
+                  className="wf-btn py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink inline-flex items-center justify-center gap-1">
+                  <TruckIcon size={16} />VER SEGUIMIENTO
+                </button>
+                {tab === "entregados" && order.estado === "ENTREGADO" ? (
+                  <button onClick={() => router.push(`/reclamo?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
+                    className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-1">
+                    <FileAlertIcon size={16} />REPORTAR PROBLEMA
+                  </button>
+                ) : (
+                  <span />
+                )}
+              </div>
+              {tab === "entregados" && order.estado === "ENTREGADO" ? (
+                <button onClick={() => router.push(`/devolucion?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
+                  className="wf-btn py-2.5 px-3 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-2 text-center">
+                  <RefreshIcon size={16} className="shrink-0 ml-1" />SOLICITAR CAMBIO O DEVOLUCIÓN
+                </button>
+              ) : null}
+            </div>
+          ))}
         </div>
       )}
 
       {tab === "reembolso" && (
         <div className="flex flex-col gap-3">
-          <ListaDevoluciones items={[
-            { codigo: "#R-0312", estado: "EN REVISIÓN", motivo: "Talla incorrecta", fecha: "10 sep 2026" },
-            { codigo: "DEV-2026-00045", estado: "APROBADO", motivo: "Cambio 41 → 42", fecha: "8 sep 2026" },
-          ]} />
-          <button disabled title="Próximamente" aria-label="Preguntar en el chat (próximamente)"
-              className="wf-btn py-2.5 text-[11px] font-bold w-full bg-surface-ink text-text-inverse disabled:opacity-45 disabled:cursor-not-allowed">PREGUNTAR EN EL CHAT</button>
+          {devoluciones.isLoading ? <p className="text-[14px] text-text-secondary">Cargando solicitudes…</p> : null}
+          {devoluciones.isError ? <p className="text-[14px] text-error-default">No puedo consultar tus devoluciones.</p> : null}
+          {!devoluciones.isLoading && !devoluciones.isError && (devoluciones.data?.items.length ?? 0) === 0 ? (
+            <p className="text-[14px] text-text-secondary">Aún no tienes solicitudes de cambio o devolución.</p>
+          ) : null}
+          <ListaDevoluciones items={(devoluciones.data?.items ?? []).map((d) => ({
+            codigo: d.devolucionId,
+            estado: d.estado,
+            motivo: d.motivo,
+            fecha: formatDate(d.fechaRegistro),
+          }))} />
         </div>
       )}
 
       {tab === "reclamos" && (
         <div className="flex flex-col gap-3">
-          <ListaReclamos items={[
-            { codigo: "REC-2026-0118", estado: "EN PROCESO", motivo: "Producto defectuoso", plazo: "15 días hábiles" },
-          ]} />
-          <button disabled title="Próximamente" aria-label="Preguntar en el chat (próximamente)"
-              className="wf-btn py-2.5 text-[11px] font-bold w-full bg-surface-ink text-text-inverse disabled:opacity-45 disabled:cursor-not-allowed">PREGUNTAR EN EL CHAT</button>
+          {reclamos.isLoading ? <p className="text-[14px] text-text-secondary">Cargando reclamos…</p> : null}
+          {reclamos.isError ? <p className="text-[14px] text-error-default">No puedo consultar tus reclamos.</p> : null}
+          {!reclamos.isLoading && !reclamos.isError && (reclamos.data?.items.length ?? 0) === 0 ? (
+            <p className="text-[14px] text-text-secondary">Aún no tienes reclamos registrados.</p>
+          ) : null}
+          <ListaReclamos items={(reclamos.data?.items ?? []).map((r) => ({
+            codigo: r.codigoSeguimiento,
+            estado: r.estado,
+            motivo: r.motivo,
+            plazo: formatDate(r.fechaLimiteSLA),
+          }))} />
         </div>
       )}
     </div>

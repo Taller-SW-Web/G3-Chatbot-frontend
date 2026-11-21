@@ -33,6 +33,7 @@ Object.defineProperty(globalThis, "localStorage", {
 });
 
 import { chatbotApi } from "@/adapters/outbound/ChatbotApiAxiosAdapter";
+import { apiConfig } from "@/infrastructure/config/apiConfig";
 
 describe("contrato de rutas del frontend (/api/v1)", () => {
   beforeEach(() => {
@@ -47,7 +48,7 @@ describe("contrato de rutas del frontend (/api/v1)", () => {
     expect(peticiones.post).toHaveBeenCalledWith(
       "/carrito/items",
       { sku: "SKU-1", cantidad: 2 },
-      expect.objectContaining({ timeout: 4000 })
+      expect.objectContaining({ timeout: apiConfig.timeouts.catalogo })
     );
   });
 
@@ -63,7 +64,7 @@ describe("contrato de rutas del frontend (/api/v1)", () => {
     expect(peticiones.post).toHaveBeenCalledWith(
       "/envio/cotizar",
       input,
-      expect.objectContaining({ timeout: 4000 })
+      expect.objectContaining({ timeout: apiConfig.timeouts.catalogo })
     );
   });
 
