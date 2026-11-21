@@ -11,10 +11,17 @@ import {
 
 const modulesDir = path.join(root, "src/modules");
 const exceptionsPath = path.join(root, "scripts/module-boundaries.exceptions.json");
-const exceptions = fs.existsSync(exceptionsPath)
+const exceptionsRaw = fs.existsSync(exceptionsPath)
   ? JSON.parse(fs.readFileSync(exceptionsPath, "utf8"))
-  : [];
-const allowed = new Set(exceptions.map((e) => `${e.from}->${e.to}`));
+  : {};
+// Formato v1 (array) → v2 (objeto con moduleEdges + sharedPrivateImports).
+const exceptions = Array.isArray(exceptionsRaw)
+  ? { moduleEdges: exceptionsRaw, sharedPrivateImports: [] }
+  : exceptionsRaw;
+const allowed = new Set((exceptions.moduleEdges ?? []).map((e) => `${e.from}->${e.to}`));
+const sharedPrivateImportFiles = new Set(
+  (exceptions.sharedPrivateImports ?? []).map((e) => e.file)
+);
 
 const errors = [];
 const warnings = new Set();
@@ -44,7 +51,7 @@ for (const id of ids) {
     fail(`${id}: falta la carpeta`);
     continue;
   }
-  for (const required of ["MODULE.md", "module.manifest.ts", "public.ts", "ports", "adapters"]) {
+  for (const required of ["MODULE.md", "module.manifest.ts", "public.ts", "ui", "ports", "adapters"]) {
     if (!fs.existsSync(path.join(dir, required))) fail(`${id}: falta ${required}`);
   }
   const ports = fs.existsSync(path.join(dir, "ports"))
@@ -122,6 +129,7 @@ function scanSource(file) {
   );
   const imports = [];
   const containerKeys = [];
+  const dynamicImports = [];
   const add = (spec, typeOnly = false) => { if (spec) imports.push({ spec, typeOnly }); };
   const visit = (node) => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
@@ -132,13 +140,12 @@ function scanSource(file) {
       ts.isStringLiteral(node.moduleSpecifier)
     ) {
       add(node.moduleSpecifier.text, node.isTypeOnly);
-    } else if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-      node.arguments.length === 1 &&
-      ts.isStringLiteral(node.arguments[0])
-    ) {
-      add(node.arguments[0].text);
+    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      if (node.arguments.length === 1 && ts.isStringLiteral(node.arguments[0])) {
+        add(node.arguments[0].text);
+      } else {
+        dynamicImports.push(node.arguments.map((a) => a.getText(source)).join(", "));
+      }
     } else if (
       ts.isPropertyAccessExpression(node) &&
       ts.isIdentifier(node.expression) &&
@@ -157,7 +164,7 @@ function scanSource(file) {
     ts.forEachChild(node, visit);
   };
   visit(source);
-  return { imports, containerKeys };
+  return { imports, containerKeys, dynamicImports };
 }
 
 /** Alias de `container` → módulo dueño del adapter (evita llamadas cruzadas encubiertas). */
@@ -185,8 +192,12 @@ for (const file of sourceFiles) {
   const rel = path.relative(root, file).replace(/\\/g, "/");
   const moduleMatch = rel.match(/^src\/modules\/(mod-[a-z-]+)\//);
   const own = moduleMatch?.[1];
-  const isContainer = rel === "src/shared/di/container.ts";
+  const privateImportAllowed = sharedPrivateImportFiles.has(rel);
   const scanned = scanSource(file);
+
+  if (scanned.dynamicImports.length) {
+    fail(`${rel}: import() dinámico no permitido (usa un string literal): ${scanned.dynamicImports.join(" | ")}`);
+  }
 
   // El agregado `container.api` no deja rastro estático de qué módulo se llama:
   // dentro de un módulo se usa `container.<alias>` propio o el port público.
@@ -241,7 +252,7 @@ for (const file of sourceFiles) {
     } else if (targetModule) {
       // shared/ y app/ pueden componer módulos, pero solo por su public.ts.
       const isPublic = target.replace(/\.(ts|tsx)$/, "") === `src/modules/${targetModule}/public`;
-      if (!isPublic && !isContainer) {
+      if (!isPublic && !privateImportAllowed) {
         fail(`${rel}: shared/app importa ${targetModule} por dentro (${spec}); usa public.ts`);
       }
     }

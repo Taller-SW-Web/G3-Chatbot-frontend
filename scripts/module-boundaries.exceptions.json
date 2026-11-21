@@ -1,1 +1,10 @@
-[]
+{
+  "version": 2,
+  "moduleEdges": [],
+  "sharedPrivateImports": [
+    {
+      "file": "src/shared/di/container.ts",
+      "reason": "Composition root: cablea los adapters de los 8 módulos y necesita las implementaciones, no solo su public.ts. Cualquier otro archivo de shared/ o app/ debe entrar por public.ts."
+    }
+  ]
+}
