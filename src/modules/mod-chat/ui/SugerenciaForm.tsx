@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { PhotoIcon, CheckIcon } from "@/shared/ui/icons";
 import {
   mensajeSugerencia,
@@ -63,33 +63,6 @@ export function SugerenciaForm({
     titulo.trim().length >= SUGERENCIA_TITULO_MIN &&
     detalle.trim().length >= SUGERENCIA_DESCRIPCION_MIN;
 
-  // El preview se dibuja en canvas desde el File: ni `img src` ni HTML dinámico.
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    if (!evidencia || typeof createImageBitmap !== "function") return;
-    let cancelled = false;
-    let bitmap: ImageBitmap | null = null;
-    createImageBitmap(evidencia.archivo)
-      .then((bmp) => {
-        if (cancelled) {
-          bmp.close();
-          return;
-        }
-        bitmap = bmp;
-        const canvas = canvasRef.current;
-        const ctx = canvas?.getContext("2d");
-        if (canvas && ctx) ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-      })
-      .catch(() => {
-        // La captura se envía igual; si el navegador no puede decodificarla, el preview queda vacío.
-      });
-    return () => {
-      cancelled = true;
-      bitmap?.close();
-    };
-  }, [evidencia]);
-
   function handleFile(file: File | undefined) {
     if (!file) return;
     const problema = capturaValida(file);
@@ -150,15 +123,6 @@ export function SugerenciaForm({
           </button>
         ) : (
           <div className="rounded-md bg-white border border-border-default p-2.5 flex items-center gap-3">
-            {/* La captura se pinta en canvas: no se reinterpreta texto como HTML. */}
-            <canvas
-              ref={canvasRef}
-              width={56}
-              height={56}
-              role="img"
-              aria-label={`Vista previa de ${evidencia.nombre}`}
-              className="w-14 h-14 rounded-md border border-border-default shrink-0"
-            />
             <div className="flex-1 min-w-0 text-left">
               <p className="text-[13px] font-bold truncate">{evidencia.nombre}</p>
               <p className="text-[12px] text-text-secondary">JPG/PNG ≤ 5 MB</p>

@@ -92,7 +92,7 @@ describe("SugerenciaForm (SPEC-24 Req. 4)", () => {
     const input = screen.getByLabelText("Elegir captura de la biblioteca");
 
     fireEvent.change(input, { target: { files: [archivo] } });
-    expect(screen.getByRole("img", { name: /Vista previa de captura\.png/ })).toBeDefined();
+    expect(screen.getByText("captura.png")).toBeDefined();
     expect(screen.getByText("Cambiar")).toBeDefined();
 
     completar();
@@ -103,7 +103,7 @@ describe("SugerenciaForm (SPEC-24 Req. 4)", () => {
     fireEvent.click(screen.getByRole("button", { name: "ENTENDIDO" }));
     // El modal se cierra y la captura sigue adjunta hasta quitarla.
     fireEvent.click(screen.getByText("Quitar"));
-    expect(screen.queryByRole("img", { name: /captura\.png/ })).toBeNull();
+    expect(screen.queryByText("captura.png")).toBeNull();
   });
 
   it("rechaza una captura que no es JPG/PNG sin bloquear el envío", () => {
