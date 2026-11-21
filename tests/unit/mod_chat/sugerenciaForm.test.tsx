@@ -1,22 +1,31 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SugerenciaForm } from "@/modules/mod-chat/ui/SugerenciaForm";
 
 const onEnviado = vi.fn();
 const onCancelar = vi.fn();
 const onEnviar = vi.fn();
+const drawImage = vi.fn();
+const cerrarBitmap = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
-  Object.defineProperty(URL, "createObjectURL", {
-    configurable: true,
-    value: vi.fn(() => "blob:captura"),
-  });
+  vi.stubGlobal(
+    "createImageBitmap",
+    vi.fn(async () => ({ close: cerrarBitmap }) as unknown as ImageBitmap),
+  );
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+    drawImage,
+  } as unknown as CanvasRenderingContext2D);
   onEnviar.mockResolvedValue({ codigoSeguimiento: "SUG-2026-0142" });
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 function montar() {
   return render(
@@ -94,6 +103,8 @@ describe("SugerenciaForm (SPEC-24 Req. 4)", () => {
     fireEvent.change(input, { target: { files: [archivo] } });
     expect(screen.getByText("captura.png")).toBeDefined();
     expect(screen.getByText("Cambiar")).toBeDefined();
+    expect(await screen.findByRole("img", { name: "Vista previa de captura.png" })).toBeDefined();
+    await waitFor(() => expect(drawImage).toHaveBeenCalled());
 
     completar();
     fireEvent.click(screen.getByRole("button", { name: "ENVIAR" }));
@@ -104,6 +115,21 @@ describe("SugerenciaForm (SPEC-24 Req. 4)", () => {
     // El modal se cierra y la captura sigue adjunta hasta quitarla.
     fireEvent.click(screen.getByText("Quitar"));
     expect(screen.queryByText("captura.png")).toBeNull();
+    expect(screen.queryByRole("img", { name: /Vista previa/ })).toBeNull();
+  });
+
+  it("adjunta la captura aunque el navegador no soporte createImageBitmap", () => {
+    vi.stubGlobal("createImageBitmap", undefined);
+    montar();
+    const archivo = new File(["x"], "captura.png", { type: "image/png" });
+    const input = screen.getByLabelText("Elegir captura de la biblioteca");
+
+    fireEvent.change(input, { target: { files: [archivo] } });
+
+    expect(screen.getByText("captura.png")).toBeDefined();
+    expect(screen.getByRole("img", { name: "Vista previa de captura.png" })).toBeDefined();
+    fireEvent.click(screen.getByText("Quitar"));
+    expect(screen.queryByRole("img", { name: /Vista previa/ })).toBeNull();
   });
 
   it("rechaza una captura que no es JPG/PNG sin bloquear el envío", () => {
