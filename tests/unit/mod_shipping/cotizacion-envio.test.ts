@@ -29,10 +29,12 @@ Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
 });
 
-import { chatbotApi } from "@/adapters/outbound/ChatbotApiAxiosAdapter";
-import { cotizarEnvioUseCase } from "@/application/use_cases/cotizarEnvioUseCase";
-import { mensajeCotizacion } from "@/application/errors/cotizacionMensajes";
-import type { ChatbotApiPort } from "@/ports/outbound/ChatbotApiPort";
+import { container } from "@/shared/di/container";
+
+const chatbotApi = container.api;
+import { cotizarEnvioUseCase } from "@/modules/mod-shipping/application/cotizarEnvioUseCase";
+import { mensajeCotizacion } from "@/modules/mod-shipping/application/errors/cotizacionMensajes";
+import type { EnvioPort } from "@/modules/mod-shipping/ports/envioPort";
 
 const DIRECCION = {
   destinatario: "Ana Díaz",
@@ -78,7 +80,7 @@ describe("cotización de envío (SPEC-12)", () => {
   it("el caso de uso delega en el puerto sin tocar los datos", async () => {
     const api = {
       cotizarEnvio: vi.fn().mockResolvedValue(COTIZACION),
-    } as unknown as ChatbotApiPort;
+    } as unknown as EnvioPort;
 
     const resultado = await cotizarEnvioUseCase(api, DIRECCION);
 

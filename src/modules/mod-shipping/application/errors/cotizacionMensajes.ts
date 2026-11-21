@@ -1,4 +1,4 @@
-import { isUnavailable, problemCode } from "@/domain/utils/httpError";
+import { isUnavailable, problemCode } from "@/shared/api/httpError";
 
 /** Mensaje humano del fallo de cotización (SPEC-12): sin cobertura, sesión o módulo. */
 export function mensajeCotizacion(error: unknown): string {

@@ -1,12 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { container } from "@/infrastructure/di/container";
-import { cotizarEnvioUseCase } from "@/application/use_cases/cotizarEnvioUseCase";
-import type { DireccionInput } from "@/domain/schemas/direccion.schema";
+import { container } from "@/shared/di/container";
+import { cotizarEnvioUseCase } from "@/modules/mod-shipping/application/cotizarEnvioUseCase";
+
+/** Datos mínimos de la dirección que necesita Despacho (evita depender de mod-checkout). */
+export type DireccionCotizable = {
+  nombre: string;
+  direccion: string;
+  distrito: string;
+  referencia?: string;
+};
 
 /** Clave de caché por dirección: cambiar de distrito recotiza (SPEC-12 Req. 4). */
-export function cotizacionEnvioQueryKey(direccion: DireccionInput | null) {
+export function cotizacionEnvioQueryKey(direccion: DireccionCotizable | null) {
   return [
     "cotizacion-envio",
     direccion?.distrito ?? null,
@@ -19,7 +26,7 @@ export function cotizacionEnvioQueryKey(direccion: DireccionInput | null) {
  * Cotización del envío (SPEC-12): el costo y el plazo los decide Despacho a
  * través del backend (`POST /envio/cotizar`). La UI nunca inventa un envío.
  */
-export function useCotizacionEnvio(direccion: DireccionInput | null) {
+export function useCotizacionEnvio(direccion: DireccionCotizable | null) {
   const habilitado = Boolean(direccion?.distrito);
   const query = useQuery({
     queryKey: cotizacionEnvioQueryKey(direccion),
