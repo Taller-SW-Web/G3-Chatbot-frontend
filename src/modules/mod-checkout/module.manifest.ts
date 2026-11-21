@@ -13,6 +13,7 @@ export const manifest = {
     "/checkout",
     "/checkout/{checkoutId}",
     "/checkout/{checkoutId}/pago",
+    "/pedidos/{pedidoId}/valoracion-compra",
   ],
   dependsOn: ["mod-cart", "mod-shipping"],
 } satisfies ModuleManifest;

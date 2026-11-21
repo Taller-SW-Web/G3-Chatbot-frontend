@@ -1,5 +1,6 @@
 import type { Mensaje } from "@/modules/mod-chat/domain/entities/Mensaje";
 import type { Bloque } from "@/modules/mod-chat/domain/entities/Bloque";
+import type { AdjuntoMensaje } from "@/modules/mod-chat/domain/entities/Adjunto";
 
 /** Tramo de texto de un resultado de búsqueda; `coincide` marca el término encontrado. */
 export type SegmentoResaltado = {
@@ -30,6 +31,23 @@ export type ResultadoAccionChat = {
   bloques: Bloque[];
 };
 
+/** Reacción a un mensaje del asistente (SPEC-24 Req. 1). */
+export type ReaccionMensaje = "POSITIVE" | "NEGATIVE";
+
+/** Formulario de sugerencia o bug (SPEC-24 Req. 4). */
+export type NuevaSugerenciaInput = {
+  tipo: "SUGERENCIA" | "BUG";
+  titulo: string;
+  descripcion: string;
+  correoContacto: string;
+  /** Captura opcional (JPG/PNG ≤ 5 MB), subida por el backend al bucket privado. */
+  captura?: File;
+};
+
+export type SugerenciaCreada = {
+  codigoSeguimiento: string;
+};
+
 /** Tamaño de página del listado y la búsqueda (backend: CONVERSATIONS_PAGE_SIZE). */
 export const CONVERSACIONES_POR_PAGINA = 20;
 
@@ -47,4 +65,22 @@ export interface ChatApiPort {
   ): Promise<ResultadoAccionChat>;
   listarConversaciones(pagina?: number): Promise<ConversacionResumen[]>;
   buscarConversaciones(q: string, pagina?: number): Promise<ConversacionResumen[]>;
+  /** SPEC-23: sube una imagen (multipart) y la deja `PENDING` hasta enviar el mensaje. */
+  subirAdjunto(
+    conversacionId: string,
+    archivo: File,
+    onProgress?: (porcentaje: number) => void
+  ): Promise<AdjuntoMensaje>;
+  /** SPEC-23: quita un adjunto pendiente y sus archivos del bucket. */
+  eliminarAdjunto(conversacionId: string, adjuntoId: string): Promise<void>;
+  /** SPEC-23: emite una URL firmada nueva para un adjunto de la conversación. */
+  obtenerUrlAdjunto(adjuntoId: string): Promise<{
+    urlMiniatura?: string | null;
+    urlImagen?: string | null;
+    expiraEn?: string | null;
+  }>;
+  /** SPEC-24 Req. 1: registra o cambia la reacción de un mensaje. */
+  enviarReaccion(mensajeId: string, reaccion: ReaccionMensaje): Promise<void>;
+  /** SPEC-24 Req. 4: registra la sugerencia o bug, con captura opcional. */
+  enviarSugerencia(input: NuevaSugerenciaInput): Promise<SugerenciaCreada>;
 }

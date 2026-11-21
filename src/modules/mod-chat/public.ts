@@ -14,6 +14,20 @@ export { useChat } from "./application/useChat";
 export { crearConversacionUseCase } from "./application/crearConversacionUseCase";
 export { ejecutarAccionChatUseCase } from "./application/ejecutarAccionChatUseCase";
 export { MENSAJE_MAX_CARACTERES } from "./application/enviarMensajeUseCase";
+export { enviarReaccionUseCase } from "./application/enviarReaccionUseCase";
+export { enviarSugerenciaUseCase } from "./application/enviarSugerenciaUseCase";
+export { useReaccion } from "./application/useReaccion";
+export { useAdjuntosChat } from "./application/useAdjuntosChat";
+export type { AdjuntoPendiente, EstadoAdjuntoPendiente } from "./application/useAdjuntosChat";
 
-export type { AccionChat, ChatApiPort, ConversacionResumen, ResultadoAccionChat, SegmentoResaltado } from "./ports/chatApiPort";
+export type {
+  AccionChat,
+  ChatApiPort,
+  ConversacionResumen,
+  NuevaSugerenciaInput,
+  ReaccionMensaje,
+  ResultadoAccionChat,
+  SegmentoResaltado,
+  SugerenciaCreada,
+} from "./ports/chatApiPort";
 export type { ChatStreamEvento, ChatStreamPort } from "./ports/chatStreamPort";

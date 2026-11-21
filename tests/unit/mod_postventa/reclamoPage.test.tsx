@@ -97,6 +97,34 @@ describe("ReclamoPage", () => {
     expect(screen.getByText(/REC-2026-0119/)).toBeDefined();
   });
 
+  it("muestra el reclamo duplicado y permite registrarlo igual con forzar", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    crearReclamo.mockRejectedValueOnce({
+      response: {
+        status: 409,
+        data: { code: "RECLAMO_DUPLICADO", codigoSeguimiento: "REC-2026-00001" },
+      },
+    });
+    renderPage();
+
+    await screen.findByDisplayValue("+51999888777");
+    fireEvent.change(await screen.findByLabelText(/Descripci.n del reclamo/), {
+      target: { value: "El producto llegó defectuoso y no funciona correctamente." },
+    });
+    fireEvent.change(screen.getByLabelText("Documento"), { target: { value: "12345678" } });
+    fireEvent.change(screen.getByLabelText(/Tel.fono/), { target: { value: "+51999888777" } });
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR RECLAMO/ }));
+
+    expect(await screen.findByTestId("postventa-duplicado")).toBeDefined();
+    expect(screen.getByText(/REC-2026-00001/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "REGISTRAR IGUAL" }));
+    await waitFor(() =>
+      expect(crearReclamo).toHaveBeenLastCalledWith(expect.objectContaining({ forzar: true }))
+    );
+    expect(await screen.findByText(/SE REGISTR.*TU RECLAMO/)).toBeDefined();
+  });
+
   it("muestra error de validación al registrar el reclamo", async () => {
     params.value = new URLSearchParams("pedidoId=PED-2026-00002");
     crearReclamo.mockRejectedValue({ response: { status: 400, data: { code: "VALIDACION" } } });

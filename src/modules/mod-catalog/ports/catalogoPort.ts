@@ -1,3 +1,5 @@
+import type { OrdenCatalogo } from "@/modules/mod-catalog/domain/entities/OrdenCatalogo";
+
 /** Filtros de `GET /catalogo/productos` (SPEC-06, nombres reales del contrato). */
 export type BuscarProductosInput = {
   soloOfertas?: boolean;
@@ -6,7 +8,7 @@ export type BuscarProductosInput = {
   marca?: string;
   precioMin?: number;
   precioMax?: number;
-  orden?: string;
+  orden?: OrdenCatalogo;
   pagina?: number;
   tamanio?: number;
 };

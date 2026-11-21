@@ -6,6 +6,7 @@
  * Sin React, sin fetch, sin localStorage (regla hexagonal domain/).
  */
 import type { Bloque } from "@/modules/mod-chat/domain/entities/Bloque";
+import type { AdjuntoMensaje } from "@/modules/mod-chat/domain/entities/Adjunto";
 
 export type MensajeRol = "user" | "bot";
 
@@ -16,6 +17,8 @@ export type Mensaje = {
   rol: MensajeRol;
   texto: string;
   bloques?: Bloque[];
+  /** Imágenes del mensaje con URLs firmadas o blob local (SPEC-23). */
+  adjuntos?: AdjuntoMensaje[];
   /** Motivo disponible durante el turno en vivo; el historial no lo conserva. */
   motivoDegradado?: string;
   creadoEn: string;

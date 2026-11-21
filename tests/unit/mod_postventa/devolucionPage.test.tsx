@@ -136,6 +136,29 @@ describe("DevolucionPage", () => {
     expect(screen.getByText(/DEV-2026-00099/)).toBeDefined();
   });
 
+  it("muestra la devolución duplicada y permite registrarla igual con forzar", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    crearDevolucion.mockRejectedValueOnce({
+      response: {
+        status: 409,
+        data: { code: "DEVOLUCION_DUPLICADA", devolucionId: "DEV-2026-00001" },
+      },
+    });
+    renderPage();
+
+    await screen.findByText(/Solicitar devolución/);
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR SOLICITUD/ }));
+
+    expect(await screen.findByTestId("postventa-duplicado")).toBeDefined();
+    expect(screen.getByText(/DEV-2026-00001/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "REGISTRAR IGUAL" }));
+    await waitFor(() =>
+      expect(crearDevolucion).toHaveBeenLastCalledWith(expect.objectContaining({ forzar: true }))
+    );
+    expect(await screen.findByText(/SOLICITUD ENVIADA/)).toBeDefined();
+  });
+
   it("muestra el error de plazo vencido al crear la devolución", async () => {
     params.value = new URLSearchParams("pedidoId=PED-2026-00002");
     crearDevolucion.mockRejectedValue({ response: { status: 400, data: { code: "PLAZO_VENCIDO" } } });

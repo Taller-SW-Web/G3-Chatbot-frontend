@@ -26,6 +26,8 @@ export type CrearDevolucionInput = {
   descripcion?: string;
   items: DevolucionItemInput[];
   evidencias?: DevolucionEvidenciaInput[];
+  /** Reenvía pese a un `409 DEVOLUCION_DUPLICADA` (acción "Registrar igual"). */
+  forzar?: boolean;
 };
 
 export type DevolucionResumen = {
@@ -68,6 +70,8 @@ export type CrearReclamoInput = {
   detalle: string;
   consumidor: ReclamoConsumidorInput;
   solucionEsperada?: string;
+  /** Reenvía pese a un `409 RECLAMO_DUPLICADO` (acción "Registrar igual"). */
+  forzar?: boolean;
 };
 
 export type ReclamoResumen = {

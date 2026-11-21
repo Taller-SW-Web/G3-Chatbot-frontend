@@ -24,6 +24,9 @@ const mockApi = {
   pagarCheckout: vi.fn(),
   // SPEC-12: la dirección se cotiza contra Despacho antes de confirmar.
   cotizarEnvio: vi.fn(),
+  // SPEC-04: el checkout pide verificar el celular cuando el backend lo bloquea.
+  solicitarOtpCelular: vi.fn(),
+  verificarOtpCelular: vi.fn(),
 };
 
 vi.mock("@/shared/di/container", () => ({
@@ -37,6 +40,10 @@ vi.mock("@/shared/di/container", () => ({
     checkout: {
       iniciarCheckout: (...args: unknown[]) => mockApi.iniciarCheckout(...args),
       pagarCheckout: (...args: unknown[]) => mockApi.pagarCheckout(...args),
+    },
+    auth: {
+      solicitarOtpCelular: (...args: unknown[]) => mockApi.solicitarOtpCelular(...args),
+      verificarOtpCelular: (...args: unknown[]) => mockApi.verificarOtpCelular(...args),
     },
   },
 }));
@@ -83,6 +90,17 @@ function resetStore() {
     avisos: [],
   });
   mockApi.pagarCheckout.mockReset();
+  mockApi.solicitarOtpCelular.mockReset();
+  mockApi.solicitarOtpCelular.mockResolvedValue({
+    enviado: true,
+    celularEnmascarado: "+51 9****4321",
+    expiraEn: new Date(Date.now() + 300_000).toISOString(),
+  });
+  mockApi.verificarOtpCelular.mockReset();
+  mockApi.verificarOtpCelular.mockResolvedValue({
+    celularVerificado: true,
+    celularEnmascarado: "+51 9****4321",
+  });
   mockApi.cotizarEnvio.mockReset();
   mockApi.cotizarEnvio.mockResolvedValue({
     coberturaDisponible: true,
@@ -455,5 +473,82 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
     const [first, second] = mockApi.iniciarCheckout.mock.calls;
     expect(first[1]).toEqual(expect.any(String));
     expect(second[1]).toBe(first[1]);
+  });
+
+  it("muestra el detalle por línea del 409 CARRITO_DESACTUALIZADO y permite volver al carrito", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({
+      response: {
+        status: 409,
+        data: {
+          code: "CARRITO_DESACTUALIZADO",
+          lineas: [
+            { sku: "SKU-ZAP-1", nombre: "Zapatilla Runner", motivo: "AGOTADO" },
+            { sku: "SKU-POLO-2", nombre: "Polo Inka", motivo: "STOCK_INSUFICIENTE" },
+          ],
+        },
+      },
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    expect(await screen.findByTestId("detalle-stock")).toBeDefined();
+    expect(screen.getByText("Zapatilla Runner se agotó mientras elegías")).toBeDefined();
+    expect(screen.getByText("Polo Inka ya no tiene stock suficiente")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "VOLVER AL CARRITO" }));
+    expect(navMock.push).toHaveBeenCalledWith("/carrito");
+  });
+
+  it("guarda accionPendiente y muestra el OTP ante 403 CELULAR_NO_VERIFICADO", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({
+      response: { status: 403, data: { code: "CELULAR_NO_VERIFICADO" } },
+    });
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-otp",
+      total: 132.5,
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    expect(await screen.findByTestId("checkout-otp-celular")).toBeDefined();
+    expect(useChatStore.getState().accionPendiente).toBe("INICIAR_CHECKOUT");
+
+    fireEvent.click(screen.getByRole("button", { name: "ENVIAR CÓDIGO" }));
+    await screen.findByText("Ingresa el código de 6 dígitos");
+    fireEvent.change(screen.getByLabelText("Código de verificación"), { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: "VERIFICAR" }));
+
+    await waitFor(() => expect(mockApi.iniciarCheckout).toHaveBeenCalledTimes(2));
+    expect(mockApi.verificarOtpCelular).toHaveBeenCalledWith("123456");
+    expect(useChatStore.getState().accionPendiente).toBeNull();
+    expect(screen.getByText("Paso 2 de 2")).toBeDefined();
+  });
+
+  it("envía guardarDireccion solo cuando el cliente marca la casilla", async () => {
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-guardar",
+      total: 132.5,
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    renderCheckout();
+    fireEvent.click(screen.getByLabelText(/Guardar esta dirección/));
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    await waitFor(() => expect(mockApi.iniciarCheckout).toHaveBeenCalled());
+    expect(mockApi.iniciarCheckout.mock.calls[0][0]).toMatchObject({ guardarDireccion: true });
   });
 });

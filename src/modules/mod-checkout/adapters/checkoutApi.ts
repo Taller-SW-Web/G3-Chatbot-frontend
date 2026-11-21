@@ -33,4 +33,11 @@ export const checkoutApi: CheckoutPort = {
     });
     return data as ResultadoPago;
   },
+  async calificarCompra(pedidoId: string, estrellas: 1 | 2 | 3 | 4 | 5, comentario?: string): Promise<void> {
+    await http.post(
+      `/pedidos/${encodeURIComponent(pedidoId)}/valoracion-compra`,
+      { estrellas, ...(comentario ? { comentario } : {}) },
+      { headers: { "Idempotency-Key": newIdempotencyKey() } }
+    );
+  },
 };

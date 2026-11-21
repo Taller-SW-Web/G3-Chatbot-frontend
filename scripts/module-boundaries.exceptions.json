@@ -7,20 +7,7 @@
       "reason": "Composition root: cablea los adapters de los 8 módulos y necesita las implementaciones, no solo su public.ts. Cualquier otro archivo de shared/ o app/ debe entrar por public.ts."
     }
   ],
-  "contractPending": [
-    {
-      "module": "mod-auth",
-      "path": "/contacto/celular/verificar-otp",
-      "todo": "TODO(H-17): el backend aún no publica el OTP de celular.",
-      "reviewBy": "2026-12-19"
-    },
-    {
-      "module": "mod-auth",
-      "path": "/contacto/celular/solicitar-otp",
-      "todo": "TODO(H-17): se declará en el manifiesto cuando el adapter y el backend lo publiquen.",
-      "reviewBy": "2026-12-19"
-    }
-  ],
+  "contractPending": [],
   "contractTagExceptions": [
     {
       "module": "mod-orders",

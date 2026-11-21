@@ -40,6 +40,19 @@ export function problemFaltantes(error: unknown): string[] {
     : [];
 }
 
+/** Campo numérico extra del problem+json (`intentosRestantes`, `esperaSegundos`, …). */
+export function problemNumber(error: unknown, field: string): number | undefined {
+  const data = (error as { response?: { data?: Record<string, unknown> } })
+    ?.response?.data;
+  const value = data?.[field];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
 /** Campo de texto extra del problem+json (`motivo`, `cuponActual`, …). */
 export function problemField(error: unknown, field: string): string | undefined {
   const data = (error as { response?: { data?: Record<string, unknown> } })

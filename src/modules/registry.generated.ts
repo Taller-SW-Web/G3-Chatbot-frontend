@@ -25,6 +25,7 @@ export const moduleRegistry = [
       "/sesion/refresh",
       "/sesion/logout",
       "/sesion/perfil",
+      "/contacto/celular/solicitar-otp",
       "/contacto/celular/verificar-otp",
     ],
     dependsOn: [
@@ -102,6 +103,7 @@ export const moduleRegistry = [
       "/checkout",
       "/checkout/{checkoutId}",
       "/checkout/{checkoutId}/pago",
+      "/pedidos/{pedidoId}/valoracion-compra",
     ],
     dependsOn: [
       "mod-cart",
@@ -170,6 +172,11 @@ export const moduleRegistry = [
       "/chat/conversaciones",
       "/chat/conversaciones/buscar",
       "/chat/conversaciones/{conversacionId}/mensajes",
+      "/chat/conversaciones/{conversacionId}/adjuntos",
+      "/chat/conversaciones/{conversacionId}/adjuntos/{adjuntoId}",
+      "/chat/adjuntos/{adjuntoId}",
+      "/mensajes/{mensajeId}/reaccion",
+      "/sugerencias",
     ],
     dependsOn: [
       "mod-auth",

@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -8,6 +8,10 @@ import path from "node:path";
  * (así Node resuelve `typescript` y eslint/tsc no escanean la copia). Cada caso
  * muta un archivo y exige que el proceso salga con error y explique la regla.
  */
+
+// Cada caso copia el repo y arranca un proceso: con la suite completa en
+// paralelo, 5 s (el default) no alcanzan.
+vi.setConfig({ testTimeout: 30_000 });
 
 const repoRoot = process.cwd();
 const temporales: string[] = [];
@@ -112,7 +116,7 @@ describe("check-modules.mjs", () => {
   it.skipIf(!hayBackend)("valida el contrato real: paths y tag del módulo", () => {
     const r = ejecutar(copiarRepo(), { OPENAPI_PATH: openapiReal });
     expect(r.status).toBe(0);
-    expect(r.salida).toContain("pendiente en backend");
+    expect(r.salida).toContain("OK: 8 módulos");
     expect(r.salida).toContain("etiquetado [mod-postventa]");
   });
 
@@ -138,7 +142,7 @@ describe("check-modules.mjs", () => {
     expect(r.salida).toContain("mod-cart: /carrito tiene tag [mod-catalog] y no mod-cart");
   });
 
-  it.skipIf(!hayBackend)("la allowlist es lo que mantiene verde el OTP pendiente", () => {
+  it.skipIf(!hayBackend)("falla si el OTP de celular desaparece del openapi", () => {
     const dir = copiarRepo();
     const exceptions = path.join(dir, "scripts/module-boundaries.exceptions.json");
     const json = JSON.parse(fs.readFileSync(exceptions, "utf8"));
@@ -146,8 +150,11 @@ describe("check-modules.mjs", () => {
       (e: { path: string }) => e.path !== "/contacto/celular/verificar-otp"
     );
     fs.writeFileSync(exceptions, JSON.stringify(json, null, 2));
+    const openapi = copiarOpenapi(dir, (o) => {
+      delete o.paths["/api/v1/contacto/celular/verificar-otp"];
+    });
 
-    const r = ejecutar(dir, { OPENAPI_PATH: openapiReal });
+    const r = ejecutar(dir, { OPENAPI_PATH: openapi });
     expect(r.status).not.toBe(0);
     expect(r.salida).toContain("mod-auth: /contacto/celular/verificar-otp no existe");
   });

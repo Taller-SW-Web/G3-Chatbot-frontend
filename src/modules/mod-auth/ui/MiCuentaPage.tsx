@@ -3,10 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckIcon, LockIcon } from "@/shared/ui/icons";
-import { OtpCelularForm } from "@/modules/mod-auth/ui/forms/OtpCelularForm";
+import { OtpCelularFlow } from "@/shared/auth/OtpCelularFlow";
 import { useChatStore } from "@/shared/auth/chatStore";
-import { validarContactoUseCase } from "@/modules/mod-auth/application/validarContactoUseCase";
-import { container } from "@/shared/di/container";
 
 /**
  * `/cuenta`: datos de sesión, verificación de celular (SPEC-04),
@@ -19,8 +17,6 @@ export function MiCuentaPage() {
   const setCliente = useChatStore((s) => s.setCliente);
   const logout = useChatStore((s) => s.logout);
   const [otp, setOtp] = useState(false);
-  const [enviado, setEnviado] = useState(false);
-  const [errorVerificacion, setErrorVerificacion] = useState<string | null>(null);
 
   if (!cliente) {
     return (
@@ -29,21 +25,6 @@ export function MiCuentaPage() {
         <button onClick={() => router.push("/")} className="wf-btn w-full py-3 text-[12px] font-bold bg-action-primary text-surface-ink">VOLVER AL INICIO</button>
       </div>
     );
-  }
-
-  async function verificar(codigo: string) {
-    if (!cliente) return;
-    setErrorVerificacion(null);
-    try {
-      const r = await validarContactoUseCase(container.auth, codigo);
-      if (r.verificado) {
-        setCliente({ ...cliente, celularVerificado: true });
-      } else {
-        setErrorVerificacion("No pudimos verificar el código. Inténtalo de nuevo.");
-      }
-    } catch {
-      setErrorVerificacion("No pudimos verificar el código. Inténtalo de nuevo.");
-    }
   }
 
   return (
@@ -59,23 +40,15 @@ export function MiCuentaPage() {
       {!cliente.celularVerificado && (
         !otp ? (
           <button onClick={() => setOtp(true)} className="wf-btn py-3 text-[12px] font-bold tracking-wide bg-surface-ink text-text-inverse">VERIFICAR CELULAR</button>
-        ) : !enviado ? (
-          <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
-            <p className="text-[14px] font-bold">Para coordinar la entrega necesitamos confirmar tu celular {cliente.celularEnmascarado}</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setEnviado(true)} className="wf-btn py-3 text-[12px] font-bold bg-action-primary text-surface-ink">ENVIAR CÓDIGO</button>
-              <button className="wf-btn py-3 text-[12px] font-bold bg-white border border-border-default">ESE NO ES MI NÚMERO</button>
-            </div>
-          </div>
         ) : (
-          <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
-            <p className="text-[14px] font-bold">Ingresa el código de 6 dígitos</p>
-            <p className="text-[12px] text-text-secondary">5:00 · <button className="underline">Enviar otro código</button></p>
-            <OtpCelularForm onOk={verificar} />
-            {errorVerificacion && (
-              <p role="alert" className="text-[12px] text-error-default">{errorVerificacion}</p>
-            )}
-          </div>
+          <OtpCelularFlow
+            celularEnmascarado={cliente.celularEnmascarado}
+            onVerificado={() => {
+              setCliente({ ...cliente, celularVerificado: true });
+              setOtp(false);
+            }}
+            onCancelar={() => setOtp(false)}
+          />
         )
       )}
 

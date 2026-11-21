@@ -5,6 +5,19 @@ export type CrearCheckoutInput = {
   cartId?: string;
   direccion?: Record<string, unknown>;
   contacto?: Record<string, unknown>;
+  /** SPEC-12: guarda la dirección en el perfil para próximas compras. */
+  guardarDireccion?: boolean;
+};
+
+/** Línea que el backend reporta como desactualizada en un `409 CARRITO_DESACTUALIZADO`. */
+export type LineaDesactualizada = {
+  sku: string;
+  nombre?: string;
+  cantidad?: number;
+  /** `AGOTADO`, `STOCK_INSUFICIENTE`, `PRECIO_CAMBIADO`, … */
+  motivo?: string;
+  disponible?: number | null;
+  mensaje?: string;
 };
 
 export type CheckoutSesionData = {
@@ -45,4 +58,6 @@ export interface CheckoutPort {
   obtenerCheckout(checkoutId: string): Promise<CheckoutSesionData>;
   /** SPEC-14: Simula el pago con tarjeta determinista contra el simulador de backend. */
   pagarCheckout(checkoutId: string, input: ProcesarPagoInput, idempotencyKey?: string): Promise<ResultadoPago>;
+  /** SPEC-24 Req. 7: valora la experiencia de compra (una por pedido, propia del chatbot). */
+  calificarCompra(pedidoId: string, estrellas: 1 | 2 | 3 | 4 | 5, comentario?: string): Promise<void>;
 }

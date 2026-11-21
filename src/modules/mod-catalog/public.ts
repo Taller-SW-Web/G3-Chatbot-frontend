@@ -4,6 +4,8 @@
  */
 export { HomePage } from "./ui/HomePage";
 export type { HomeAgregarInput, HomeAgregarResultado, HomePageProps } from "./ui/HomePage";
+export { SelectorOrden } from "./ui/SelectorOrden";
+export type { OrdenCatalogo } from "./domain/entities/OrdenCatalogo";
 export { ProductCard } from "./ui/ProductCard";
 export { AvailabilityBadge } from "./ui/AvailabilityBadge";
 export { ProductImage } from "./ui/ProductImage";

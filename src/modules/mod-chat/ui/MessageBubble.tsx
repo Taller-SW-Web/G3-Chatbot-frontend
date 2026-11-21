@@ -31,6 +31,7 @@ import { AccionesRapidas } from "@/modules/mod-chat/ui/blocks/AccionesRapidas";
 import { AvisoDegradado } from "@/modules/mod-chat/ui/blocks/AvisoDegradado";
 import { BloqueError as BloqueErrorView } from "@/shared/ui/BloqueError";
 import { CarritoChat, FormularioRegistroChat, SelectorVarianteChat } from "@/modules/mod-chat/ui/blocks/BloquesContenedores";
+import { OtpCelularChatBlock } from "@/modules/mod-chat/ui/blocks/OtpCelularChatBlock";
 import { CarruselProductos } from "@/modules/mod-catalog/public";
 import { ConfirmacionPedido } from "@/modules/mod-orders/public";
 import { DetalleProducto } from "@/modules/mod-catalog/public";
@@ -38,6 +39,8 @@ import { ResumenCheckout } from "@/modules/mod-checkout/public";
 import { mensajePorCodigo } from "@/modules/mod-chat/ui/chatPresentacion";
 import { dividirResaltado } from "@/modules/mod-chat/ui/resaltadoChat";
 import { TextoMarkdown } from "@/modules/mod-chat/ui/TextoMarkdown";
+import { MessageAttachments } from "@/modules/mod-chat/ui/MessageAttachments";
+import type { AdjuntoMensaje } from "@/modules/mod-chat/domain/entities/Adjunto";
 import type { AccionRapidaChat } from "@/modules/mod-chat/ui/ChatWindow";
 
 type Props = {
@@ -45,6 +48,8 @@ type Props = {
   rol: "user" | "bot";
   /** Bloques del turno (SPEC-05 Req. 4); los tipos sin componente no se pintan. */
   bloques?: Bloque[];
+  /** Imágenes del mensaje (SPEC-23). */
+  adjuntos?: AdjuntoMensaje[];
   /** Respuesta en construcción: tokens llegando por SSE (efecto de escritura en vivo). */
   streaming?: boolean;
   /** First bot reply: Botleta introduction. */
@@ -179,7 +184,15 @@ export function renderBloque(
       );
     }
     case "FORMULARIO": {
-      if (!esFormularioRegistro(bloque as BloqueFormulario)) return null;
+      const formulario = bloque as BloqueFormulario;
+      if (formulario.formulario === "OTP_CELULAR") {
+        return (
+          <div key={clave} className="mt-2" data-testid="bloque-otp-celular">
+            <OtpCelularChatBlock celularEnmascarado={formulario.celularEnmascarado} />
+          </div>
+        );
+      }
+      if (!esFormularioRegistro(formulario)) return null;
       return (
         <div key={clave} className="mt-2">
           <FormularioRegistroChat />
@@ -206,6 +219,7 @@ export function MessageBubble({
   texto,
   rol,
   bloques = [],
+  adjuntos = [],
   streaming = false,
   isFirstAssistant = false,
   degradado = false,
@@ -220,7 +234,8 @@ export function MessageBubble({
         data-rol="user"
         className="msg-in self-end max-w-[80%] rounded-md rounded-br-xs px-3 py-2 text-[14px] leading-5 bg-surface-ink text-text-inverse"
       >
-        {renderChatText(texto, true)}
+        {texto && <p>{renderChatText(texto, true)}</p>}
+        {adjuntos.length > 0 && <MessageAttachments adjuntos={adjuntos} />}
       </div>
     );
   }
@@ -239,6 +254,7 @@ export function MessageBubble({
       )}
       {degradado && <AvisoDegradado motivo={motivoDegradado} />}
       {texto && <TextoMarkdown texto={sanitize(texto)} />}
+      {adjuntos.length > 0 && <MessageAttachments adjuntos={adjuntos} />}
       {bloques.map((bloque, i) => renderBloque(bloque, i, onQuickAction, actionsBusy))}
       {streaming && <span data-testid="typing-indicator" aria-label="escribiendo" />}
     </div>
