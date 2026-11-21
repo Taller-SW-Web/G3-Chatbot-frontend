@@ -28,11 +28,15 @@ const mockApi = {
 
 vi.mock("@/shared/di/container", () => ({
   container: {
-    api: {
+    carrito: {
       listarCarrito: (...args: unknown[]) => mockApi.listarCarrito(...args),
+    },
+    envio: {
+      cotizarEnvio: (...args: unknown[]) => mockApi.cotizarEnvio(...args),
+    },
+    checkout: {
       iniciarCheckout: (...args: unknown[]) => mockApi.iniciarCheckout(...args),
       pagarCheckout: (...args: unknown[]) => mockApi.pagarCheckout(...args),
-      cotizarEnvio: (...args: unknown[]) => mockApi.cotizarEnvio(...args),
     },
   },
 }));

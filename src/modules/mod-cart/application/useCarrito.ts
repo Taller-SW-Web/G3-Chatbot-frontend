@@ -31,7 +31,7 @@ export function useCarrito() {
     queryKey,
     queryFn: async () => {
       try {
-        return await listarCarritoUseCase(container.api, conversacion);
+        return await listarCarritoUseCase(container.carrito, conversacion);
       } catch (error) {
         if (!cliente && conversacion && problemCode(error) === "RECURSO_NO_ENCONTRADO" &&
           useChatStore.getState().ultimaConversacionId === conversacion &&

@@ -4,6 +4,9 @@
  */
 export { DevolucionPage } from "./ui/DevolucionPage";
 export { ReclamoPage } from "./ui/ReclamoPage";
+export { HistorialDevoluciones, HistorialReclamos } from "./ui/HistorialPostventa";
+export { ListaDevoluciones } from "./ui/blocks/ListaDevoluciones";
+export { ListaReclamos } from "./ui/blocks/ListaReclamos";
 export { ConstanciaDevolucion } from "./ui/blocks/ConstanciaDevolucion";
 export { EstadoDevolucion } from "./ui/blocks/EstadoDevolucion";
 export { ConstanciaReclamo } from "./ui/blocks/ConstanciaReclamo";

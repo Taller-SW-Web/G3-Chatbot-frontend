@@ -39,7 +39,7 @@ export function VerificarCorreoPage({ token }: { token?: string }) {
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", "/verificar-correo");
     }
-    container.api
+    container.auth
       .verificarCorreo(token)
       .then(() => setEstado("exito"))
       .catch((error) => {
@@ -54,7 +54,7 @@ export function VerificarCorreoPage({ token }: { token?: string }) {
     setReenviando(true);
     setReenvioEstado({});
     try {
-      await container.api.reenviarVerificacion(correo);
+      await container.auth.reenviarVerificacion(correo);
       setReenvioEstado({ mensaje: REENVIO_NEUTRO });
     } catch (error) {
       const e = error as AxiosError<{ code?: string }>;

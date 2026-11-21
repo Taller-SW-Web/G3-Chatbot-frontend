@@ -112,7 +112,7 @@ function isTypeOnly(node) {
       node.importClause.namedBindings.elements.every((e) => e.isTypeOnly));
 }
 
-function importedSpecifiers(file) {
+function scanSource(file) {
   const source = ts.createSourceFile(
     file,
     fs.readFileSync(file, "utf8"),
@@ -120,8 +120,9 @@ function importedSpecifiers(file) {
     true,
     file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
   );
-  const out = [];
-  const add = (spec, typeOnly = false) => { if (spec) out.push({ spec, typeOnly }); };
+  const imports = [];
+  const containerKeys = [];
+  const add = (spec, typeOnly = false) => { if (spec) imports.push({ spec, typeOnly }); };
   const visit = (node) => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       add(node.moduleSpecifier.text, isTypeOnly(node));
@@ -138,12 +139,39 @@ function importedSpecifiers(file) {
       ts.isStringLiteral(node.arguments[0])
     ) {
       add(node.arguments[0].text);
+    } else if (
+      ts.isPropertyAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "container"
+    ) {
+      containerKeys.push(node.name.text);
+    } else if (
+      ts.isElementAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "container" &&
+      node.argumentExpression &&
+      ts.isStringLiteral(node.argumentExpression)
+    ) {
+      containerKeys.push(node.argumentExpression.text);
     }
     ts.forEachChild(node, visit);
   };
   visit(source);
-  return out;
+  return { imports, containerKeys };
 }
+
+/** Alias de `container` → módulo dueño del adapter (evita llamadas cruzadas encubiertas). */
+const CONTAINER_KEY_MODULE = {
+  auth: "mod-auth",
+  catalogo: "mod-catalog",
+  carrito: "mod-cart",
+  envio: "mod-shipping",
+  checkout: "mod-checkout",
+  pedidos: "mod-orders",
+  postventa: "mod-postventa",
+  chat: "mod-chat",
+  stream: "mod-chat",
+};
 
 const sourceFiles = walk(path.join(root, "src"));
 const STRANGLER = ["adapters", "application", "domain", "ports", "infrastructure"];
@@ -158,8 +186,29 @@ for (const file of sourceFiles) {
   const moduleMatch = rel.match(/^src\/modules\/(mod-[a-z-]+)\//);
   const own = moduleMatch?.[1];
   const isContainer = rel === "src/shared/di/container.ts";
+  const scanned = scanSource(file);
 
-  for (const { spec } of importedSpecifiers(file)) {
+  // El agregado `container.api` no deja rastro estático de qué módulo se llama:
+  // dentro de un módulo se usa `container.<alias>` propio o el port público.
+  if (own) {
+    if (scanned.containerKeys.includes("api")) {
+      fail(`${rel}: usa container.api dentro de ${own}; usa container.<alias> o el port de public.ts`);
+    }
+    for (const key of new Set(scanned.containerKeys)) {
+      const targetModule = CONTAINER_KEY_MODULE[key];
+      if (!targetModule || targetModule === own) continue;
+      const declared = (manifestsById.get(own)?.dependsOn ?? []).includes(targetModule);
+      const key2 = `${own}->${targetModule}`;
+      if (declared) continue;
+      if (allowed.has(key2)) {
+        warnings.add(`${rel}: container.${key} → ${targetModule} (excepción documentada)`);
+      } else {
+        fail(`${rel}: container.${key} llama a ${targetModule} sin declararlo en dependsOn`);
+      }
+    }
+  }
+
+  for (const { spec } of scanned.imports) {
     const target = resolveSpec(file, spec);
     if (!target || !target.startsWith("src/")) continue;
 

@@ -73,7 +73,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
 
   const cambiarCantidad = useMutation({
     mutationFn: (input: { itemId: string; cantidad: number }) =>
-      actualizarCantidadCarritoUseCase(container.api, { ...input, conversacionId: conv }),
+      actualizarCantidadCarritoUseCase(container.carrito, { ...input, conversacionId: conv }),
     onSuccess: (data) => {
       setDeshacer(null);
       // La respuesta del PATCH ya trae el carrito recalculado: se usa de inmediato.
@@ -84,7 +84,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
 
   const quitar = useMutation({
     mutationFn: (input: { itemId: string; sku: string; cantidad: number; nombre: string }) =>
-      quitarDelCarritoUseCase(container.api, { itemId: input.itemId, conversacionId: conv }).then((r) => ({
+      quitarDelCarritoUseCase(container.carrito, { itemId: input.itemId, conversacionId: conv }).then((r) => ({
         ...r,
         borrada: input,
       })),
@@ -95,7 +95,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   });
 
   const vaciar = useMutation({
-    mutationFn: () => vaciarCarritoUseCase(container.api, conv),
+    mutationFn: () => vaciarCarritoUseCase(container.carrito, conv),
     onSuccess: () => {
       setConfirmarVaciar(false);
       invalidar();
@@ -104,7 +104,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
 
   const reagregar = useMutation({
     mutationFn: (input: { sku: string; cantidad: number }) =>
-      agregarProductoAlCarritoUseCase(container.api, { ...input, conversacionId: conv }),
+      agregarProductoAlCarritoUseCase(container.carrito, { ...input, conversacionId: conv }),
     onSuccess: (data) => {
       setDeshacer(null);
       if (data.carrito) queryClient.setQueryData(queryKey, data.carrito);
@@ -114,7 +114,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
 
   const aplicarCupon = useMutation({
     mutationFn: (input: { codigo: string; confirmarReemplazo?: boolean }) =>
-      aplicarCuponUseCase(container.api, input.codigo, input.confirmarReemplazo ?? false),
+      aplicarCuponUseCase(container.carrito, input.codigo, input.confirmarReemplazo ?? false),
     onSuccess: (data) => {
       // La respuesta ya trae el carrito recalculado con el descuento.
       queryClient.setQueryData(queryKey, data.carrito);
@@ -137,7 +137,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   });
 
   const quitarCupon = useMutation({
-    mutationFn: () => quitarCuponUseCase(container.api),
+    mutationFn: () => quitarCuponUseCase(container.carrito),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKey, data.carrito);
       invalidar();

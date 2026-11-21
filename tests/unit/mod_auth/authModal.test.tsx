@@ -17,7 +17,7 @@ const api = vi.hoisted(() => ({
 const push = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-vi.mock("@/shared/di/container", () => ({ container: { api } }));
+vi.mock("@/shared/di/container", () => ({ container: { auth: api } }));
 
 const sesion = {
   accessToken: "jwt-123",

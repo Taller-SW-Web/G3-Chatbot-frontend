@@ -1,16 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon } from "@/shared/ui/icons";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { DeliveryRating } from "@/modules/mod-orders/ui/DeliveryRating";
-import { ListaReclamos } from "@/modules/mod-orders/ui/blocks/ListaReclamos";
-import { ListaDevoluciones } from "@/modules/mod-orders/ui/blocks/ListaDevoluciones";
 import { container } from "@/shared/di/container";
 
 type Tab = "proceso" | "entregados" | "reembolso" | "reclamos";
+
+/**
+ * Contenido de las pestañas de postventa. Lo inyecta el composition root
+ * (`app/pedidos/page.tsx`) con componentes de `mod-postventa/public`, para que
+ * `mod-orders` no dependa de `mod-postventa`.
+ */
+export type OrderHistorySlots = {
+  reembolso?: ReactNode;
+  reclamos?: ReactNode;
+};
 
 const TABS: Tab[] = ["proceso", "entregados", "reembolso", "reclamos"];
 const TAB_LABEL: Record<Tab, string> = {
@@ -29,34 +38,26 @@ function formatDate(value: string | null | undefined): string {
 }
 
 /** `/pedidos` pestañas En proceso/Entregados/Reembolsos/Reclamos. SPEC-17,18,21,22 */
-export function OrderHistoryPage({ initialTab = "proceso" }: { initialTab?: Tab }) {
+export function OrderHistoryPage({
+  initialTab = "proceso",
+  slots,
+}: {
+  initialTab?: Tab;
+  slots?: OrderHistorySlots;
+}) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const router = useRouter();
 
   const pedidos = useQuery({
     queryKey: ["pedidos", "historial"],
-    queryFn: () => container.api.listarPedidos({ page: 1, pageSize: 20 }),
+    queryFn: () => container.pedidos.listarPedidos({ page: 1, pageSize: 20 }),
     enabled: tab === "proceso" || tab === "entregados",
-    retry: false,
-  });
-
-  const devoluciones = useQuery({
-    queryKey: ["devoluciones", "historial"],
-    queryFn: () => container.api.listarDevoluciones({ page: 1, pageSize: 20 }),
-    enabled: tab === "reembolso",
-    retry: false,
-  });
-
-  const reclamos = useQuery({
-    queryKey: ["reclamos", "historial"],
-    queryFn: () => container.api.listarReclamos({ page: 1, pageSize: 20 }),
-    enabled: tab === "reclamos",
     retry: false,
   });
 
   const calificar = useMutation({
     mutationFn: ({ pedidoId, puntuacion }: { pedidoId: string; puntuacion: 1 | 3 | 5 }) =>
-      container.api.calificarPedido(pedidoId, puntuacion),
+      container.pedidos.calificarPedido(pedidoId, puntuacion),
   });
 
   const allOrders = pedidos.data?.items ?? [];
@@ -137,37 +138,9 @@ export function OrderHistoryPage({ initialTab = "proceso" }: { initialTab?: Tab 
         </div>
       )}
 
-      {tab === "reembolso" && (
-        <div className="flex flex-col gap-3">
-          {devoluciones.isLoading ? <p className="text-[14px] text-text-secondary">Cargando solicitudes…</p> : null}
-          {devoluciones.isError ? <p className="text-[14px] text-error-default">No puedo consultar tus devoluciones.</p> : null}
-          {!devoluciones.isLoading && !devoluciones.isError && (devoluciones.data?.items.length ?? 0) === 0 ? (
-            <p className="text-[14px] text-text-secondary">Aún no tienes solicitudes de cambio o devolución.</p>
-          ) : null}
-          <ListaDevoluciones items={(devoluciones.data?.items ?? []).map((d) => ({
-            codigo: d.devolucionId,
-            estado: d.estado,
-            motivo: d.motivo,
-            fecha: formatDate(d.fechaRegistro),
-          }))} />
-        </div>
-      )}
+      {tab === "reembolso" ? slots?.reembolso ?? null : null}
 
-      {tab === "reclamos" && (
-        <div className="flex flex-col gap-3">
-          {reclamos.isLoading ? <p className="text-[14px] text-text-secondary">Cargando reclamos…</p> : null}
-          {reclamos.isError ? <p className="text-[14px] text-error-default">No puedo consultar tus reclamos.</p> : null}
-          {!reclamos.isLoading && !reclamos.isError && (reclamos.data?.items.length ?? 0) === 0 ? (
-            <p className="text-[14px] text-text-secondary">Aún no tienes reclamos registrados.</p>
-          ) : null}
-          <ListaReclamos items={(reclamos.data?.items ?? []).map((r) => ({
-            codigo: r.codigoSeguimiento,
-            estado: r.estado,
-            motivo: r.motivo,
-            plazo: formatDate(r.fechaLimiteSLA),
-          }))} />
-        </div>
-      )}
+      {tab === "reclamos" ? slots?.reclamos ?? null : null}
     </div>
   );
 }

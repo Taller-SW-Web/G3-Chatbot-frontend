@@ -9,7 +9,7 @@ const api = vi.hoisted(() => ({
   reenviarVerificacion: vi.fn(),
 }));
 
-vi.mock("@/shared/di/container", () => ({ container: { api } }));
+vi.mock("@/shared/di/container", () => ({ container: { auth: api } }));
 
 function errorCon(code: string, status: number) {
   return { response: { status, data: { code } } };

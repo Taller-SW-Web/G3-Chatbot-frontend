@@ -122,7 +122,7 @@ export function CheckoutPage() {
       if (checkoutKeyRef.current?.fingerprint !== fingerprint) {
         checkoutKeyRef.current = { fingerprint, key: newKey("chk") };
       }
-      const sesion = await container.api.iniciarCheckout(payload, checkoutKeyRef.current.key);
+      const sesion = await container.checkout.iniciarCheckout(payload, checkoutKeyRef.current.key);
       checkoutKeyRef.current = null;
       setResumenActualizado(null);
 
@@ -166,7 +166,7 @@ export function CheckoutPage() {
 
     try {
       const checkoutId = checkoutSesion.id;
-      const res = await container.api.pagarCheckout(
+      const res = await container.checkout.pagarCheckout(
         checkoutId,
         {
           numeroTarjeta: pago.tarjetaNum,

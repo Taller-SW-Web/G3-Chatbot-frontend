@@ -20,7 +20,9 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: h.push }) }));
-vi.mock("@/shared/di/container", () => ({ container: { api: {}, stream: {} } }));
+vi.mock("@/shared/di/container", () => ({
+  container: { catalogo: {}, carrito: {}, chat: {}, stream: {} },
+}));
 vi.mock("@/modules/mod-catalog/application/buscarProductosUseCase", () => ({ buscarProductosUseCase: h.buscar }));
 vi.mock("@/modules/mod-catalog/application/verDetalleProductoUseCase", () => ({ verDetalleProductoUseCase: h.detalle }));
 vi.mock("@/modules/mod-catalog/application/consultarDisponibilidadUseCase", () => ({ consultarDisponibilidadUseCase: h.disponibilidad }));

@@ -16,7 +16,8 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/shared/di/container", () => ({
   container: {
-    api: { fetchProfile, crearReclamo },
+    auth: { fetchProfile },
+    postventa: { crearReclamo },
   },
 }));
 

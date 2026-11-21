@@ -26,7 +26,7 @@ export function useChat(conversacionId: string) {
     controladorRef.current = controlador;
     enviandoRef.current = false;
     dispatch({ tipo: "historialCargando" });
-    cargarHistorialUseCase(container.api, conversacionId)
+    cargarHistorialUseCase(container.chat, conversacionId)
       .then((mensajes) => {
         if (controlador.signal.aborted) return;
         dispatch({ tipo: "historialCargado", mensajes });
@@ -49,7 +49,7 @@ export function useChat(conversacionId: string) {
       setUltimoTexto(texto);
       try {
         await ejecutarTurnoUseCase({
-          api: container.api,
+          api: container.chat,
           stream: container.stream,
           conversacionId,
           texto,
@@ -81,7 +81,7 @@ export function useChat(conversacionId: string) {
   const recargarSilencioso = useCallback(async () => {
     const controlador = controladorRef.current;
     if (!controlador || controlador.signal.aborted) return;
-    const historial = await cargarHistorialUseCase(container.api, conversacionId);
+    const historial = await cargarHistorialUseCase(container.chat, conversacionId);
     if (controlador.signal.aborted) return;
     dispatch({ tipo: "historialCargado", mensajes: historial });
   }, [conversacionId]);

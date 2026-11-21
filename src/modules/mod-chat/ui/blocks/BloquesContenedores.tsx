@@ -62,7 +62,7 @@ export function SelectorVarianteChat({
   const [enviado, setEnviado] = useState(false);
   const detalle = useQuery({
     queryKey: ["catalogo", "detalle", productId],
-    queryFn: () => verDetalleProductoUseCase(container.api, productId),
+    queryFn: () => verDetalleProductoUseCase(container.catalogo, productId),
   });
 
   if (detalle.isPending) {

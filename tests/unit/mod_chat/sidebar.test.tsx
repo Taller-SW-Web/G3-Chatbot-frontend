@@ -13,7 +13,7 @@ const api = vi.hoisted(() => ({
   crearConversacion: vi.fn(),
 }));
 
-vi.mock("@/shared/di/container", () => ({ container: { api, stream: {} } }));
+vi.mock("@/shared/di/container", () => ({ container: { chat: api, stream: {} } }));
 
 function resumen(id: string, titulo = `Chat ${id}`, preview = "Un mensaje"): ConversacionResumen {
   return { id, titulo, preview, ultimoMensajeEn: "2026-11-09T00:00:00Z" };

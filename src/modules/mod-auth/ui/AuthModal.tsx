@@ -83,7 +83,7 @@ export function AuthModal() {
   useEffect(() => {
     if (tab !== "registro" || politica) return;
     let activo = true;
-    container.api
+    container.auth
       .obtenerPoliticaContrasena()
       .then((p) => {
         if (activo) setPolitica(p);
@@ -109,7 +109,7 @@ export function AuthModal() {
 
   async function hidratarPerfil(correoFallback: string) {
     try {
-      const perfil = await container.api.fetchProfile();
+      const perfil = await container.auth.fetchProfile();
       setCliente(clienteDesdePerfil(perfil, correoFallback));
     } catch {
       return;
@@ -121,7 +121,7 @@ export function AuthModal() {
     setError(null);
     setCorreoIngresado(d.correo);
     try {
-      const answer = await container.api.login(d.correo, d.password);
+      const answer = await container.auth.login(d.correo, d.password);
       if ("mfaRequerido" in answer) {
         setCanal(answer.canal);
         setContacto(d.correo);
@@ -147,7 +147,7 @@ export function AuthModal() {
     setOfrecerLogin(false);
     setCorreoIngresado(d.correo);
     try {
-      const resultado = await container.api.registrar(d);
+      const resultado = await container.auth.registrar(d);
       setCorreoRegistrado(resultado.correoEnmascarado);
       setCorreoIngresado(d.correo);
       setReenvioEstado({});
@@ -167,7 +167,7 @@ export function AuthModal() {
     setReenviando(true);
     setReenvioEstado({});
     try {
-      await container.api.reenviarVerificacion(correo);
+      await container.auth.reenviarVerificacion(correo);
       setReenvioEstado({ mensaje: REENVIO_NEUTRO });
     } catch (error) {
       const { status, code } = problemDe(error);
@@ -181,7 +181,7 @@ export function AuthModal() {
     setCargando(true);
     setError(null);
     try {
-      const opened = await container.api.verifyMfaCode(codigo);
+      const opened = await container.auth.verifyMfaCode(codigo);
       applySession(opened.accessToken, opened.expiresIn);
       setCliente(clienteDesdeUsuario(opened.usuario, contacto));
       await hidratarPerfil(contacto);
@@ -199,7 +199,7 @@ export function AuthModal() {
   async function solicitarCodigo(next: Canal) {
     setError(null);
     try {
-      await container.api.requestMfaCode(next);
+      await container.auth.requestMfaCode(next);
     } catch (error) {
       const { status, code } = problemDe(error);
       const fallo = describeMfaResendFailure(status, code);

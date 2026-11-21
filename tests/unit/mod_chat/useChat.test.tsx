@@ -6,7 +6,7 @@ import type { Mensaje } from "@/modules/mod-chat/domain/entities/Mensaje";
 
 const h = vi.hoisted(() => ({ cargar: vi.fn(), ejecutar: vi.fn() }));
 
-vi.mock("@/shared/di/container", () => ({ container: { api: {}, stream: {} } }));
+vi.mock("@/shared/di/container", () => ({ container: { chat: {}, stream: {} } }));
 vi.mock("@/modules/mod-chat/application/cargarHistorialUseCase", () => ({
   cargarHistorialUseCase: h.cargar,
 }));

@@ -64,13 +64,13 @@ export function HomePage() {
   // Grid con datos reales (SPEC-06). Sin fallback a mocks en este flujo.
   const catalogo = useQuery({
     queryKey: ["catalogo", "ofertas"],
-    queryFn: () => buscarProductosUseCase(container.api, { pagina: 1, tamanio: 10, soloOfertas: true }),
+    queryFn: () => buscarProductosUseCase(container.catalogo, { pagina: 1, tamanio: 10, soloOfertas: true }),
   });
   const productos: CatalogCardItem[] = catalogo.data?.items ?? [];
 
   const detalleQuery = useQuery({
     queryKey: ["catalogo", "detalle", detalleId],
-    queryFn: () => verDetalleProductoUseCase(container.api, detalleId as string),
+    queryFn: () => verDetalleProductoUseCase(container.catalogo, detalleId as string),
     enabled: detalleId != null,
   });
   const detalle: CatalogDetail | null = detalleQuery.data ?? null;
@@ -89,12 +89,12 @@ export function HomePage() {
       if (sel.sku == null) throw new Error("sku requerido");
       const sku = sel.sku;
       const crearConversacion = async () => {
-        const { conversacionId } = await crearConversacionUseCase(container.api);
+        const { conversacionId } = await crearConversacionUseCase(container.chat);
         convCreadaRef.current = conversacionId;
         return conversacionId;
       };
       const agregarEnConversacion = async (conversacionId?: string) => {
-        await agregarProductoAlCarritoUseCase(container.api, {
+        await agregarProductoAlCarritoUseCase(container.carrito, {
           sku,
           cantidad: 1,
           product_id: item.product_id,
@@ -137,7 +137,7 @@ export function HomePage() {
     setCreando(true);
     setFallido(null);
     try {
-      const { conversacionId } = await crearConversacionUseCase(container.api);
+      const { conversacionId } = await crearConversacionUseCase(container.chat);
       setPrimerMensaje(limpio);
       setComposer("");
       router.push(`/chat/${encodeURIComponent(conversacionId)}`);
@@ -333,7 +333,7 @@ export function HomePage() {
             if (item) agregar.mutate({ item, sel });
           }}
           consultarDisponibilidad={(sku) =>
-            consultarDisponibilidadUseCase(container.api, { sku }).then((r) =>
+            consultarDisponibilidadUseCase(container.catalogo, { sku }).then((r) =>
               toAvailabilityState(r.status)
             )
           }

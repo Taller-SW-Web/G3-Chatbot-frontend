@@ -6,7 +6,7 @@ import { ChatPage } from "@/modules/mod-chat/ui/ChatPage";
 
 const h = vi.hoisted(() => ({ execute: vi.fn(), reload: vi.fn(), send: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
-vi.mock("@/shared/di/container", () => ({ container: { api: {} } }));
+vi.mock("@/shared/di/container", () => ({ container: { chat: {} } }));
 vi.mock("@/modules/mod-chat/application/ejecutarAccionChatUseCase", () => ({ ejecutarAccionChatUseCase: h.execute }));
 vi.mock("@/modules/mod-chat/application/useChat", () => ({
   useChat: () => ({

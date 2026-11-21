@@ -1,5 +1,6 @@
 import { AppShell } from "@/shared/ui/shell/AppShell";
 import { OrderHistoryPage } from "@/modules/mod-orders/public";
+import { HistorialDevoluciones, HistorialReclamos } from "@/modules/mod-postventa/public";
 import { AuthGuard } from "@/shared/auth/AuthGuard";
 
 const TABS = ["proceso", "entregados", "reembolso", "reclamos"] as const;
@@ -16,7 +17,13 @@ export default async function PedidosTabRoute({
   return (
     <AppShell initialScreen="pedidos">
       <AuthGuard>
-        <OrderHistoryPage initialTab={initialTab} />
+        <OrderHistoryPage
+          initialTab={initialTab}
+          slots={{
+            reembolso: <HistorialDevoluciones />,
+            reclamos: <HistorialReclamos />,
+          }}
+        />
       </AuthGuard>
     </AppShell>
   );

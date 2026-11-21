@@ -57,7 +57,7 @@ export function Sidebar({
 
   const recientes = useInfiniteQuery({
     queryKey: ["conversaciones", dueno],
-    queryFn: ({ pageParam }) => listarConversacionesUseCase(container.api, pageParam),
+    queryFn: ({ pageParam }) => listarConversacionesUseCase(container.chat, pageParam),
     initialPageParam: 1,
     getNextPageParam: siguientePaginaConversaciones,
   });
@@ -65,14 +65,14 @@ export function Sidebar({
   const resultados = useInfiniteQuery({
     queryKey: ["conversaciones", dueno, "buscar", termino],
     queryFn: async ({ pageParam }) =>
-      (await buscarConversacionesUseCase(container.api, termino, pageParam)) ?? [],
+      (await buscarConversacionesUseCase(container.chat, termino, pageParam)) ?? [],
     initialPageParam: 1,
     getNextPageParam: siguientePaginaConversaciones,
     enabled: buscando && termino !== "",
   });
 
   const nuevoChat = useMutation({
-    mutationFn: () => crearConversacionUseCase(container.api),
+    mutationFn: () => crearConversacionUseCase(container.chat),
     onSuccess: ({ conversacionId }) => {
       // Vacía no aparece en Recientes hasta su primer mensaje; se refresca al volver.
       queryClient.invalidateQueries({ queryKey: ["conversaciones"] });
