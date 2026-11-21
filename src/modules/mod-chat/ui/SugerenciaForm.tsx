@@ -134,8 +134,13 @@ export function SugerenciaForm({
           </button>
         ) : (
           <div className="rounded-md bg-white border border-border-default p-2.5 flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewUrl ?? undefined} alt={evidencia.nombre} className="w-14 h-14 rounded-md object-cover border border-border-default" />
+            {/* La captura se pinta como fondo: no se reinterpreta texto como HTML. */}
+            <div
+              role="img"
+              aria-label={`Vista previa de ${evidencia.nombre}`}
+              className="w-14 h-14 rounded-md border border-border-default bg-cover bg-center shrink-0"
+              style={previewUrl ? { backgroundImage: `url("${previewUrl}")` } : undefined}
+            />
             <div className="flex-1 min-w-0 text-left">
               <p className="text-[13px] font-bold truncate">{evidencia.nombre}</p>
               <p className="text-[12px] text-text-secondary">JPG/PNG ≤ 5 MB</p>

@@ -87,12 +87,12 @@ describe("SugerenciaForm (SPEC-24 Req. 4)", () => {
   });
 
   it("adjunta una captura, la envía con el formulario y permite quitarla", async () => {
-    const { container } = montar();
+    montar();
     const archivo = new File(["x"], "captura.png", { type: "image/png" });
     const input = screen.getByLabelText("Elegir captura de la biblioteca");
 
     fireEvent.change(input, { target: { files: [archivo] } });
-    expect(screen.getByAltText("captura.png")).toBeDefined();
+    expect(screen.getByRole("img", { name: /Vista previa de captura\.png/ })).toBeDefined();
     expect(screen.getByText("Cambiar")).toBeDefined();
 
     completar();
@@ -103,7 +103,7 @@ describe("SugerenciaForm (SPEC-24 Req. 4)", () => {
     fireEvent.click(screen.getByRole("button", { name: "ENTENDIDO" }));
     // El modal se cierra y la captura sigue adjunta hasta quitarla.
     fireEvent.click(screen.getByText("Quitar"));
-    expect(container.querySelector("img")).toBeNull();
+    expect(screen.queryByRole("img", { name: /captura\.png/ })).toBeNull();
   });
 
   it("rechaza una captura que no es JPG/PNG sin bloquear el envío", () => {
