@@ -259,7 +259,75 @@ for (const file of sourceFiles) {
   }
 }
 
-// 5) Reporte.
+// 5) Contrato backend↔frontend: cada endpoint del manifiesto debe existir en
+//    el openapi.json del backend y llevar el tag del mismo id de módulo.
+const openapiPath = process.env.OPENAPI_PATH
+  ? path.resolve(process.env.OPENAPI_PATH)
+  : path.join(root, "../G3-Chatbot-backend/docs/openapi.json");
+const hoy = new Date().toISOString().slice(0, 10);
+
+function normalizarRuta(ruta) {
+  return ruta.replace(/^\/api\/v1(?=\/|$)/, "").replace(/\{[^}]+\}/g, "{}");
+}
+
+const pendingByKey = new Map(
+  (exceptions.contractPending ?? []).map((e) => [`${e.module}:${normalizarRuta(e.path)}`, e])
+);
+const tagExceptionByKey = new Map(
+  (exceptions.contractTagExceptions ?? []).map((e) => [`${e.module}:${normalizarRuta(e.path)}`, e])
+);
+for (const [key, exc] of [...pendingByKey, ...tagExceptionByKey]) {
+  if (exc.reviewBy && exc.reviewBy < hoy) {
+    fail(`${key}: allowlist de contrato vencida (reviewBy ${exc.reviewBy}); resuélvela o renueva la fecha`);
+  }
+}
+
+if (!fs.existsSync(openapiPath)) {
+  if (process.env.OPENAPI_PATH) {
+    fail(`OPENAPI_PATH no existe: ${openapiPath}`);
+  } else {
+    warnings.add(
+      `contrato no validado: falta ${path.relative(root, openapiPath)} (exporta OPENAPI_PATH para exigirlo)`
+    );
+  }
+} else {
+  const openapi = JSON.parse(fs.readFileSync(openapiPath, "utf8"));
+  const openapiPaths = new Map();
+  for (const [ruta, operaciones] of Object.entries(openapi.paths ?? {})) {
+    const tags = new Set();
+    for (const operacion of Object.values(operaciones ?? {})) {
+      if (operacion && Array.isArray(operacion.tags)) operacion.tags.forEach((t) => tags.add(t));
+    }
+    openapiPaths.set(normalizarRuta(ruta), tags);
+  }
+
+  for (const manifest of manifests) {
+    for (const endpoint of manifest.endpoints ?? []) {
+      const key = `${manifest.id}:${normalizarRuta(endpoint)}`;
+      const tags = openapiPaths.get(normalizarRuta(endpoint));
+      if (!tags) {
+        const exc = pendingByKey.get(key);
+        if (exc) {
+          warnings.add(`${manifest.id}: ${endpoint} pendiente en backend (${exc.todo}; revisar ${exc.reviewBy})`);
+        } else {
+          fail(`${manifest.id}: ${endpoint} no existe en ${path.basename(openapiPath)}`);
+        }
+        continue;
+      }
+      if (!tags.has(manifest.id)) {
+        const exc = tagExceptionByKey.get(key);
+        const etiquetas = [...tags].join(", ") || "sin tag";
+        if (exc) {
+          warnings.add(`${manifest.id}: ${endpoint} etiquetado [${etiquetas}] en openapi (${exc.todo})`);
+        } else {
+          fail(`${manifest.id}: ${endpoint} tiene tag [${etiquetas}] y no ${manifest.id}`);
+        }
+      }
+    }
+  }
+}
+
+// 6) Reporte.
 if (warnings.size) {
   console.warn(`Avisos (${warnings.size}):`);
   for (const w of warnings) console.warn(`  - ${w}`);
