@@ -1,7 +1,18 @@
 import type { PoliticaContrasena } from "@/shared/auth/passwordPolicy";
-import type { PerfilCliente, UsuarioSesion } from "@/shared/auth/types";
+import type {
+  PerfilCliente,
+  SolicitudOtpCelular,
+  UsuarioSesion,
+  VerificacionOtpCelular,
+} from "@/shared/auth/types";
 
-export type { PoliticaContrasena, PerfilCliente, UsuarioSesion };
+export type {
+  PoliticaContrasena,
+  PerfilCliente,
+  SolicitudOtpCelular,
+  UsuarioSesion,
+  VerificacionOtpCelular,
+};
 
 export type SessionOpened = {
   accessToken: string;
@@ -46,5 +57,10 @@ export interface AuthPort {
   refreshSession(): Promise<SessionOpened>;
   logout(): Promise<{ ok: true }>;
   fetchProfile(): Promise<PerfilCliente>;
+  /** SPEC-04 Req. 2: envía un OTP simulado al celular vigente del perfil. */
+  solicitarOtpCelular(): Promise<SolicitudOtpCelular>;
+  /** SPEC-04 Req. 2: valida el OTP y deja el celular verificado localmente. */
+  verificarOtpCelular(codigo: string): Promise<VerificacionOtpCelular>;
+  /** Compatibilidad con la pantalla anterior: mismo endpoint de verificación. */
   validarContactoCelular(codigo: string): Promise<{ verificado: boolean }>;
 }

@@ -25,6 +25,7 @@ export const moduleRegistry = [
       "/sesion/refresh",
       "/sesion/logout",
       "/sesion/perfil",
+      "/contacto/celular/solicitar-otp",
       "/contacto/celular/verificar-otp",
     ],
     dependsOn: [

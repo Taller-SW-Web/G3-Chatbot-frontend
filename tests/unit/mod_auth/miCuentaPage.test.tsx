@@ -4,7 +4,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MiCuentaPage } from "@/modules/mod-auth/ui/MiCuentaPage";
 import { useChatStore } from "@/shared/auth/chatStore";
 
-const api = vi.hoisted(() => ({ validarContactoCelular: vi.fn() }));
+const api = vi.hoisted(() => ({
+  solicitarOtpCelular: vi.fn(),
+  verificarOtpCelular: vi.fn(),
+  validarContactoCelular: vi.fn(),
+}));
 const push = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -25,6 +29,12 @@ function cliente(extra: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   useChatStore.setState({ cliente: null, accessToken: null });
+  api.solicitarOtpCelular.mockResolvedValue({
+    ok: true,
+    celularEnmascarado: "*****321",
+    expiraEnSegundos: 300,
+  });
+  api.verificarOtpCelular.mockResolvedValue({ verificado: true });
   api.validarContactoCelular.mockResolvedValue({ verificado: true });
 });
 
@@ -59,24 +69,25 @@ describe("MiCuentaPage", () => {
     expect(screen.getByText(/Para coordinar la entrega necesitamos confirmar tu celular/)).toBeDefined();
 
     fireEvent.click(screen.getByRole("button", { name: "ENVIAR CÓDIGO" }));
-    expect(screen.getByText("Ingresa el código de 6 dígitos")).toBeDefined();
+    expect(await screen.findByText("Ingresa el código de 6 dígitos")).toBeDefined();
 
-    fireEvent.change(screen.getByLabelText(/C.digo celular 6 d.gitos/), { target: { value: "123456" } });
+    fireEvent.change(screen.getByLabelText("Código de verificación"), { target: { value: "123456" } });
     fireEvent.click(screen.getByRole("button", { name: "VERIFICAR" }));
 
-    await waitFor(() => expect(api.validarContactoCelular).toHaveBeenCalledWith("123456"));
+    await waitFor(() => expect(api.verificarOtpCelular).toHaveBeenCalledWith("123456"));
     expect(useChatStore.getState().cliente?.celularVerificado).toBe(true);
     expect(screen.getByText("Celular verificado")).toBeDefined();
   });
 
   it("conserva el celular sin verificar si el código no es válido", async () => {
-    api.validarContactoCelular.mockResolvedValue({ verificado: false });
+    api.verificarOtpCelular.mockResolvedValue({ verificado: false });
     useChatStore.setState({ cliente: cliente() });
     render(<MiCuentaPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "VERIFICAR CELULAR" }));
     fireEvent.click(screen.getByRole("button", { name: "ENVIAR CÓDIGO" }));
-    fireEvent.change(screen.getByLabelText(/C.digo celular 6 d.gitos/), { target: { value: "000000" } });
+    await screen.findByText("Ingresa el código de 6 dígitos");
+    fireEvent.change(screen.getByLabelText("Código de verificación"), { target: { value: "000000" } });
     fireEvent.click(screen.getByRole("button", { name: "VERIFICAR" }));
 
     // La respuesta se procesa cuando aparece el aviso; esperar solo la llamada

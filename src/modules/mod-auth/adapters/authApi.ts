@@ -15,6 +15,8 @@ import type {
   RegistroClienteInput,
   RegistroResultado,
   SessionOpened,
+  SolicitudOtpCelular,
+  VerificacionOtpCelular,
 } from "@/modules/mod-auth/ports/authPort";
 
 /** Adapter REST de autenticación, cuenta y contacto (SPEC-01..04). */
@@ -75,6 +77,17 @@ export const authApi: AuthPort = {
   async fetchProfile() {
     const { data } = await http.get("/sesion/perfil");
     return data as PerfilCliente;
+  },
+  // SPEC-04: el código OTP va directo al endpoint, nunca por el LLM.
+  async solicitarOtpCelular() {
+    const { data } = await http.post("/contacto/celular/solicitar-otp");
+    return data as SolicitudOtpCelular;
+  },
+  async verificarOtpCelular(codigo: string) {
+    const { data } = await http.post("/contacto/celular/verificar-otp", {
+      codigo,
+    });
+    return data as VerificacionOtpCelular;
   },
   async validarContactoCelular(codigo) {
     const { data } = await http.post(`/contacto/celular/verificar-otp`, {

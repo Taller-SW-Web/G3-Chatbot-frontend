@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { otpMfaSchema } from "@/modules/mod-auth/domain/schemas/otpMfa.schema";
+import { OtpInput } from "@/shared/ui/OtpInput";
 import { maskCelular, maskEmail } from "@/shared/security/sanitize";
 
 const CODE_TTL_SECONDS = 5 * 60;
@@ -54,9 +55,7 @@ export function OtpMfaForm({
       <label htmlFor="codigo-mfa" className="text-[12px] font-semibold text-text-primary">
         Código de verificación
       </label>
-      <input {...register("codigo")} id="codigo-mfa" inputMode="numeric" maxLength={6} placeholder="••••••"
-        autoComplete="one-time-code"
-        className="wf-input px-3 py-2.5 text-sm text-center tracking-[0.3em] outline-none" />
+      <OtpInput {...register("codigo")} id="codigo-mfa" placeholder="••••••" />
       {error && (
         <p role="alert" className="text-[12px] text-error-default">{error}</p>
       )}

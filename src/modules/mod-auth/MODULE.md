@@ -3,7 +3,7 @@
 - **Owner:** @Ankarmin
 - **Frontend:** carpeta `mod-auth`, rutas `[/cuenta, /verificar-correo]`
 - **Depende de:** ninguno
-- **Contrato:** `/sesion/*` y `/contacto/celular/verificar-otp`
+- **Contrato:** `/sesion/*`, `/contacto/celular/solicitar-otp` y `/contacto/celular/verificar-otp`
 
 ## Responsabilidad
 
@@ -24,7 +24,9 @@ Sesión del cliente, registro, MFA, verificación de correo, datos de cuenta y p
 
 ## Endpoints
 
-`POST /sesion/login`, `POST /sesion/registro`, `GET /sesion/politica-contrasena`, `POST /sesion/verificar-correo`, `POST /sesion/verificar-correo/reenviar`, `POST /sesion/mfa/solicitar`, `POST /sesion/mfa/verificar`, `POST /sesion/refresh`, `POST /sesion/logout`, `GET /sesion/perfil`, `POST /contacto/celular/verificar-otp`.
+`POST /sesion/login`, `POST /sesion/registro`, `GET /sesion/politica-contrasena`, `POST /sesion/verificar-correo`, `POST /sesion/verificar-correo/reenviar`, `POST /sesion/mfa/solicitar`, `POST /sesion/mfa/verificar`, `POST /sesion/refresh`, `POST /sesion/logout`, `GET /sesion/perfil`, `POST /contacto/celular/solicitar-otp`, `POST /contacto/celular/verificar-otp`.
+
+El OTP del celular (SPEC-04) es local del chatbot: el flujo completo vive en `shared/auth/OtpCelularFlow` (reutilizado por checkout) y reutiliza la primitiva `shared/ui/OtpInput`. La vigencia de 5 minutos, los 3 intentos y el temporizador de reenvío se manejan del lado del cliente; el backend sigue siendo la autoridad.
 
 ## Dependencias externas
 
