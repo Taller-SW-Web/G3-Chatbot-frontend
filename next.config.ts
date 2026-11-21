@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
+import { resolveApiProxyTarget } from "./src/shared/config/apiProxyTarget";
 
 // ADR-0023: el navegador llama a /api/* en el propio origen y Next.js reenvía al backend.
 // Variable de servidor por entorno (staging: https://g3-chatbot-backend-staging.up.railway.app).
-const apiProxyTarget = process.env.API_PROXY_TARGET;
+// En Vercel falla el build si falta (ver resolveApiProxyTarget).
+const apiProxyTarget = resolveApiProxyTarget(process.env);
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
