@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
-import { buscarProductosUseCase } from "@/application/use_cases/buscarProductosUseCase";
-import { verDetalleProductoUseCase } from "@/application/use_cases/verDetalleProductoUseCase";
-import { consultarDisponibilidadUseCase } from "@/application/use_cases/consultarDisponibilidadUseCase";
-import type { ChatbotApiPort } from "@/ports/outbound/ChatbotApiPort";
-import { messiClub } from "../fixtures/messiClub";
+import { buscarProductosUseCase } from "@/modules/mod-catalog/application/buscarProductosUseCase";
+import { verDetalleProductoUseCase } from "@/modules/mod-catalog/application/verDetalleProductoUseCase";
+import { consultarDisponibilidadUseCase } from "@/modules/mod-catalog/application/consultarDisponibilidadUseCase";
+import type { CatalogoPort } from "@/modules/mod-catalog/ports/catalogoPort";
+import { messiClub } from "@/shared/testing/fixtures/messiClub";
 
-function apiCon(overrides: Partial<ChatbotApiPort> = {}): {
-  api: ChatbotApiPort;
+function apiCon(overrides: Partial<CatalogoPort> = {}): {
+  api: CatalogoPort;
   llamadas: Record<string, unknown[]>;
 } {
   const llamadas: Record<string, unknown[]> = {};
@@ -23,8 +23,8 @@ function apiCon(overrides: Partial<ChatbotApiPort> = {}): {
       (llamadas.disponibilidad ??= []).push(sku);
       return [{ sku, status: "DISPONIBLE" }];
     }),
-  } as unknown as ChatbotApiPort;
-  return { api: { ...api, ...overrides } as ChatbotApiPort, llamadas };
+  } as unknown as CatalogoPort;
+  return { api: { ...api, ...overrides } as CatalogoPort, llamadas };
 }
 
 describe("casos de uso de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {

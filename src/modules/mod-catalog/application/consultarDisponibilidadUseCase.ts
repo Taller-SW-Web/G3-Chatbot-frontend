@@ -1,9 +1,9 @@
-import type { ChatbotApiPort } from "@/ports/outbound/ChatbotApiPort";
-import { isKnownAvailability } from "@/domain/entities/CatalogoUI";
+import type { CatalogoPort } from "@/modules/mod-catalog/ports/catalogoPort";
+import { isKnownAvailability } from "@/modules/mod-catalog/domain/entities/CatalogoUI";
 
 /** Disponibilidad puntual con datos reales (SPEC-10). Sin mocks. */
 export async function consultarDisponibilidadUseCase(
-  api: ChatbotApiPort,
+  api: CatalogoPort,
   input: { sku: string; cantidad?: number }
 ): Promise<{ sku: string; status: string; veredicto?: string | null }> {
   const sku = input.sku.trim();

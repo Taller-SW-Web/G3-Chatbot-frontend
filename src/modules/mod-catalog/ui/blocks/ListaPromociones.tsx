@@ -1,5 +1,5 @@
-import { formatPromotionDate, type PromotionSummary } from "@/domain/entities/PromocionesUI";
-import { sanitize } from "@/domain/utils/sanitize";
+import { formatPromotionDate, type PromotionSummary } from "@/modules/mod-catalog/domain/entities/PromocionesUI";
+import { sanitize } from "@/shared/security/sanitize";
 
 /** Only public summaries from G3; never provider benefits or coupon data. */
 export function ListaPromociones({ promos, unavailable = false }: { promos: PromotionSummary[] | null; unavailable?: boolean }) {

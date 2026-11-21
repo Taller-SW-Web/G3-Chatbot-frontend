@@ -2,17 +2,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ProductCard } from "@/adapters/inbound/components/ProductCard";
-import { ProductDetailModal } from "@/adapters/inbound/components/blocks/DetalleProducto";
-import { DevolucionForm } from "@/adapters/inbound/components/forms/DevolucionForm";
-import { mensajeCarrito } from "@/application/errors/carritoMensajes";
+import { ProductCard } from "@/modules/mod-catalog/ui/ProductCard";
+import { ProductDetailModal } from "@/modules/mod-catalog/ui/blocks/DetalleProducto";
+import { DevolucionForm } from "@/modules/mod-postventa/ui/forms/DevolucionForm";
+import { mensajeCarrito } from "@/modules/mod-cart/application/errors/carritoMensajes";
 import {
   canAddCard,
   mapCarouselItem,
   mapProductDetail,
   toAvailabilityState,
-} from "@/domain/entities/CatalogoUI";
-import { messiClub } from "../fixtures/messiClub";
+} from "@/modules/mod-catalog/domain/entities/CatalogoUI";
+import { messiClub } from "@/shared/testing/fixtures/messiClub";
 
 /**
  * Acuerdo A17 con Productos (issues #30): la tarjeta no inventa stock ni

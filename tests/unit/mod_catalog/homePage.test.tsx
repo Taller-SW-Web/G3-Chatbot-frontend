@@ -3,11 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
-import { HomePage } from "@/adapters/inbound/pages/HomePage";
-import { useChatStore } from "@/application/state/chatStore";
-import type { CatalogCardItem, CatalogDetail } from "@/domain/entities/CatalogoUI";
-import { mapCarouselItem, mapProductDetail } from "@/domain/entities/CatalogoUI";
-import { messiClub } from "../fixtures/messiClub";
+import { HomePage } from "@/modules/mod-catalog/ui/HomePage";
+import { useChatStore } from "@/shared/auth/chatStore";
+import type { CatalogCardItem, CatalogDetail } from "@/modules/mod-catalog/domain/entities/CatalogoUI";
+import { mapCarouselItem, mapProductDetail } from "@/modules/mod-catalog/domain/entities/CatalogoUI";
+import { messiClub } from "@/shared/testing/fixtures/messiClub";
 
 const h = vi.hoisted(() => ({
   buscar: vi.fn(),
@@ -20,13 +20,13 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: h.push }) }));
-vi.mock("@/infrastructure/di/container", () => ({ container: { api: {}, stream: {} } }));
-vi.mock("@/application/use_cases/buscarProductosUseCase", () => ({ buscarProductosUseCase: h.buscar }));
-vi.mock("@/application/use_cases/verDetalleProductoUseCase", () => ({ verDetalleProductoUseCase: h.detalle }));
-vi.mock("@/application/use_cases/consultarDisponibilidadUseCase", () => ({ consultarDisponibilidadUseCase: h.disponibilidad }));
-vi.mock("@/application/use_cases/agregarProductoAlCarritoUseCase", () => ({ agregarProductoAlCarritoUseCase: h.agregar }));
-vi.mock("@/application/use_cases/agregarCarritoAnonimoUseCase", () => ({ agregarCarritoAnonimoUseCase: h.anonimo }));
-vi.mock("@/application/use_cases/crearConversacionUseCase", () => ({ crearConversacionUseCase: h.crear }));
+vi.mock("@/shared/di/container", () => ({ container: { api: {}, stream: {} } }));
+vi.mock("@/modules/mod-catalog/application/buscarProductosUseCase", () => ({ buscarProductosUseCase: h.buscar }));
+vi.mock("@/modules/mod-catalog/application/verDetalleProductoUseCase", () => ({ verDetalleProductoUseCase: h.detalle }));
+vi.mock("@/modules/mod-catalog/application/consultarDisponibilidadUseCase", () => ({ consultarDisponibilidadUseCase: h.disponibilidad }));
+vi.mock("@/modules/mod-cart/application/agregarProductoAlCarritoUseCase", () => ({ agregarProductoAlCarritoUseCase: h.agregar }));
+vi.mock("@/modules/mod-cart/application/agregarCarritoAnonimoUseCase", () => ({ agregarCarritoAnonimoUseCase: h.anonimo }));
+vi.mock("@/modules/mod-chat/application/crearConversacionUseCase", () => ({ crearConversacionUseCase: h.crear }));
 
 const producto: CatalogCardItem = {
   product_id: "p1",

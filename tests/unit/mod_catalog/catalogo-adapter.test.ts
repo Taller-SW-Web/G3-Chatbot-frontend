@@ -23,9 +23,11 @@ Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
 });
 
-import { chatbotApi } from "@/adapters/outbound/ChatbotApiAxiosAdapter";
-import { agregarProductoAlCarritoUseCase } from "@/application/use_cases/agregarProductoAlCarritoUseCase";
-import { messiClub } from "../fixtures/messiClub";
+import { container } from "@/shared/di/container";
+
+const chatbotApi = container.api;
+import { agregarProductoAlCarritoUseCase } from "@/modules/mod-cart/application/agregarProductoAlCarritoUseCase";
+import { messiClub } from "@/shared/testing/fixtures/messiClub";
 
 describe("adapter Axios de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {
   beforeEach(() => {

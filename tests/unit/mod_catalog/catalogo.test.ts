@@ -7,7 +7,7 @@ import {
   mapProductDetail,
   safeImageUrl,
   toAvailabilityState,
-} from "@/domain/entities/CatalogoUI";
+} from "@/modules/mod-catalog/domain/entities/CatalogoUI";
 
 describe("mappers de catálogo (SPEC-06, SPEC-09)", () => {
   it("mapea item de carrusel con fallbacks", () => {

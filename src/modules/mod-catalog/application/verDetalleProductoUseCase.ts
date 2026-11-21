@@ -1,13 +1,13 @@
-import type { ChatbotApiPort } from "@/ports/outbound/ChatbotApiPort";
+import type { CatalogoPort } from "@/modules/mod-catalog/ports/catalogoPort";
 import {
   mapProductDetail,
   isProductRow,
   type CatalogDetail,
-} from "@/domain/entities/CatalogoUI";
+} from "@/modules/mod-catalog/domain/entities/CatalogoUI";
 
 /** Detalle con variantes reales (SPEC-09). Sin mocks. */
 export async function verDetalleProductoUseCase(
-  api: ChatbotApiPort,
+  api: CatalogoPort,
   productId: string
 ): Promise<CatalogDetail> {
   if (!productId.trim()) throw new Error("productId requerido");

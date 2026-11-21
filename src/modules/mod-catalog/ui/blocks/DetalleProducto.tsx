@@ -2,18 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { XIcon } from "../icons";
-import { AvailabilityBadge } from "../AvailabilityBadge";
-import { ProductImage } from "../ProductImage";
+import { XIcon } from "@/shared/ui/icons";
+import { AvailabilityBadge } from "@/modules/mod-catalog/ui/AvailabilityBadge";
+import { ProductImage } from "@/modules/mod-catalog/ui/ProductImage";
 import {
   findVariantSku,
   canAddWithAvailability,
   toAvailabilityState,
   type AvailabilityState,
   type CatalogDetail,
-} from "@/domain/entities/CatalogoUI";
-import { PriceTag } from "../PriceTag";
-import { sanitize } from "@/domain/utils/sanitize";
+} from "@/modules/mod-catalog/domain/entities/CatalogoUI";
+import { PriceTag } from "@/modules/mod-catalog/ui/PriceTag";
+import { sanitize } from "@/shared/security/sanitize";
 
 export type { CatalogDetail };
 

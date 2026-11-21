@@ -1,16 +1,16 @@
 import type {
   BuscarProductosInput,
-  ChatbotApiPort,
-} from "@/ports/outbound/ChatbotApiPort";
+  CatalogoPort,
+} from "@/modules/mod-catalog/ports/catalogoPort";
 import {
   mapCarouselItem,
   isProductRow,
   type CatalogCardItem,
-} from "@/domain/entities/CatalogoUI";
+} from "@/modules/mod-catalog/domain/entities/CatalogoUI";
 
 /** Búsqueda paginada con datos reales (SPEC-06). Sin mocks. */
 export async function buscarProductosUseCase(
-  api: ChatbotApiPort,
+  api: CatalogoPort,
   input: BuscarProductosInput
 ): Promise<{ items: CatalogCardItem[]; total: number; mensaje?: string; partial: boolean }> {
   const page = await api.buscarProductos({

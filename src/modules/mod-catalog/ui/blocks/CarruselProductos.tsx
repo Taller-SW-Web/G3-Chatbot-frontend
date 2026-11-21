@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { PlusIcon } from "../icons";
+import { PlusIcon } from "@/shared/ui/icons";
 import {
   canAddCard,
   type CatalogCardItem,
-} from "@/domain/entities/CatalogoUI";
-import { PriceTag } from "../PriceTag";
-import { sanitize } from "@/domain/utils/sanitize";
-import { AvailabilityBadge } from "../AvailabilityBadge";
-import { ProductImage } from "../ProductImage";
+} from "@/modules/mod-catalog/domain/entities/CatalogoUI";
+import { PriceTag } from "@/modules/mod-catalog/ui/PriceTag";
+import { sanitize } from "@/shared/security/sanitize";
+import { AvailabilityBadge } from "@/modules/mod-catalog/ui/AvailabilityBadge";
+import { ProductImage } from "@/modules/mod-catalog/ui/ProductImage";
 
 export type { CatalogCardItem };
 

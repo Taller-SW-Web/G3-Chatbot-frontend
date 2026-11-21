@@ -1,17 +1,17 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { PriceTag } from "@/adapters/inbound/components/PriceTag";
-import { ProductCard } from "@/adapters/inbound/components/ProductCard";
-import { MessageBubble } from "@/adapters/inbound/components/MessageBubble";
-import { AccionesRapidas } from "@/adapters/inbound/components/blocks/AccionesRapidas";
-import { BloqueCarrito } from "@/adapters/inbound/components/blocks/BloqueCarrito";
-import { ProductDetailModal } from "@/adapters/inbound/components/blocks/DetalleProducto";
+import { PriceTag } from "@/modules/mod-catalog/ui/PriceTag";
+import { ProductCard } from "@/modules/mod-catalog/ui/ProductCard";
+import { MessageBubble } from "@/modules/mod-chat/ui/MessageBubble";
+import { AccionesRapidas } from "@/modules/mod-chat/ui/blocks/AccionesRapidas";
+import { BloqueCarrito } from "@/modules/mod-cart/ui/blocks/BloqueCarrito";
+import { ProductDetailModal } from "@/modules/mod-catalog/ui/blocks/DetalleProducto";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { mapCarouselItem, mapProductDetail } from "@/domain/entities/CatalogoUI";
-import { formatPromotionDate, parseAmount, parseIsoDate, parsePromotions } from "@/domain/entities/PromocionesUI";
-import { mapearHistorial } from "@/adapters/outbound/mapearHistorial";
-import type { Bloque } from "@/domain/entities/Bloque";
+import { mapCarouselItem, mapProductDetail } from "@/modules/mod-catalog/domain/entities/CatalogoUI";
+import { formatPromotionDate, parseAmount, parseIsoDate, parsePromotions } from "@/modules/mod-catalog/domain/entities/PromocionesUI";
+import { mapearHistorial } from "@/modules/mod-chat/adapters/mapearHistorial";
+import type { Bloque } from "@/modules/mod-chat/domain/entities/Bloque";
 
 // Explicit local fixtures: these are not successful G6 responses.
 const item = { product_id: "fixture-1", name: "Zapatilla de prueba", price: "239.90", regular_price: "299.90", offer_price: "239.90", savings_pct: 20, availability: "INDETERMINADO", recommendation_reason: "Para correr en asfalto" };

@@ -3,34 +3,34 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpIcon, PhotoIcon } from "../components/icons";
-import { ProductCard } from "../components/ProductCard";
+import { ArrowUpIcon, PhotoIcon } from "@/shared/ui/icons";
+import { ProductCard } from "@/modules/mod-catalog/ui/ProductCard";
 import {
   toAvailabilityState,
   canAddCard,
   type CatalogCardItem,
   type CatalogDetail,
-} from "@/domain/entities/CatalogoUI";
+} from "@/modules/mod-catalog/domain/entities/CatalogoUI";
 import {
   isUnavailable,
   problemCode,
   problemFaltantes,
-} from "@/domain/utils/httpError";
-import { useChatStore } from "@/application/state/chatStore";
-import { conversacionParaCarrito } from "@/domain/utils/carrito";
-import { mensajeCarrito } from "@/application/errors/carritoMensajes";
+} from "@/shared/api/httpError";
+import { useChatStore } from "@/shared/auth/chatStore";
+import { conversacionParaCarrito } from "@/shared/commerce/carrito";
+import { mensajeCarrito } from "@/modules/mod-cart/public";
 import {
   ModalShell,
   ProductDetailModal,
-} from "../components/blocks/DetalleProducto";
-import { buscarProductosUseCase } from "@/application/use_cases/buscarProductosUseCase";
-import { verDetalleProductoUseCase } from "@/application/use_cases/verDetalleProductoUseCase";
-import { consultarDisponibilidadUseCase } from "@/application/use_cases/consultarDisponibilidadUseCase";
-import { agregarProductoAlCarritoUseCase } from "@/application/use_cases/agregarProductoAlCarritoUseCase";
-import { agregarCarritoAnonimoUseCase } from "@/application/use_cases/agregarCarritoAnonimoUseCase";
-import { crearConversacionUseCase } from "@/application/use_cases/crearConversacionUseCase";
-import { MENSAJE_MAX_CARACTERES } from "@/application/use_cases/enviarMensajeUseCase";
-import { container } from "@/infrastructure/di/container";
+} from "@/modules/mod-catalog/ui/blocks/DetalleProducto";
+import { buscarProductosUseCase } from "@/modules/mod-catalog/application/buscarProductosUseCase";
+import { verDetalleProductoUseCase } from "@/modules/mod-catalog/application/verDetalleProductoUseCase";
+import { consultarDisponibilidadUseCase } from "@/modules/mod-catalog/application/consultarDisponibilidadUseCase";
+import { agregarProductoAlCarritoUseCase } from "@/modules/mod-cart/public";
+import { agregarCarritoAnonimoUseCase } from "@/modules/mod-cart/public";
+import { crearConversacionUseCase } from "@/modules/mod-chat/public";
+import { MENSAJE_MAX_CARACTERES } from "@/modules/mod-chat/public";
+import { container } from "@/shared/di/container";
 
 /** Mensaje del agregado; en 409 VARIANTE_REQUERIDA indica qué falta (talla/color). */
 function mensajeAgregar(error: unknown): string {

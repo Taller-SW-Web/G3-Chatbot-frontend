@@ -4,7 +4,7 @@ import {
   availabilityMeta,
   type AvailabilityState,
   type AvailabilityTone,
-} from "@/domain/entities/CatalogoUI";
+} from "@/modules/mod-catalog/domain/entities/CatalogoUI";
 
 const TONE_CLASS: Record<AvailabilityTone, string> = {
   ok: "bg-accent-volt-soft text-accent-volt-ink",

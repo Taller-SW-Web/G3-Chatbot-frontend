@@ -2,13 +2,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ProductCard } from "@/adapters/inbound/components/ProductCard";
-import { ProductDetailModal } from "@/adapters/inbound/components/blocks/DetalleProducto";
-import { MessageBubble } from "@/adapters/inbound/components/MessageBubble";
-import { canAddCard, findVariantSku, mapCarouselItem, mapProductDetail } from "@/domain/entities/CatalogoUI";
-import { detalleDeBloque, productosDeCarrusel } from "@/domain/utils/bloquesChat";
-import type { Bloque, BloqueCarrusel, BloqueDetalle } from "@/domain/entities/Bloque";
-import { messiClub } from "../fixtures/messiClub";
+import { ProductCard } from "@/modules/mod-catalog/ui/ProductCard";
+import { ProductDetailModal } from "@/modules/mod-catalog/ui/blocks/DetalleProducto";
+import { MessageBubble } from "@/modules/mod-chat/ui/MessageBubble";
+import { canAddCard, findVariantSku, mapCarouselItem, mapProductDetail } from "@/modules/mod-catalog/domain/entities/CatalogoUI";
+import { detalleDeBloque, productosDeCarrusel } from "@/modules/mod-chat/domain/utils/bloquesChat";
+import type { Bloque, BloqueCarrusel, BloqueDetalle } from "@/modules/mod-chat/domain/entities/Bloque";
+import { messiClub } from "@/shared/testing/fixtures/messiClub";
 
 afterEach(cleanup);
 

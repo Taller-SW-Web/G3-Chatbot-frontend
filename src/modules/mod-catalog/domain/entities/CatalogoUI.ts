@@ -1,4 +1,4 @@
-import { parseAmount, parseIsoDate, type OfferPrice } from "./PromocionesUI";
+import { parseAmount, parseIsoDate, type OfferPrice } from "@/modules/mod-catalog/domain/entities/PromocionesUI";
 /** Catálogo con datos de las herramientas (SPEC-06 Req. 1, SPEC-09 Req. 1, 3).
  *
  * Formas que emite el backend (`CARRUSEL_PRODUCTOS`, `DETALLE_PRODUCTO`):

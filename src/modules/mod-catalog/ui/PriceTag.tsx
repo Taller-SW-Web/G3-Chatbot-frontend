@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatPrice } from "@/domain/entities/CatalogoUI";
-import { formatPromotionDate, type OfferPrice } from "@/domain/entities/PromocionesUI";
+import { formatPrice } from "@/modules/mod-catalog/domain/entities/CatalogoUI";
+import { formatPromotionDate, type OfferPrice } from "@/modules/mod-catalog/domain/entities/PromocionesUI";
 
 /** Shared price presentation. The effective price and savings belong to G3/G6. */
 export function PriceTag({ price, regularPrice, offerPrice, savingsPct, offerValidUntil, offerExpiryInvalid }: OfferPrice & { price: number | null }) {

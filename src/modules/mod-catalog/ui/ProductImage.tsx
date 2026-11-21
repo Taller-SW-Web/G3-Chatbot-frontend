@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { safeImageUrl } from "@/domain/entities/CatalogoUI";
-import { sanitize } from "@/domain/utils/sanitize";
+import { safeImageUrl } from "@/modules/mod-catalog/domain/entities/CatalogoUI";
+import { sanitize } from "@/shared/security/sanitize";
 
 /** Imagen de producto: `<img>` solo si la URL es http/https, si no placeholder. */
 export function ProductImage({
