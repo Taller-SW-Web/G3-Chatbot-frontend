@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PhotoIcon, CheckIcon } from "@/shared/ui/icons";
 import {
   mensajeSugerencia,
@@ -53,7 +53,7 @@ export function SugerenciaForm({
   const [titulo, setTitulo] = useState("");
   const [detalle, setDetalle] = useState("");
   const [correoContacto, setCorreoContacto] = useState(correo);
-  const [evidencia, setEvidencia] = useState<{ nombre: string; url: string; archivo: File } | null>(null);
+  const [evidencia, setEvidencia] = useState<{ nombre: string; archivo: File } | null>(null);
   const [gracias, setGracias] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +63,17 @@ export function SugerenciaForm({
     titulo.trim().length >= SUGERENCIA_TITULO_MIN &&
     detalle.trim().length >= SUGERENCIA_DESCRIPCION_MIN;
 
+  // El preview es un blob local del File, nunca texto del DOM.
+  const previewUrl = useMemo(
+    () => (evidencia ? URL.createObjectURL(evidencia.archivo) : null),
+    [evidencia],
+  );
+
+  useEffect(() => {
+    if (!previewUrl) return;
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
+
   function handleFile(file: File | undefined) {
     if (!file) return;
     const problema = capturaValida(file);
@@ -71,7 +82,7 @@ export function SugerenciaForm({
       return;
     }
     setError(null);
-    setEvidencia({ nombre: file.name || "captura.jpg", url: URL.createObjectURL(file), archivo: file });
+    setEvidencia({ nombre: file.name || "captura.jpg", archivo: file });
   }
 
   async function enviar() {
@@ -124,7 +135,7 @@ export function SugerenciaForm({
         ) : (
           <div className="rounded-md bg-white border border-border-default p-2.5 flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={evidencia.url} alt={evidencia.nombre} className="w-14 h-14 rounded-md object-cover border border-border-default" />
+            <img src={previewUrl ?? undefined} alt={evidencia.nombre} className="w-14 h-14 rounded-md object-cover border border-border-default" />
             <div className="flex-1 min-w-0 text-left">
               <p className="text-[13px] font-bold truncate">{evidencia.nombre}</p>
               <p className="text-[12px] text-text-secondary">JPG/PNG ≤ 5 MB</p>
