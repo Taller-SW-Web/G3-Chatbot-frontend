@@ -276,16 +276,6 @@ export interface ChatbotApiPort {
   verDetalleProducto(productId: string): Promise<unknown>;
   consultarDisponibilidad(sku: string, cantidad?: number): Promise<DisponibilidadPuntual[]>;
   validarContactoCelular(codigo: string): Promise<{ verificado: boolean }>;
-  cotizar(): Promise<{ total: number }>;
-  crearCheckout(input: {
-    nombre: string;
-    direccion: string;
-    distrito: string;
-    referencia?: string;
-    docTipo: string;
-    docNum: string;
-    tarjetaLast4: string;
-  }): Promise<{ pedidoId: string }>;
   /** SPEC-16 Req. 3: reenvía el correo de confirmación (máx. 2). Propaga 429 LIMITE_REENVIOS_EXCEDIDO. */
   reenviarConfirmacion(pedidoId: string, idempotencyKey: string): Promise<ReenvioConfirmacion>;
   /** SPEC-14: Inicia sesión de checkout en backend con vigencia de 15 min. */

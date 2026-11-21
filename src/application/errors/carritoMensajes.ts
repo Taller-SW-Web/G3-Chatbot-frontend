@@ -6,8 +6,10 @@ export function mensajeCarrito(code: string | null | undefined): string {
     case "SKU_AGOTADO":
       return "Ese producto se agotó. Quítalo para continuar.";
     case "SERVICIO_NO_DISPONIBLE":
-    case "INDETERMINADO":
       return "No puedo confirmar el stock ahora; intenta en unos segundos.";
+    case "INDETERMINADO":
+      // SPEC-10 Req. 1: no es un error al agregar; se acepta con un aviso neutro.
+      return "No pudimos confirmar el stock.";
     case "LIMITE_CANTIDAD":
       return "El máximo por producto es 10 unidades.";
     case "LINEA_AMBIGUA":

@@ -52,6 +52,9 @@ export function HomePage() {
   const [fallido, setFallido] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [agregado, setAgregado] = useState<string | null>(null);
+  /** Gesto táctil del banner: horizontal cambia de slide, el clic posterior no navega. */
+  const swipeBanner = useRef<{ x: number; y: number; id: number } | null>(null);
+  const swipeConsumido = useRef(false);
   const queryClient = useQueryClient();
   const cliente = useChatStore((s) => s.cliente);
   const ultimaConversacionId = useChatStore((s) => s.ultimaConversacionId);
@@ -145,6 +148,31 @@ export function HomePage() {
     }
   }
 
+  /** Swipe horizontal sobre el banner: siguiente/anterior slide sin salir de la home. */
+  function onBannerPointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+    if (e.pointerType === "mouse" && e.buttons !== 1) return;
+    swipeBanner.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+  }
+
+  function onBannerPointerUp(e: React.PointerEvent<HTMLButtonElement>) {
+    const inicio = swipeBanner.current;
+    swipeBanner.current = null;
+    if (!inicio || inicio.id !== e.pointerId) return;
+    const dx = e.clientX - inicio.x;
+    const dy = e.clientY - inicio.y;
+    if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy)) return;
+    swipeConsumido.current = true;
+    setBanner((actual) => (dx < 0 ? (actual + 1) % 4 : (actual + 3) % 4));
+  }
+
+  function abrirOfertas() {
+    if (swipeConsumido.current) {
+      swipeConsumido.current = false;
+      return;
+    }
+    void irChat("Ver ofertas");
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto no-scrollbar p-4">
@@ -158,7 +186,12 @@ export function HomePage() {
             {agregado}
           </p>
         )}
-        <button onClick={() => void irChat("Ver ofertas")} disabled={creando}
+        <button onClick={abrirOfertas} disabled={creando}
+          data-testid="banner-ofertas"
+          onPointerDown={onBannerPointerDown}
+          onPointerUp={onBannerPointerUp}
+          onPointerCancel={() => { swipeBanner.current = null; }}
+          style={{ touchAction: "pan-y" }}
           className="relative shrink-0 overflow-hidden rounded-lg w-full text-left bg-surface-ink text-text-inverse px-4 pt-5 pb-6"
           aria-label="Ver ofertas Inka Athletics">
           <span aria-hidden className="absolute inset-0 opacity-60" style={{

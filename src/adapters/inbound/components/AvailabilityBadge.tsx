@@ -20,19 +20,20 @@ const TONE_TESTID: Record<AvailabilityTone, string> = {
   unknown: "badge-indeterminado",
 };
 
-/** Etiqueta única de disponibilidad; INDETERMINADO nunca se pinta como disponible. */
+/**
+ * Etiqueta única de disponibilidad. `INDETERMINADO` y `SIN_DATO` no pintan
+ * badge (SPEC-09 Req. 1, SPEC-10 Req. 3); el llamador decide si muestra un
+ * aviso textual aparte.
+ */
 export function AvailabilityBadge({
   state,
   className = "",
-  missing = false,
 }: {
   state: AvailabilityState;
   className?: string;
-  missing?: boolean;
 }) {
-  const { label, tone } = missing
-    ? { label: "No pudimos consultar la disponibilidad ahora.", tone: "unknown" as const }
-    : availabilityMeta(state);
+  const { label, tone } = availabilityMeta(state);
+  if (label === null) return null;
   return (
     <span
       data-testid={TONE_TESTID[tone]}

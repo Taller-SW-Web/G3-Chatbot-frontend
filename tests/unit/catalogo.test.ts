@@ -25,13 +25,13 @@ describe("mappers de catálogo (SPEC-06, SPEC-09)", () => {
     });
   });
 
-  it("precio inválido cae a 0 y estado raro a INDETERMINADO", () => {
+  it("precio inválido cae a null y estado raro a SIN_DATO", () => {
     const item = mapCarouselItem(
       { product_id: "x", price: -5, availability: "RARO" } as never,
       2
     );
     expect(item.price).toBeNull();
-    expect(item.availability).toBe("INDETERMINADO");
+    expect(item.availability).toBe("SIN_DATO");
   });
 
   it("STOCK_BAJO del inventario se traduce a POCAS_UNIDADES", () => {
@@ -39,6 +39,15 @@ describe("mappers de catálogo (SPEC-06, SPEC-09)", () => {
     expect(toAvailabilityState("POCAS_UNIDADES")).toBe("POCAS_UNIDADES");
     expect(toAvailabilityState("AGOTADO")).toBe("AGOTADO");
     expect(toAvailabilityState("DISPONIBLE")).toBe("DISPONIBLE");
+  });
+
+  it("solo el literal INDETERMINADO es indeterminado; el resto es disponibilidad no obtenida", () => {
+    expect(toAvailabilityState("INDETERMINADO")).toBe("INDETERMINADO");
+    expect(toAvailabilityState(undefined)).toBe("SIN_DATO");
+    expect(toAvailabilityState(null)).toBe("SIN_DATO");
+    expect(toAvailabilityState("")).toBe("SIN_DATO");
+    expect(toAvailabilityState("DESCONOCIDA")).toBe("SIN_DATO");
+    expect(toAvailabilityState("__proto__")).toBe("SIN_DATO");
   });
 
   it("detalle usa el resumen real del backend (short_description, image, price_text)", () => {
@@ -71,7 +80,7 @@ describe("mappers de catálogo (SPEC-06, SPEC-09)", () => {
     const detail = mapProductDetail({ product_id: "p", name: "Sin texto" });
     expect(detail.shortDescription).toBeUndefined();
     expect(detail.image).toBeUndefined();
-    expect(detail.availability).toBe("INDETERMINADO");
+    expect(detail.availability).toBe("SIN_DATO");
   });
 
   it("resuelve SKU exacto o pide variante", () => {
@@ -107,9 +116,13 @@ describe("precio, imagen y etiquetas de disponibilidad", () => {
     expect(safeImageUrl(null)).toBeUndefined();
   });
 
-  it("INDETERMINADO nunca se pinta como disponible", () => {
+  it("INDETERMINADO y SIN_DATO no pintan etiqueta de stock", () => {
     expect(availabilityMeta("INDETERMINADO")).toEqual({
-      label: "Disponibilidad no confirmada",
+      label: null,
+      tone: "unknown",
+    });
+    expect(availabilityMeta("SIN_DATO")).toEqual({
+      label: null,
       tone: "unknown",
     });
     expect(availabilityMeta("AGOTADO").tone).toBe("out");

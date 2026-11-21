@@ -35,6 +35,9 @@ export function Sidebar({
   const [termino, setTermino] = useState("");
   const [buscando, setBuscando] = useState(false);
   const busquedaRef = useRef<HTMLInputElement>(null);
+  /** Swipe horizontal hacia la izquierda cierra el drawer (mobile-first). */
+  const swipeRef = useRef<{ x: number; y: number; id: number } | null>(null);
+  const touchSwipeRef = useRef<{ x: number; y: number } | null>(null);
   const cliente = useChatStore((s) => s.cliente);
   const setAccionPendiente = useChatStore((s) => s.setAccionPendiente);
   const setAuthOpen = useChatStore((s) => s.setAuthOpen);
@@ -85,12 +88,47 @@ export function Sidebar({
     }
   }
 
+  function onSwipeStart(e: React.PointerEvent<HTMLElement>) {
+    if (e.pointerType === "mouse" && e.buttons !== 1) return;
+    swipeRef.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+  }
+
+  function onSwipeEnd(e: React.PointerEvent<HTMLElement>) {
+    const inicio = swipeRef.current;
+    swipeRef.current = null;
+    if (!inicio || inicio.id !== e.pointerId) return;
+    const dx = e.clientX - inicio.x;
+    const dy = e.clientY - inicio.y;
+    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) onClose();
+  }
+
+  const swipeProps = {
+    onPointerDown: onSwipeStart,
+    onPointerUp: onSwipeEnd,
+    onPointerCancel: () => { swipeRef.current = null; },
+    onTouchStart: (e: React.TouchEvent<HTMLElement>) => {
+      const t = e.changedTouches[0];
+      if (t) touchSwipeRef.current = { x: t.clientX, y: t.clientY };
+    },
+    onTouchEnd: (e: React.TouchEvent<HTMLElement>) => {
+      const inicio = touchSwipeRef.current;
+      touchSwipeRef.current = null;
+      const t = e.changedTouches[0];
+      if (!inicio || !t) return;
+      const dx = t.clientX - inicio.x;
+      const dy = t.clientY - inicio.y;
+      if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) onClose();
+    },
+    style: { touchAction: "pan-y" as const },
+  };
+
   if (buscando) {
     const consulta = termino ? resultados : recientes;
     const filas = consulta.data?.pages.flat() ?? [];
     return (
       <div className="absolute inset-0 z-30 flex flex-row">
-        <aside className="order-1 w-[85%] max-w-[340px] bg-surface-ink text-text-inverse h-full flex flex-col p-4 gap-3">
+        <aside data-testid="sidebar-drawer" {...swipeProps}
+          className="order-1 w-[85%] max-w-[340px] bg-surface-ink text-text-inverse h-full flex flex-col p-4 gap-3">
           <div className="wf-chip px-4 py-3 flex items-center gap-2 bg-white text-text-primary">
             <SearchIcon size={20} />
             <input ref={busquedaRef} value={q} onChange={(e) => setQ(e.target.value)}
@@ -125,7 +163,8 @@ export function Sidebar({
   const filas = recientes.data?.pages.flat() ?? [];
   return (
     <div className="absolute inset-0 z-30 flex flex-row">
-      <aside className="order-1 w-[85%] max-w-[340px] bg-surface-ink text-text-inverse h-full flex flex-col side-in">
+      <aside data-testid="sidebar-drawer" {...swipeProps}
+        className="order-1 w-[85%] max-w-[340px] bg-surface-ink text-text-inverse h-full flex flex-col side-in">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border-inverse">
           <span style={{ filter: "hue-rotate(-48deg) saturate(1.35)" }} className="inline-flex">
             <BrandLogo variant="volt" className="h-12 w-auto" />
