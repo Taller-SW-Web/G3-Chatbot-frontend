@@ -1,4 +1,4 @@
-import type { CarritoUI } from "./CarritoUI";
+import type { CarritoUI } from "@/modules/mod-cart/public";
 
 /** Datos de checkout (solo tarjeta en este canal). Sin PAN persistido. */
 export type CheckoutUI = {

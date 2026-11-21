@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { CheckoutPage } from "@/adapters/inbound/pages/CheckoutPage";
-import { useChatStore } from "@/application/state/chatStore";
+import { CheckoutPage } from "@/modules/mod-checkout/ui/CheckoutPage";
+import { useChatStore } from "@/shared/auth/chatStore";
 
 const navMock = vi.hoisted(() => ({
   push: vi.fn(),
@@ -26,7 +26,7 @@ const mockApi = {
   cotizarEnvio: vi.fn(),
 };
 
-vi.mock("@/infrastructure/di/container", () => ({
+vi.mock("@/shared/di/container", () => ({
   container: {
     api: {
       listarCarrito: (...args: unknown[]) => mockApi.listarCarrito(...args),

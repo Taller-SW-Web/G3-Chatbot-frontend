@@ -3,16 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AxiosError } from "axios";
-import { useChatStore } from "@/application/state/chatStore";
-import { container } from "@/infrastructure/di/container";
-import { DireccionForm } from "../components/forms/DireccionForm";
-import { PagoForm } from "../components/forms/PagoForm";
-import type { DireccionInput } from "@/domain/schemas/direccion.schema";
-import type { PagoInput } from "@/domain/schemas/pago.schema";
-import type { CheckoutSesionData } from "@/ports/outbound/ChatbotApiPort";
-import { useCarrito } from "@/application/hooks/useCarrito";
-import { useCotizacionEnvio } from "@/application/hooks/useCotizacionEnvio";
-import { mensajeCotizacion } from "@/application/errors/cotizacionMensajes";
+import { useChatStore } from "@/shared/auth/chatStore";
+import { container } from "@/shared/di/container";
+import { DireccionForm } from "@/modules/mod-checkout/ui/forms/DireccionForm";
+import { PagoForm } from "@/modules/mod-checkout/ui/forms/PagoForm";
+import type { DireccionInput } from "@/modules/mod-checkout/domain/schemas/direccion.schema";
+import type { PagoInput } from "@/modules/mod-checkout/domain/schemas/pago.schema";
+import type { CheckoutSesionData } from "@/modules/mod-checkout/ports/checkoutPort";
+import { useCarrito } from "@/modules/mod-cart/public";
+import { CotizacionEnvio, useCotizacionEnvio } from "@/modules/mod-shipping/public";
 
 type ProblemShape = {
   code?: string;
@@ -276,27 +275,12 @@ export function CheckoutPage() {
             </div>
           )}
           <DireccionForm onValid={setDir} />
-          <p
-            className={`text-[12px] ${errorCotizacion ? "text-error-default" : "text-text-secondary"}`}
-            role={errorCotizacion ? "alert" : undefined}
-          >
-            {cotizando
-              ? "Calculando envío…"
-              : cotizacion
-                ? `Envío a ${cotizacion.distrito}: S/ ${cotizacion.costoEnvio.toFixed(2)} · ${cotizacion.plazoEstimadoDias} día(s) hábil(es)`
-                : errorCotizacion
-                  ? mensajeCotizacion(errorCotizacion)
-                  : "Envío: se calcula al elegir la dirección"}
-          </p>
-          {errorCotizacion && (
-            <button
-              type="button"
-              onClick={reintentar}
-              className="wf-chip w-fit px-3 py-1.5 text-[12px] font-semibold text-text-primary"
-            >
-              Reintentar cotización
-            </button>
-          )}
+          <CotizacionEnvio
+            cotizacion={cotizacion}
+            cotizando={cotizando}
+            error={errorCotizacion}
+            onReintentar={reintentar}
+          />
           <p className="text-[12px] text-text-secondary">
             El documento del comprobante puede ser distinto al de tu cuenta.
           </p>

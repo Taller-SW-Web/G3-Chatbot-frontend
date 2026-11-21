@@ -3,10 +3,10 @@
 import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useChatStore } from "@/application/state/chatStore";
-import type { TipoDocumento } from "@/domain/entities/Cliente";
-import { direccionSchema, type DireccionInput } from "@/domain/schemas/direccion.schema";
-import { DISTRITOS_LIMA } from "@/domain/entities/ubicaciones";
+import { useChatStore } from "@/shared/auth/chatStore";
+import type { TipoDocumento } from "@/shared/auth/Cliente";
+import { direccionSchema, type DireccionInput } from "@/modules/mod-checkout/domain/schemas/direccion.schema";
+import { DISTRITOS_LIMA } from "@/modules/mod-checkout/domain/ubicaciones";
 
 const tiposDocumento: TipoDocumento[] = ["DNI", "RUC", "CE", "PASAPORTE"];
 

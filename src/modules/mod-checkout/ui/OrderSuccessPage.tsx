@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckIcon } from "../components/icons";
-import { RatingPopup } from "../components/RatingPopup";
-import { useChatStore } from "@/application/state/chatStore";
-import { maskEmail } from "@/domain/utils/sanitize";
+import { CheckIcon } from "@/shared/ui/icons";
+import { RatingPopup } from "@/modules/mod-checkout/ui/RatingPopup";
+import { useChatStore } from "@/shared/auth/chatStore";
+import { maskEmail } from "@/shared/security/sanitize";
 
 /** Aviso textual sobre el envío del correo de confirmación (SPEC-16). */
 export function avisoConfirmacion(correoEnmascarado?: string, fallbackEmail?: string): string {

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { DireccionForm } from "@/adapters/inbound/components/forms/DireccionForm";
-import { useChatStore } from "@/application/state/chatStore";
+import { DireccionForm } from "@/modules/mod-checkout/ui/forms/DireccionForm";
+import { useChatStore } from "@/shared/auth/chatStore";
 
 beforeEach(() => useChatStore.setState({ cliente: null }));
 afterEach(() => cleanup());

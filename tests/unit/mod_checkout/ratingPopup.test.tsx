@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { RatingPopup } from "@/adapters/inbound/components/RatingPopup";
+import { RatingPopup } from "@/modules/mod-checkout/ui/RatingPopup";
 
 const onClose = vi.fn();
 

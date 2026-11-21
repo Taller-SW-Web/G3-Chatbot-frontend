@@ -3,7 +3,7 @@
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
-import { detectarMarcaTarjeta, pagoSchema, type PagoInput } from "@/domain/schemas/pago.schema";
+import { detectarMarcaTarjeta, pagoSchema, type PagoInput } from "@/modules/mod-checkout/domain/schemas/pago.schema";
 
 /** Keeps only 4 digits and inserts the slash: "1228" -> "12/28". A first digit above 1 becomes "0X". */
 function formatearVencimiento(valor: string): string {
