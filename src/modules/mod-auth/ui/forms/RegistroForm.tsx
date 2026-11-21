@@ -7,13 +7,13 @@ import {
   normalizarCelular,
   crearRegistroSchema,
   type RegistroInput,
-} from "@/domain/schemas/registro.schema";
+} from "@/modules/mod-auth/domain/schemas/registro.schema";
 import {
   POLITICA_POR_DEFECTO,
   type PoliticaContrasena,
-} from "@/domain/utils/passwordPolicy";
-import { PasswordPolicyChecklist } from "./PasswordPolicyChecklist";
-import { PasswordVisibilityButton } from "./PasswordVisibilityButton";
+} from "@/shared/auth/passwordPolicy";
+import { PasswordPolicyChecklist } from "@/modules/mod-auth/ui/forms/PasswordPolicyChecklist";
+import { PasswordVisibilityButton } from "@/modules/mod-auth/ui/forms/PasswordVisibilityButton";
 
 /**
  * SPEC-01 Req. 1/2: formulario seguro (RHF + Zod), nunca pasa por el LLM.

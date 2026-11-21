@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckIcon, LockIcon } from "../components/icons";
-import { OtpCelularForm } from "../components/forms/OtpCelularForm";
-import { useChatStore } from "@/application/state/chatStore";
-import { validarContactoUseCase } from "@/application/use_cases/validarContactoUseCase";
-import { container } from "@/infrastructure/di/container";
+import { CheckIcon, LockIcon } from "@/shared/ui/icons";
+import { OtpCelularForm } from "@/modules/mod-auth/ui/forms/OtpCelularForm";
+import { useChatStore } from "@/shared/auth/chatStore";
+import { validarContactoUseCase } from "@/modules/mod-auth/application/validarContactoUseCase";
+import { container } from "@/shared/di/container";
 
 /**
  * `/cuenta`: datos de sesión, verificación de celular (SPEC-04),

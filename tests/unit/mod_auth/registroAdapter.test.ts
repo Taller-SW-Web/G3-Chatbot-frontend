@@ -32,9 +32,10 @@ const adapter: AxiosAdapter = (config) => {
 // transporte antes de importarlo (mismo patrón que chatbotApiInterceptor.test).
 axios.defaults.adapter = adapter;
 
-const { chatbotApi } = await import("@/adapters/outbound/ChatbotApiAxiosAdapter");
-const { useChatStore } = await import("@/application/state/chatStore");
-const { clearPoliticaContrasenaCache } = await import("@/domain/utils/passwordPolicy");
+const { container } = await import("@/shared/di/container");
+const chatbotApi = container.api;
+const { useChatStore } = await import("@/shared/auth/chatStore");
+const { clearPoliticaContrasenaCache } = await import("@/shared/auth/passwordPolicy");
 
 const countOf = (url: string) => calls.filter((c) => c.url === url).length;
 const bodyOf = (url: string) =>

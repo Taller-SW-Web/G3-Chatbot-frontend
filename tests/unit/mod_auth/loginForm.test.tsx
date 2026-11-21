@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement } from "react";
-import { LoginForm } from "@/adapters/inbound/components/forms/LoginForm";
+import { LoginForm } from "@/modules/mod-auth/ui/forms/LoginForm";
 
 afterEach(cleanup);
 

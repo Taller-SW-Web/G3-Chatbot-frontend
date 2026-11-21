@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema, type LoginInput } from "@/domain/schemas/login.schema";
-import { PasswordVisibilityButton } from "./PasswordVisibilityButton";
+import { loginSchema, type LoginInput } from "@/modules/mod-auth/domain/schemas/login.schema";
+import { PasswordVisibilityButton } from "@/modules/mod-auth/ui/forms/PasswordVisibilityButton";
 
 /** SPEC-03 Req. 1: email + password with generic errors and helper links. */
 export function LoginForm({

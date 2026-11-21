@@ -1,4 +1,4 @@
-import { EyeIcon } from "../icons";
+import { EyeIcon } from "@/shared/ui/icons";
 
 export function PasswordVisibilityButton({
   visible,

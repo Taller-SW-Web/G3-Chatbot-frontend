@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { otpMfaSchema } from "@/domain/schemas/otpMfa.schema";
-import { maskCelular, maskEmail } from "@/domain/utils/sanitize";
+import { otpMfaSchema } from "@/modules/mod-auth/domain/schemas/otpMfa.schema";
+import { maskCelular, maskEmail } from "@/shared/security/sanitize";
 
 const CODE_TTL_SECONDS = 5 * 60;
 

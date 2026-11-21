@@ -4,19 +4,19 @@ import {
   crearRegistroSchema,
   normalizarCelular,
   registroSchema,
-} from "@/domain/schemas/registro.schema";
+} from "@/modules/mod-auth/domain/schemas/registro.schema";
 import {
   evaluarPolitica,
   POLITICA_POR_DEFECTO,
   politicaCumplida,
   type PoliticaContrasena,
-} from "@/domain/utils/passwordPolicy";
+} from "@/shared/auth/passwordPolicy";
 import {
   describeRegistroFailure,
   describeReenvioFailure,
   describeVerificacionResult,
   REENVIO_NEUTRO,
-} from "@/domain/utils/sesion";
+} from "@/shared/auth/sesion";
 
 const valido = {
   nombres: "Ana",

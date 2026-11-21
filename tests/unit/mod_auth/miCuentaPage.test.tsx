@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MiCuentaPage } from "@/adapters/inbound/pages/MiCuentaPage";
-import { useChatStore } from "@/application/state/chatStore";
+import { MiCuentaPage } from "@/modules/mod-auth/ui/MiCuentaPage";
+import { useChatStore } from "@/shared/auth/chatStore";
 
 const api = vi.hoisted(() => ({ validarContactoCelular: vi.fn() }));
 const push = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-vi.mock("@/infrastructure/di/container", () => ({ container: { api, stream: {} } }));
+vi.mock("@/shared/di/container", () => ({ container: { api, stream: {} } }));
 
 function cliente(extra: Record<string, unknown> = {}) {
   return {

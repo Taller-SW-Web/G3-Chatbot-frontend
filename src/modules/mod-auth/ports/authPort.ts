@@ -1,0 +1,50 @@
+import type { PoliticaContrasena } from "@/shared/auth/passwordPolicy";
+import type { PerfilCliente, UsuarioSesion } from "@/shared/auth/types";
+
+export type { PoliticaContrasena, PerfilCliente, UsuarioSesion };
+
+export type SessionOpened = {
+  accessToken: string;
+  expiresIn: number;
+  usuario: UsuarioSesion;
+};
+
+export type MfaChallenge = {
+  mfaRequerido: true;
+  canal: "EMAIL" | "SMS";
+};
+
+/** Datos del formulario de registro (SPEC-01 Req. 1); el adapter los mapea al contrato del BFF. */
+export type RegistroClienteInput = {
+  nombres: string;
+  apellidos: string;
+  correo: string;
+  celular: string;
+  contrasena: string;
+  aceptaTerminos: true;
+};
+
+/** Respuesta de `POST /sesion/registro`: la cuenta queda PENDIENTE_VERIFICACION, sin sesión. */
+export type RegistroResultado = {
+  estado: string;
+  correoEnmascarado: string;
+};
+
+/** Contrato REST de autenticación, cuenta y contacto (SPEC-01..04). */
+export interface AuthPort {
+  login(email: string, password: string): Promise<SessionOpened | MfaChallenge>;
+  /** SPEC-01: crea la cuenta y devuelve el correo enmascarado; nunca abre sesión. */
+  registrar(input: RegistroClienteInput): Promise<RegistroResultado>;
+  /** SPEC-01 Req. 2: política de contraseña cacheada durante la sesión del navegador. */
+  obtenerPoliticaContrasena(): Promise<PoliticaContrasena>;
+  /** SPEC-02 Req. 1: canjea el enlace de verificación (204) o falla con 410. */
+  verificarCorreo(token: string): Promise<void>;
+  /** SPEC-02 Req. 2: reenvío neutro del enlace (202). */
+  reenviarVerificacion(correo: string): Promise<{ ok: true }>;
+  requestMfaCode(canal: "EMAIL" | "SMS"): Promise<{ ok: true }>;
+  verifyMfaCode(code: string): Promise<SessionOpened>;
+  refreshSession(): Promise<SessionOpened>;
+  logout(): Promise<{ ok: true }>;
+  fetchProfile(): Promise<PerfilCliente>;
+  validarContactoCelular(codigo: string): Promise<{ verificado: boolean }>;
+}

@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { VerificarCorreoPage } from "@/adapters/inbound/pages/VerificarCorreoPage";
-import { useChatStore } from "@/application/state/chatStore";
+import { VerificarCorreoPage } from "@/modules/mod-auth/ui/VerificarCorreoPage";
+import { useChatStore } from "@/shared/auth/chatStore";
 
 const api = vi.hoisted(() => ({
   verificarCorreo: vi.fn(),
   reenviarVerificacion: vi.fn(),
 }));
 
-vi.mock("@/infrastructure/di/container", () => ({ container: { api } }));
+vi.mock("@/shared/di/container", () => ({ container: { api } }));
 
 function errorCon(code: string, status: number) {
   return { response: { status, data: { code } } };

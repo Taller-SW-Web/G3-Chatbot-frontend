@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { longitudMinimaDe, politicaCumplida, type PoliticaContrasena } from "@/domain/utils/passwordPolicy";
+import { longitudMinimaDe, politicaCumplida, type PoliticaContrasena } from "@/shared/auth/passwordPolicy";
 
 /** Celular aceptado por Seguridad: 9 dígitos con prefijo +51 opcional (SPEC-01 Req. 2). */
 export const CELULAR_PERU_REGEX = /^(\+51)?[0-9]{9}$/;

@@ -2,9 +2,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { createElement } from "react";
-import { AuthGuard } from "@/adapters/inbound/components/AuthGuard";
-import { useChatStore } from "@/application/state/chatStore";
-import { SESION_COOKIE_NAME, sincronizarCookieSesion } from "@/domain/utils/sesion";
+import { AuthGuard } from "@/shared/auth/AuthGuard";
+import { useChatStore } from "@/shared/auth/chatStore";
+import { SESION_COOKIE_NAME, sincronizarCookieSesion } from "@/shared/auth/sesion";
 
 const navMock = vi.hoisted(() => ({
   replace: vi.fn(),
@@ -14,7 +14,7 @@ const navMock = vi.hoisted(() => ({
 
 const apiMock = vi.hoisted(() => ({ refreshSession: vi.fn() }));
 
-vi.mock("@/infrastructure/di/container", () => ({ container: { api: apiMock } }));
+vi.mock("@/shared/di/container", () => ({ container: { api: apiMock } }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({

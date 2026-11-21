@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { AuthModal } from "@/adapters/inbound/components/AuthModal";
-import { useChatStore } from "@/application/state/chatStore";
-import { POLITICA_POR_DEFECTO } from "@/domain/utils/passwordPolicy";
+import { AuthModal } from "@/modules/mod-auth/ui/AuthModal";
+import { useChatStore } from "@/shared/auth/chatStore";
+import { POLITICA_POR_DEFECTO } from "@/shared/auth/passwordPolicy";
 
 const api = vi.hoisted(() => ({
   login: vi.fn(),
@@ -17,7 +17,7 @@ const api = vi.hoisted(() => ({
 const push = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-vi.mock("@/infrastructure/di/container", () => ({ container: { api } }));
+vi.mock("@/shared/di/container", () => ({ container: { api } }));
 
 const sesion = {
   accessToken: "jwt-123",

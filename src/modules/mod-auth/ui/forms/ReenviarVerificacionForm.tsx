@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   reenvioVerificacionSchema,
   type ReenvioVerificacionInput,
-} from "@/domain/schemas/reenvioVerificacion.schema";
+} from "@/modules/mod-auth/domain/schemas/reenvioVerificacion.schema";
 
 /**
  * SPEC-02 Req. 2: reenvío del enlace, reutilizable en la página, el chat y el login.

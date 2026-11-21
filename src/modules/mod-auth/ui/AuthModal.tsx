@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AxiosError } from "axios";
-import { XIcon } from "./icons";
-import { BrandLogo } from "./BrandLogo";
-import { LoginForm } from "./forms/LoginForm";
-import { OtpMfaForm } from "./forms/OtpMfaForm";
-import { RegistroForm } from "./forms/RegistroForm";
-import { ReenviarVerificacionForm } from "./forms/ReenviarVerificacionForm";
-import { useChatStore } from "@/application/state/chatStore";
-import { container } from "@/infrastructure/di/container";
+import { XIcon } from "@/shared/ui/icons";
+import { BrandLogo } from "@/shared/ui/BrandLogo";
+import { LoginForm } from "@/modules/mod-auth/ui/forms/LoginForm";
+import { OtpMfaForm } from "@/modules/mod-auth/ui/forms/OtpMfaForm";
+import { RegistroForm } from "@/modules/mod-auth/ui/forms/RegistroForm";
+import { ReenviarVerificacionForm } from "@/modules/mod-auth/ui/forms/ReenviarVerificacionForm";
+import { useChatStore } from "@/shared/auth/chatStore";
+import { container } from "@/shared/di/container";
 import {
   clienteDesdePerfil,
   clienteDesdeUsuario,
@@ -21,10 +21,10 @@ import {
   describeRegistroFailure,
   describeReenvioFailure,
   REENVIO_NEUTRO,
-} from "@/domain/utils/sesion";
-import type { LoginInput } from "@/domain/schemas/login.schema";
-import type { RegistroInput } from "@/domain/schemas/registro.schema";
-import type { PoliticaContrasena } from "@/domain/utils/passwordPolicy";
+} from "@/shared/auth/sesion";
+import type { LoginInput } from "@/modules/mod-auth/domain/schemas/login.schema";
+import type { RegistroInput } from "@/modules/mod-auth/domain/schemas/registro.schema";
+import type { PoliticaContrasena } from "@/shared/auth/passwordPolicy";
 
 type Paso = "login" | "mfa" | "verificar-correo" | "reenviar";
 type Canal = "EMAIL" | "SMS";

@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { otpCelularSchema } from "@/domain/schemas/otpCelular.schema";
+import { otpCelularSchema } from "@/modules/mod-auth/domain/schemas/otpCelular.schema";
 
 /** SPEC-04 */
 export function OtpCelularForm({ onOk }: { onOk: (codigo: string) => void }) {

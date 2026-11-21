@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { AxiosError } from "axios";
-import { CheckIcon, FileAlertIcon } from "../components/icons";
-import { ReenviarVerificacionForm } from "../components/forms/ReenviarVerificacionForm";
-import { container } from "@/infrastructure/di/container";
-import { useChatStore } from "@/application/state/chatStore";
+import { CheckIcon, FileAlertIcon } from "@/shared/ui/icons";
+import { ReenviarVerificacionForm } from "@/modules/mod-auth/ui/forms/ReenviarVerificacionForm";
+import { container } from "@/shared/di/container";
+import { useChatStore } from "@/shared/auth/chatStore";
 import {
   describeReenvioFailure,
   describeVerificacionResult,
   REENVIO_NEUTRO,
   type VerificacionResultado,
-} from "@/domain/utils/sesion";
+} from "@/shared/auth/sesion";
 
 type Estado = "verificando" | "exito" | "vencido" | "usado" | "error";
 
