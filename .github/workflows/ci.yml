@@ -79,13 +79,12 @@ jobs:
       - name: Build
         run: pnpm run build
 
-  # Fase 3 de ADR-0024: valida ids, registry, estructura y fronteras de módulos.
-  # Advisory durante la migración: no bloquea el gate todavía.
+  # Fase 4 de ADR-0024: el checker es bloqueante. Si falla, hay imports
+  # cruzados entre módulos o falta la estructura obligatoria.
   modules:
     name: Module boundaries
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
         with:
