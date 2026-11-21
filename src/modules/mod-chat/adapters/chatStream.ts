@@ -93,7 +93,7 @@ async function leerError(response: Response): Promise<ChatStreamError> {
  * ninguno: se resuelve y el llamador decide cómo tratar el turno incompleto.
  */
 export const chatbotSse: ChatStreamPort = {
-  async enviarMensajeStream(conversacionId, texto, onEvento, signal) {
+  async enviarMensajeStream(conversacionId, texto, onEvento, signal, adjuntoIds) {
     const request = (token: string | null) => fetch(
       `${apiConfig.baseUrl}/chat/conversaciones/${encodeURIComponent(conversacionId)}/mensajes`,
       {
@@ -104,7 +104,10 @@ export const chatbotSse: ChatStreamPort = {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
-        body: JSON.stringify({ texto }),
+        body: JSON.stringify({
+          texto,
+          ...(adjuntoIds && adjuntoIds.length > 0 ? { adjuntoIds } : {}),
+        }),
         signal,
       }
     );

@@ -44,6 +44,38 @@ describe("mapearHistorial", () => {
     expect(mapearHistorial([{ ...base, bloques: { blocks: [1] } }])[0].bloques).toBeUndefined();
   });
 
+  it("mapea los adjuntos del mensaje con sus URLs firmadas (SPEC-23)", () => {
+    const [mensaje] = mapearHistorial([
+      {
+        ...base,
+        adjuntos: [
+          {
+            adjuntoId: "a-1",
+            mimeType: "image/png",
+            ancho: 800,
+            alto: 600,
+            urlMiniatura: "https://firmada/mini",
+            expiraEn: "2026-11-20T12:00:00Z",
+          },
+          { id: "a-2", mime_type: "image/webp" },
+          { mimeType: "image/png" },
+        ],
+      },
+    ]);
+    expect(mensaje.adjuntos).toHaveLength(2);
+    expect(mensaje.adjuntos?.[0]).toMatchObject({
+      adjuntoId: "a-1",
+      ancho: 800,
+      urlMiniatura: "https://firmada/mini",
+    });
+    expect(mensaje.adjuntos?.[1]).toMatchObject({ adjuntoId: "a-2", mimeType: "image/webp" });
+  });
+
+  it("omite adjuntos que no son una lista o no tienen id", () => {
+    expect(mapearHistorial([{ ...base, adjuntos: "x" }])[0].adjuntos).toBeUndefined();
+    expect(mapearHistorial([{ ...base, adjuntos: [{ mimeType: "image/png" }] }])[0].adjuntos).toBeUndefined();
+  });
+
   it("devuelve una lista vacía para un arreglo vacío", () => {
     expect(mapearHistorial([])).toEqual([]);
   });

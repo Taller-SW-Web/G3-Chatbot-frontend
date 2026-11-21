@@ -171,6 +171,9 @@ export const moduleRegistry = [
       "/chat/conversaciones",
       "/chat/conversaciones/buscar",
       "/chat/conversaciones/{conversacionId}/mensajes",
+      "/chat/conversaciones/{conversacionId}/adjuntos",
+      "/chat/conversaciones/{conversacionId}/adjuntos/{adjuntoId}",
+      "/chat/adjuntos/{adjuntoId}",
     ],
     dependsOn: [
       "mod-auth",

@@ -46,6 +46,8 @@ export interface ChatStreamPort {
     conversacionId: string,
     texto: string,
     onEvento: (evento: ChatStreamEvento) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    /** SPEC-23: referencias a adjuntos ya subidos (máx. 3). */
+    adjuntoIds?: string[]
   ): Promise<void>;
 }

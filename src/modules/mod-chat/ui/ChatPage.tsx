@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowUpIcon, PhotoIcon } from "@/shared/ui/icons";
+import { ArrowUpIcon } from "@/shared/ui/icons";
 import { ChatWindow, type AccionRapidaChat } from "@/modules/mod-chat/ui/ChatWindow";
 import { AccionesRapidas } from "@/modules/mod-chat/ui/blocks/AccionesRapidas";
 import {
@@ -15,10 +15,17 @@ import {
   puedeEnviar,
 } from "@/modules/mod-chat/ui/chatPresentacion";
 import { useChat } from "@/modules/mod-chat/application/useChat";
+import { useAdjuntosChat } from "@/modules/mod-chat/application/useAdjuntosChat";
 import { useChatStore } from "@/shared/auth/chatStore";
 import { ejecutarAccionChatUseCase } from "@/modules/mod-chat/application/ejecutarAccionChatUseCase";
 import { container } from "@/shared/di/container";
 import { MENSAJE_MAX_CARACTERES } from "@/modules/mod-chat/application/enviarMensajeUseCase";
+import { ADJUNTOS_MAX_POR_MENSAJE } from "@/modules/mod-chat/domain/entities/Adjunto";
+import { AttachmentButton } from "@/modules/mod-chat/ui/AttachmentButton";
+import { AttachmentPreviewList } from "@/modules/mod-chat/ui/AttachmentPreviewList";
+import { AttachmentPrivacyNotice } from "@/modules/mod-chat/ui/AttachmentPrivacyNotice";
+
+const CLAVE_AVISO_ADJUNTOS = "chat-adjunto-privacidad";
 
 const SUGERENCIAS = ["Ver ofertas", "Rastrear pedido", "Ayuda con devolución"];
 const CATEGORIAS = ["zapatillas", "polos", "chimpunes"];
@@ -53,7 +60,12 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
   const accionOcupada = pendingActionId !== null;
   const [eligeCategoria, setEligeCategoria] = useState(false);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const [avisoAdjuntos, setAvisoAdjuntos] = useState(false);
+  const archivoAdjuntoRef = useRef<HTMLInputElement>(null);
+  const adjuntos = useAdjuntosChat(conversationId);
   const accionOcupadaRef = useRef(false);
+  const adjuntosBloquean =
+    adjuntos.pendientes.length > 0 && !adjuntos.puedeEnviarAdjuntos;
 
   // Si el mensaje no llegó a aceptarse (error previo al stream) el texto vuelve al campo.
   if (error !== errorVisto) {
@@ -73,10 +85,13 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
   }, [historialCargado, mensajes.length, enviar, setPrimerMensaje]);
 
   function enviarTexto(texto: string) {
-    if (!puedeEnviar(texto, estado) || accionOcupadaRef.current) return;
+    if (accionOcupadaRef.current || adjuntosBloquean) return;
     const limpio = texto.trim();
+    const conAdjuntos = adjuntos.puedeEnviarAdjuntos;
+    if (!conAdjuntos && !puedeEnviar(texto, estado)) return;
+    if (conAdjuntos && limpio.length > MENSAJE_MAX_CARACTERES) return;
     setComposer("");
-    if (eligeCategoria) {
+    if (eligeCategoria && !conAdjuntos) {
       setEligeCategoria(false);
       void ejecutarAccionRapida({
         id: "BUSCAR_POR_CATEGORIA",
@@ -85,7 +100,36 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
       });
       return;
     }
+    if (eligeCategoria) setEligeCategoria(false);
+    if (conAdjuntos) {
+      const enviados = adjuntos.listos
+        .map((a) => a.adjunto)
+        .filter((a): a is NonNullable<typeof a> => Boolean(a));
+      void enviar(limpio, enviados);
+      adjuntos.limpiar();
+      return;
+    }
     void enviar(limpio);
+  }
+
+  function abrirSelectorAdjuntos() {
+    const confirmado =
+      typeof window !== "undefined" && window.localStorage.getItem(CLAVE_AVISO_ADJUNTOS) === "1";
+    if (!confirmado) {
+      setAvisoAdjuntos(true);
+      return;
+    }
+    archivoAdjuntoRef.current?.click();
+  }
+
+  function aceptarAvisoAdjuntos() {
+    try {
+      window.localStorage.setItem(CLAVE_AVISO_ADJUNTOS, "1");
+    } catch {
+      // Sin localStorage el aviso vuelve a mostrarse: no bloquea el chat.
+    }
+    setAvisoAdjuntos(false);
+    archivoAdjuntoRef.current?.click();
   }
 
   async function ejecutarAccionRapida(accion: AccionRapidaChat) {
@@ -203,36 +247,63 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
         </div>
       </div>
 
-      <div className="sticky bottom-3 z-10 mx-3 mb-3 rounded-[28px] border border-border-default bg-surface-cloud/95 backdrop-blur px-2 py-2 flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
-        <button
-          aria-label="Agregar imagen (próximamente)"
-          title="Próximamente"
-          disabled
-          className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse disabled:opacity-45 disabled:cursor-not-allowed"
-        >
-          <PhotoIcon size={20} />
-        </button>
-        <input
-          value={composer}
-          maxLength={MENSAJE_MAX_CARACTERES}
-          disabled={bloqueado}
-          aria-label="Mensaje"
-          onChange={(e) => setComposer(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") enviarTexto(composer);
-          }}
-          placeholder={eligeCategoria ? "Escribe una categoría…" : "Pregunta por zapatillas, tallas, pedidos…"}
-          className="flex-1 wf-chip px-4 py-2.5 text-sm outline-none min-w-0 bg-white text-text-primary placeholder:text-text-secondary disabled:opacity-60"
+      <div className="sticky bottom-3 z-10 mx-3 mb-3 rounded-[28px] border border-border-default bg-surface-cloud/95 backdrop-blur px-2 py-2 flex flex-col gap-1 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+        {adjuntos.error && (
+          <p role="alert" className="px-2 pt-1 text-[12px] text-error-default">
+            {adjuntos.error}
+          </p>
+        )}
+        <AttachmentPreviewList
+          pendientes={adjuntos.pendientes}
+          onQuitar={adjuntos.quitar}
+          onReintentar={adjuntos.reintentar}
         />
-        <button
-          aria-label="Enviar"
-          disabled={!puedeEnviar(composer, estado)}
-          onClick={() => enviarTexto(composer)}
-          className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse disabled:opacity-45 disabled:cursor-not-allowed"
-        >
-          <ArrowUpIcon size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={archivoAdjuntoRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="hidden"
+            aria-label="Adjuntar imagen"
+            onChange={(e) => {
+              if (e.target.files) adjuntos.agregarArchivos(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <AttachmentButton
+            onClick={abrirSelectorAdjuntos}
+            disabled={bloqueado}
+            lleno={adjuntos.pendientes.length >= ADJUNTOS_MAX_POR_MENSAJE}
+          />
+          <input
+            value={composer}
+            maxLength={MENSAJE_MAX_CARACTERES}
+            disabled={bloqueado}
+            aria-label="Mensaje"
+            onChange={(e) => setComposer(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") enviarTexto(composer);
+            }}
+            placeholder={eligeCategoria ? "Escribe una categoría…" : "Pregunta por zapatillas, tallas, pedidos…"}
+            className="flex-1 wf-chip px-4 py-2.5 text-sm outline-none min-w-0 bg-white text-text-primary placeholder:text-text-secondary disabled:opacity-60"
+          />
+          <button
+            aria-label="Enviar"
+            disabled={bloqueado || adjuntosBloquean || (!adjuntos.puedeEnviarAdjuntos && !puedeEnviar(composer, estado))}
+            onClick={() => enviarTexto(composer)}
+            className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse disabled:opacity-45 disabled:cursor-not-allowed"
+          >
+            <ArrowUpIcon size={20} />
+          </button>
+        </div>
       </div>
+      {avisoAdjuntos && (
+        <AttachmentPrivacyNotice
+          onAceptar={aceptarAvisoAdjuntos}
+          onCerrar={() => setAvisoAdjuntos(false)}
+        />
+      )}
     </div>
   );
 }

@@ -26,7 +26,11 @@ El store de sesión (`useChatStore`) vive en `shared/auth/chatStore` porque lo u
 
 ## Endpoints
 
-`GET|POST /chat/conversaciones`, `GET /chat/conversaciones/buscar`, `POST /chat/conversaciones/{conversacionId}/mensajes` (REST y `text/event-stream`).
+`GET|POST /chat/conversaciones`, `GET /chat/conversaciones/buscar`, `POST /chat/conversaciones/{conversacionId}/mensajes` (REST y `text/event-stream`), `POST /chat/conversaciones/{conversacionId}/adjuntos`, `DELETE /chat/conversaciones/{conversacionId}/adjuntos/{adjuntoId}`, `GET /chat/adjuntos/{adjuntoId}`.
+
+### Adjuntos (SPEC-23)
+
+El compositor acepta hasta 3 imágenes JPG/PNG/WebP de 5 MB (`validateImageFile`), muestra el aviso de privacidad una vez por dispositivo, sube cada imagen con progreso y permite quitarla o reintentarla. El mensaje viaja con `adjuntoIds` y el historial muestra miniaturas con las URLs firmadas del backend; si una URL caduca se pide una nueva y, si falla, se muestra "Imagen no disponible". PDF queda fuera del alcance de SPEC-23.
 
 ## Dependencias externas
 

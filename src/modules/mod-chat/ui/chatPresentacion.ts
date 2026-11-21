@@ -1,6 +1,7 @@
 import type { BorradorBot, ErrorTurno, EstadoTurno } from "@/modules/mod-chat/application/turnoChat";
 import { MENSAJE_MAX_CARACTERES } from "@/modules/mod-chat/application/enviarMensajeUseCase";
 import type { Bloque } from "@/modules/mod-chat/domain/entities/Bloque";
+import type { AdjuntoMensaje } from "@/modules/mod-chat/domain/entities/Adjunto";
 import type { Mensaje } from "@/modules/mod-chat/domain/entities/Mensaje";
 
 /** Código con el que el hook marca que el historial de la conversación no se pudo cargar. */
@@ -12,6 +13,7 @@ export type ItemChat = {
   rol: "user" | "bot";
   texto: string;
   bloques: Bloque[];
+  adjuntos?: AdjuntoMensaje[];
   streaming: boolean;
   degradado?: boolean;
   motivoDegradado?: string;
@@ -64,6 +66,7 @@ export function construirItemsChat(mensajes: Mensaje[], borrador: BorradorBot | 
     rol: m.rol,
     texto: m.texto,
     bloques: m.bloques ?? [],
+    ...(m.adjuntos && m.adjuntos.length > 0 ? { adjuntos: m.adjuntos } : {}),
     streaming: false,
     ...(m.motivoDegradado
       ? { degradado: true, motivoDegradado: m.motivoDegradado }

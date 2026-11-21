@@ -75,6 +75,32 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("chatbotSse.enviarMensajeStream (SPEC-23)", () => {
+  it("incluye adjuntoIds en el POST del turno", async () => {
+    fetchMock.mockResolvedValue(
+      respuestaSse([frame("fin", { mensajeId: "m-2" })])
+    );
+
+    await chatbotSse.enviarMensajeStream("c-1", "busco unas así", () => undefined, undefined, [
+      "a-1",
+      "a-2",
+    ]);
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+    expect(body).toEqual({ texto: "busco unas así", adjuntoIds: ["a-1", "a-2"] });
+  });
+
+  it("omite adjuntoIds cuando el mensaje es solo texto", async () => {
+    fetchMock.mockResolvedValue(
+      respuestaSse([frame("fin", { mensajeId: "m-3" })])
+    );
+
+    await chatbotSse.enviarMensajeStream("c-1", "hola", () => undefined);
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ texto: "hola" });
+  });
+});
+
 describe("chatbotSse.enviarMensajeStream", () => {
   it("conserva los bloques de catálogo, datos incompletos y acciones sin perder el SKU", async () => {
     const bloques = [

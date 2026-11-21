@@ -19,6 +19,24 @@
       "path": "/contacto/celular/solicitar-otp",
       "todo": "TODO(H-17): se declará en el manifiesto cuando el adapter y el backend lo publiquen.",
       "reviewBy": "2026-12-19"
+    },
+    {
+      "module": "mod-chat",
+      "path": "/chat/conversaciones/{conversacionId}/adjuntos",
+      "todo": "TODO(SPEC-23): el backend aún no publica la carga multipart de imágenes en el chat.",
+      "reviewBy": "2026-12-19"
+    },
+    {
+      "module": "mod-chat",
+      "path": "/chat/conversaciones/{conversacionId}/adjuntos/{adjuntoId}",
+      "todo": "TODO(SPEC-23): el backend aún no publica el borrado de adjuntos pendientes.",
+      "reviewBy": "2026-12-19"
+    },
+    {
+      "module": "mod-chat",
+      "path": "/chat/adjuntos/{adjuntoId}",
+      "todo": "TODO(SPEC-23): el backend aún no publica la emisión de URLs firmadas.",
+      "reviewBy": "2026-12-19"
     }
   ],
   "contractTagExceptions": [

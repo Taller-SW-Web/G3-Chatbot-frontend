@@ -2,6 +2,7 @@ import type { AccionTurno } from "@/modules/mod-chat/application/turnoChat";
 import { cargarHistorialUseCase } from "@/modules/mod-chat/application/cargarHistorialUseCase";
 import { enviarMensajeUseCase, validarMensaje } from "@/modules/mod-chat/application/enviarMensajeUseCase";
 import type { Mensaje } from "@/modules/mod-chat/domain/entities/Mensaje";
+import type { AdjuntoMensaje } from "@/modules/mod-chat/domain/entities/Adjunto";
 import type { ChatApiPort } from "@/modules/mod-chat/ports/chatApiPort";
 import {
   ChatStreamError,
@@ -14,6 +15,10 @@ export type EjecutarTurnoInput = {
   stream: ChatStreamPort;
   conversacionId: string;
   texto: string;
+  /** Imágenes pendientes ya subidas (SPEC-23). */
+  adjuntoIds?: string[];
+  /** Miniaturas locales para el mensaje optimista. */
+  adjuntos?: AdjuntoMensaje[];
   dispatch: (accion: AccionTurno) => void;
   signal?: AbortSignal;
 };
@@ -33,8 +38,8 @@ function tieneRespuestaPosterior(historial: Mensaje[]) {
  * Rechaza solo si el texto es inválido (antes de despachar nada). ADR-0021.
  */
 export async function ejecutarTurnoUseCase(input: EjecutarTurnoInput): Promise<void> {
-  const { api, stream, conversacionId, dispatch, signal } = input;
-  const texto = validarMensaje(input.texto);
+  const { api, stream, conversacionId, adjuntoIds, adjuntos, dispatch, signal } = input;
+  const texto = validarMensaje(input.texto, Boolean(adjuntoIds && adjuntoIds.length > 0));
   const idTemporal = `u-${Date.now()}`;
   let terminado = false;
 
@@ -45,6 +50,7 @@ export async function ejecutarTurnoUseCase(input: EjecutarTurnoInput): Promise<v
       conversacionId,
       rol: "user",
       texto,
+      ...(adjuntos && adjuntos.length > 0 ? { adjuntos } : {}),
       creadoEn: new Date().toISOString(),
     },
   });
@@ -80,7 +86,7 @@ export async function ejecutarTurnoUseCase(input: EjecutarTurnoInput): Promise<v
   };
 
   try {
-    await enviarMensajeUseCase(stream, conversacionId, texto, onEvento, signal);
+    await enviarMensajeUseCase(stream, conversacionId, texto, onEvento, signal, adjuntoIds);
   } catch (e) {
     if (esAbort(e, signal) || terminado) return;
     if (e instanceof ChatStreamError) {

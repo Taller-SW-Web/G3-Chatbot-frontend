@@ -4,6 +4,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { turnoChatReducer, turnoInicial } from "@/modules/mod-chat/application/turnoChat";
 import { cargarHistorialUseCase } from "@/modules/mod-chat/application/cargarHistorialUseCase";
 import { ejecutarTurnoUseCase } from "@/modules/mod-chat/application/ejecutarTurnoUseCase";
+import type { AdjuntoMensaje } from "@/modules/mod-chat/domain/entities/Adjunto";
 import { container } from "@/shared/di/container";
 
 /**
@@ -41,18 +42,21 @@ export function useChat(conversacionId: string) {
   }, [conversacionId, recarga]);
 
   const enviar = useCallback(
-    async (texto: string) => {
+    async (texto: string, adjuntos?: AdjuntoMensaje[]) => {
       const controlador = controladorRef.current;
       if (!controlador || enviandoRef.current || turno.estado === "cargando") return;
       enviandoRef.current = true;
       ultimoTextoRef.current = texto;
       setUltimoTexto(texto);
+      const adjuntoIds = adjuntos?.map((a) => a.adjuntoId).filter(Boolean);
       try {
         await ejecutarTurnoUseCase({
           api: container.chat,
           stream: container.stream,
           conversacionId,
           texto,
+          adjuntoIds,
+          adjuntos,
           dispatch: (accion) => {
             if (!controlador.signal.aborted) dispatch(accion);
           },

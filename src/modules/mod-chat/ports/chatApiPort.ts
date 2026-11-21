@@ -1,5 +1,6 @@
 import type { Mensaje } from "@/modules/mod-chat/domain/entities/Mensaje";
 import type { Bloque } from "@/modules/mod-chat/domain/entities/Bloque";
+import type { AdjuntoMensaje } from "@/modules/mod-chat/domain/entities/Adjunto";
 
 /** Tramo de texto de un resultado de búsqueda; `coincide` marca el término encontrado. */
 export type SegmentoResaltado = {
@@ -47,4 +48,18 @@ export interface ChatApiPort {
   ): Promise<ResultadoAccionChat>;
   listarConversaciones(pagina?: number): Promise<ConversacionResumen[]>;
   buscarConversaciones(q: string, pagina?: number): Promise<ConversacionResumen[]>;
+  /** SPEC-23: sube una imagen (multipart) y la deja `PENDING` hasta enviar el mensaje. */
+  subirAdjunto(
+    conversacionId: string,
+    archivo: File,
+    onProgress?: (porcentaje: number) => void
+  ): Promise<AdjuntoMensaje>;
+  /** SPEC-23: quita un adjunto pendiente y sus archivos del bucket. */
+  eliminarAdjunto(conversacionId: string, adjuntoId: string): Promise<void>;
+  /** SPEC-23: emite una URL firmada nueva para un adjunto de la conversación. */
+  obtenerUrlAdjunto(adjuntoId: string): Promise<{
+    urlMiniatura?: string | null;
+    urlImagen?: string | null;
+    expiraEn?: string | null;
+  }>;
 }

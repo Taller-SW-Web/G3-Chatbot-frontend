@@ -3,6 +3,7 @@
 import { http } from "@/shared/api/http";
 import { apiConfig } from "@/shared/config/apiConfig";
 import type { Bloque } from "@/modules/mod-chat/domain/entities/Bloque";
+import type { AdjuntoMensaje } from "@/modules/mod-chat/domain/entities/Adjunto";
 import type {
   ChatApiPort,
   ConversacionResumen,
@@ -44,4 +45,46 @@ export const chatApi: ChatApiPort = {
     });
     return data as ConversacionResumen[];
   },
+  async subirAdjunto(conversacionId, archivo, onProgress) {
+    const form = new FormData();
+    form.append("archivo", archivo);
+    const { data } = await http.post(
+      `/chat/conversaciones/${encodeURIComponent(conversacionId)}/adjuntos`,
+      form,
+      {
+        timeout: apiConfig.timeouts.catalogo,
+        onUploadProgress: (evento) => {
+          if (!onProgress || !evento.total) return;
+          onProgress(Math.round((evento.loaded * 100) / evento.total));
+        },
+      }
+    );
+    return mapearAdjunto(data);
+  },
+  async eliminarAdjunto(conversacionId, adjuntoId) {
+    await http.delete(
+      `/chat/conversaciones/${encodeURIComponent(conversacionId)}/adjuntos/${encodeURIComponent(adjuntoId)}`
+    );
+  },
+  async obtenerUrlAdjunto(adjuntoId) {
+    const { data } = await http.get(`/chat/adjuntos/${encodeURIComponent(adjuntoId)}`);
+    return data as { urlMiniatura?: string | null; urlImagen?: string | null; expiraEn?: string | null };
+  },
 };
+
+/** Normaliza la respuesta del backend sin acoplar la UI a snake_case. */
+function mapearAdjunto(data: unknown): AdjuntoMensaje {
+  const item = (data ?? {}) as Record<string, unknown>;
+  const numero = (valor: unknown) => (typeof valor === "number" ? valor : null);
+  const texto = (valor: unknown) => (typeof valor === "string" ? valor : null);
+  return {
+    adjuntoId: String(item.adjuntoId ?? item.id ?? ""),
+    mimeType: String(item.mimeType ?? item.mime_type ?? "image/jpeg"),
+    ancho: numero(item.ancho ?? item.width),
+    alto: numero(item.alto ?? item.height),
+    tamanioBytes: numero(item.tamanioBytes ?? item.size_bytes) ?? undefined,
+    urlMiniatura: texto(item.urlMiniatura ?? item.url_miniatura),
+    urlImagen: texto(item.urlImagen ?? item.url_imagen),
+    expiraEn: texto(item.expiraEn ?? item.expira_en),
+  };
+}

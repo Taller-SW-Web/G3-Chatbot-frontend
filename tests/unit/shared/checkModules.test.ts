@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -8,6 +8,10 @@ import path from "node:path";
  * (así Node resuelve `typescript` y eslint/tsc no escanean la copia). Cada caso
  * muta un archivo y exige que el proceso salga con error y explique la regla.
  */
+
+// Cada caso copia el repo y arranca un proceso: con la suite completa en
+// paralelo, 5 s (el default) no alcanzan.
+vi.setConfig({ testTimeout: 30_000 });
 
 const repoRoot = process.cwd();
 const temporales: string[] = [];
