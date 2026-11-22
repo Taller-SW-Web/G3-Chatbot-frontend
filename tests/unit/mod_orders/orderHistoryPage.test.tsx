@@ -51,8 +51,17 @@ beforeEach(() => {
         moneda: "PEN",
         fechaCreacion: "2026-11-02T10:00:00Z",
       },
+      {
+        pedidoId: "PED-2026-00003",
+        canal: "CHATBOT",
+        estado: "ANULADO",
+        estadoEtiqueta: "Anulado",
+        total: 89.9,
+        moneda: "PEN",
+        fechaCreacion: "2026-10-28T10:00:00Z",
+      },
     ],
-    total: 2,
+    total: 3,
     page: 1,
     pageSize: 20,
   });
@@ -103,13 +112,24 @@ describe("OrderHistoryPage", () => {
     expect(push).toHaveBeenCalledWith("/seguimiento?pedidoId=PED-2026-00001");
   });
 
-  it("en 'Entregados' permite calificar y abrir reclamo o devolución", async () => {
+  it("abre el detalle del pedido desde la tarjeta", async () => {
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("Pedido PED-2026-00001")).toBeDefined());
+    fireEvent.click(screen.getAllByText("VER DETALLE")[0]);
+    expect(push).toHaveBeenCalledWith("/pedido?pedidoId=PED-2026-00001");
+  });
+
+  it("en 'Entregados' no muestra el CSAT en la lista y permite abrir reclamo o devolución", async () => {
     renderPage();
     fireEvent.click(screen.getByText("Entregados"));
 
     await waitFor(() => expect(screen.getByText("Pedido PED-2026-00002")).toBeDefined());
-    fireEvent.click(screen.getByRole("radio", { name: "Bien" }));
-    await waitFor(() => expect(calificarPedido).toHaveBeenCalledWith("PED-2026-00002", 5));
+    expect(screen.getByText("Pedido PED-2026-00003")).toBeDefined();
+    expect(screen.queryByText("Califica tu entrega")).toBeNull();
+    expect(screen.queryByLabelText("Calificar entrega del pedido PED-2026-00002")).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Bien" })).toBeNull();
+    expect(calificarPedido).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByText("REPORTAR PROBLEMA"));
     expect(push).toHaveBeenCalledWith("/reclamo?pedidoId=PED-2026-00002");
