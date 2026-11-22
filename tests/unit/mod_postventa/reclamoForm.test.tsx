@@ -44,11 +44,26 @@ describe("ReclamoForm", () => {
     expect(screen.getByText(`${DESCRIPCION.length}/1000`)).toBeDefined();
   });
 
+  it("muestra los 5 motivos de G5, sin OTRO", () => {
+    abrir();
+
+    const motivos = screen.getByLabelText("Motivo del reclamo");
+    const opciones = Array.from((motivos as HTMLSelectElement).options).map((o) => o.value);
+    expect(opciones).toEqual([
+      "INCUMPLIMIENTO_PLAZO_ENTREGA",
+      "PRODUCTO_DEFECTUOSO_O_INCORRECTO",
+      "COBRO_INDEBIDO_O_NO_RECONOCIDO",
+      "ATENCION_INADECUADA",
+      "INCUMPLIMIENTO_GARANTIA",
+    ]);
+    expect(opciones).not.toContain("OTRO");
+  });
+
   it("envía el reclamo con motivo, documento y solución", async () => {
     abrir();
 
     fireEvent.change(screen.getByLabelText("Motivo del reclamo"), {
-      target: { value: "PRODUCTO_EQUIVOCADO" },
+      target: { value: "PRODUCTO_DEFECTUOSO_O_INCORRECTO" },
     });
     fireEvent.change(screen.getByLabelText(/Descripci.n del reclamo/), { target: { value: DESCRIPCION } });
     fireEvent.change(screen.getByLabelText("Documento"), { target: { value: "DNI 12345678" } });
@@ -59,7 +74,7 @@ describe("ReclamoForm", () => {
     expect(onOk).toHaveBeenCalledWith({
       pedidoId: "PED-2026-00891",
       tipo: "RECLAMO",
-      motivo: "PRODUCTO_EQUIVOCADO",
+      motivo: "PRODUCTO_DEFECTUOSO_O_INCORRECTO",
       descripcion: DESCRIPCION,
       documento: "DNI 12345678",
       telefono: "999888777",

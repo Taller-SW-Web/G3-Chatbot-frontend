@@ -36,7 +36,7 @@ Solicitudes de cambio/devolución con evidencias, Libro de Reclamaciones (reclam
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_postventa/` (6 archivos)
+- Unitarias: `tests/unit/mod_postventa/` (8 archivos)
 
 ## Reglas
 
