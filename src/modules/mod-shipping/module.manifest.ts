@@ -7,5 +7,5 @@ export const manifest = {
   routes: [],
   nav: [],
   endpoints: ["/envio/cotizar"],
-  dependsOn: [],
+  dependsOn: ["mod-cart"],
 } satisfies ModuleManifest;
