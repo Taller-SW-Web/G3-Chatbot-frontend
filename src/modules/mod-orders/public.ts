@@ -4,6 +4,7 @@
  */
 export { OrderHistoryPage } from "./ui/OrderHistoryPage";
 export type { OrderHistorySlots } from "./ui/OrderHistoryPage";
+export { OrderDetailPage } from "./ui/OrderDetailPage";
 export { SeguimientoPage } from "./ui/SeguimientoPage";
 export { ConfirmacionPedido } from "./ui/blocks/ConfirmacionPedido";
 export { ListaPedidos } from "./ui/blocks/ListaPedidos";
@@ -19,6 +20,7 @@ export { pedidosApi as pedidosPort } from "./adapters/pedidosApi";
 export type {
   PaginaPedidos,
   PedidoDetalle,
+  PedidoEnvio,
   PedidoLinea,
   PedidoResumen,
   PedidosPort,

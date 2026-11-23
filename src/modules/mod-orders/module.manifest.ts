@@ -7,6 +7,7 @@ export const manifest = {
   routes: [
     { path: "/pedidos", description: "Historial de pedidos por estado" },
     { path: "/pedidos/[tab]", description: "Historial filtrado por pestaña" },
+    { path: "/pedido", description: "Detalle de un pedido con su CSAT" },
     { path: "/seguimiento", description: "Hitos del despacho de un pedido" },
   ],
   nav: [

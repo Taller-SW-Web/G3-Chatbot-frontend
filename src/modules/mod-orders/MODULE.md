@@ -1,19 +1,19 @@
 # `mod-orders` — Pedidos y seguimiento
 
 - **Owner:** @MathiasTL
-- **Frontend:** carpeta `mod-orders`, rutas `[/pedidos, /pedidos/[tab], /seguimiento]`
+- **Frontend:** carpeta `mod-orders`, rutas `[/pedidos, /pedidos/[tab], /pedido, /seguimiento]`
 - **Depende de:** `mod-checkout`
 - **Contrato:** `/pedidos/*`
 
 ## Responsabilidad
 
-Historial de pedidos por estado, detalle, seguimiento del despacho, reenvío de confirmación y calificación de entrega. Las pestañas de devoluciones y reclamos se inyectan como slots desde `app/pedidos/page.tsx` con componentes de `mod-postventa`; su creación también vive ahí.
+Historial de pedidos por estado, detalle, seguimiento del despacho, reenvío de confirmación y calificación de entrega (CSAT) únicamente al pie del detalle de un pedido `ENTREGADO`, nunca en la lista. Las pestañas de devoluciones y reclamos se inyectan como slots desde `app/pedidos/page.tsx` con componentes de `mod-postventa`; su creación también vive ahí.
 
 ## Superficie pública
 
 | Tipo | Archivo | Qué expone |
 |---|---|---|
-| Frontend | `public.ts` | `OrderHistoryPage` (+ `OrderHistorySlots`), `SeguimientoPage`, `ConfirmacionPedido`, `ListaPedidos`, `EstadoPedido`, `pedidosPort`, casos de uso y tipos |
+| Frontend | `public.ts` | `OrderHistoryPage` (+ `OrderHistorySlots`), `OrderDetailPage`, `SeguimientoPage`, `ConfirmacionPedido`, `ListaPedidos`, `EstadoPedido`, `pedidosPort`, casos de uso y tipos |
 
 ## Rutas
 
@@ -21,6 +21,7 @@ Historial de pedidos por estado, detalle, seguimiento del despacho, reenvío de 
 |---|---|---|
 | GET | `/pedidos` | Historial por pestañas |
 | GET | `/pedidos/[tab]` | Historial filtrado por estado |
+| GET | `/pedido?pedidoId=` | Detalle del pedido con CSAT al pie |
 | GET | `/seguimiento` | Hitos del despacho |
 
 ## Endpoints
@@ -33,7 +34,7 @@ Historial de pedidos por estado, detalle, seguimiento del despacho, reenvío de 
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_orders/` (4 archivos)
+- Unitarias: `tests/unit/mod_orders/` (7 archivos)
 
 ## Reglas
 

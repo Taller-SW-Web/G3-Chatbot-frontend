@@ -3,10 +3,9 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon } from "@/shared/ui/icons";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
-import { DeliveryRating } from "@/modules/mod-orders/ui/DeliveryRating";
 import { container } from "@/shared/di/container";
 
 type Tab = "proceso" | "entregados" | "reembolso" | "reclamos";
@@ -55,13 +54,10 @@ export function OrderHistoryPage({
     retry: false,
   });
 
-  const calificar = useMutation({
-    mutationFn: ({ pedidoId, puntuacion }: { pedidoId: string; puntuacion: 1 | 3 | 5 }) =>
-      container.pedidos.calificarPedido(pedidoId, puntuacion),
-  });
-
   const allOrders = pedidos.data?.items ?? [];
   const inProcess = allOrders.filter((o) => o.estado !== "ENTREGADO" && o.estado !== "ANULADO");
+  // "Entregados" también muestra los anulados para que el cliente los encuentre;
+  // las acciones de postventa solo aplican a ENTREGADO.
   const delivered = allOrders.filter((o) => o.estado === "ENTREGADO" || o.estado === "ANULADO");
   const visibleOrders = tab === "proceso" ? inProcess : delivered;
 
@@ -102,17 +98,10 @@ export function OrderHistoryPage({
                 <span className="text-text-secondary">Creado</span>
                 <span>{formatDate(order.fechaCreacion)}</span>
               </div>
-              {tab === "entregados" && order.estado === "ENTREGADO" ? (
-                <DeliveryRating
-                  orderId={order.pedidoId}
-                  onRate={(orderId, mood) =>
-                    calificar.mutate({
-                      pedidoId: orderId,
-                      puntuacion: mood === "bien" ? 5 : mood === "regular" ? 3 : 1,
-                    })
-                  }
-                />
-              ) : null}
+              <button onClick={() => router.push(`/pedido?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
+                className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary">
+                VER DETALLE
+              </button>
               <div className="grid grid-cols-2 gap-2 mt-1">
                 <button onClick={() => router.push(`/seguimiento?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
                   className="wf-btn py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink inline-flex items-center justify-center gap-1">

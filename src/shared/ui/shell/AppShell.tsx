@@ -16,7 +16,7 @@ import { safeInternalPath } from "@/shared/security/safeInternalPath";
 
 export type ScreenKind =
   | "home" | "chat" | "carrito" | "checkout" | "exito"
-  | "pedidos" | "seguimiento" | "reclamo" | "devolucion"
+  | "pedidos" | "pedido" | "seguimiento" | "reclamo" | "devolucion"
   | "cuenta" | "sugerencias" | "verificar-correo";
 
 /** Layout raíz único (decisión: no duplicar layout.tsx). Orquesta UI. */
@@ -84,6 +84,7 @@ export function AppShell({
     initialScreen === "checkout" ? "CHECKOUT" :
     initialScreen === "exito" ? "PEDIDO" :
     initialScreen === "pedidos" ? "HISTORIAL DE PEDIDOS" :
+    initialScreen === "pedido" ? "DETALLE DEL PEDIDO" :
     initialScreen === "seguimiento" ? "SEGUIMIENTO" :
     initialScreen === "reclamo" ? "RECLAMO" :
     initialScreen === "devolucion" ? "DEVOLUCIÓN" :

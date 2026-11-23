@@ -27,9 +27,18 @@ export type PedidoLinea = {
   precioUnitario: number;
 };
 
+/** Snapshot del envío en el detalle del pedido (contratos-integracion §2.5.2). */
+export type PedidoEnvio = {
+  destinatario?: string;
+  distrito?: string;
+  direccion?: string;
+  costo?: number;
+  plazoEstimadoDias?: number;
+};
+
 export type PedidoDetalle = PedidoResumen & {
   items: PedidoLinea[];
-  envio: Record<string, unknown> | null;
+  envio: PedidoEnvio | null;
   historial: { estado: string; etiqueta: string; fecha: string; completado: boolean }[];
   seguimientoDisponible?: boolean;
 };
