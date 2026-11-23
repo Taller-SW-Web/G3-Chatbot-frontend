@@ -44,7 +44,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "eslint-plugin-sonarjs": "^4.2.2",
-    "jsdom": "^31.0.0",
+    "jsdom": "^31.0.1",
     "playwright": "^1.65.0",
     "tailwindcss": "^4",
     "typescript": "^6",
