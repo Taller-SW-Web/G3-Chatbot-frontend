@@ -3,7 +3,7 @@ import type { ModuleManifest } from "@/shared/config/moduleManifest";
 export const manifest = {
   id: "mod-chat",
   name: "Chat",
-  owner: "@Ankarmin",
+  owner: "@Taller-SW-Web/chatbot",
   routes: [
     { path: "/chat/[id]", description: "Conversación con historial y bloques en línea" },
     { path: "/sugerencias", description: "Formulario de sugerencias del asistente" },

@@ -1,6 +1,6 @@
 # `mod-auth` — Autenticación y cuenta
 
-- **Owner:** @Ankarmin
+- **Owner:** @Taller-SW-Web/chatbot
 - **Frontend:** carpeta `mod-auth`, rutas `[/cuenta, /verificar-correo]`
 - **Depende de:** ninguno
 - **Contrato:** `/sesion/*`, `/contacto/celular/solicitar-otp` y `/contacto/celular/verificar-otp`
