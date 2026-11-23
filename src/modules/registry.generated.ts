@@ -85,7 +85,7 @@ export const moduleRegistry = [
       "/envio/cotizar",
     ],
     dependsOn: [
-
+      "mod-cart",
     ],
   },
   {
