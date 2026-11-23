@@ -6,8 +6,8 @@ import { reclamoSchema, RECLAMO_MOTIVOS, type ReclamoInput } from "@/modules/mod
 import { FileAlertIcon } from "@/shared/ui/icons";
 
 /**
- * SPEC-19: pedido, tipo, 8 motivos, descripción 20-1000, documento, teléfono
- * y solución esperada.
+ * SPEC-19: pedido, tipo, los 5 motivos de G5, descripción 20-1000, documento,
+ * teléfono y solución esperada.
  */
 export function ReclamoForm({
   pedidoId,
@@ -27,7 +27,7 @@ export function ReclamoForm({
     defaultValues: {
       pedidoId,
       tipo: "RECLAMO",
-      motivo: "PRODUCTO_DEFECTUOSO",
+      motivo: "PRODUCTO_DEFECTUOSO_O_INCORRECTO",
       documento: documentoInicial,
       telefono: telefonoInicial,
     },
@@ -49,6 +49,9 @@ export function ReclamoForm({
       <select {...register("motivo")} aria-label="Motivo del reclamo" className="wf-input px-3 py-2.5 text-sm">
         {RECLAMO_MOTIVOS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
       </select>
+      <p className="text-[11px] text-text-secondary">
+        Elige el motivo más cercano y cuéntanos lo ocurrido en la descripción.
+      </p>
       <textarea {...register("descripcion")} placeholder="Describe lo ocurrido (20 a 1000 caracteres)..." aria-label="Descripción del reclamo" rows={4} maxLength={1000} className="wf-input px-3 py-2.5 text-sm outline-none" />
       <p className="text-[11px] text-text-secondary text-right">{descripcion.length}/1000</p>
       {errors.descripcion && <span className="text-[12px] text-error-default">{errors.descripcion.message}</span>}
