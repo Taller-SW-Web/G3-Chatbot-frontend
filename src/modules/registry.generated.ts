@@ -6,7 +6,7 @@ export const moduleRegistry = [
   {
     id: "mod-auth",
     name: "Autenticación y cuenta",
-    owner: "@Ankarmin",
+    owner: "@Taller-SW-Web/chatbot",
     routes: [
       { path: "/cuenta", description: "Datos de la cuenta y verificación del celular" },
       { path: "/verificar-correo", description: "Canje del enlace de verificación de correo" },
@@ -35,7 +35,7 @@ export const moduleRegistry = [
   {
     id: "mod-catalog",
     name: "Catálogo",
-    owner: "@SOoOnny",
+    owner: "@Taller-SW-Web/chatbot",
     routes: [
       { path: "/", description: "Home con ofertas, tarjetas y detalle de producto" },
     ],
@@ -54,7 +54,7 @@ export const moduleRegistry = [
   {
     id: "mod-cart",
     name: "Carrito",
-    owner: "@SOoOnny",
+    owner: "@Taller-SW-Web/chatbot",
     routes: [
       { path: "/carrito", description: "Líneas, cantidades, cupón y total del carrito" },
     ],
@@ -74,7 +74,7 @@ export const moduleRegistry = [
   {
     id: "mod-shipping",
     name: "Envío",
-    owner: "@SOoOnny",
+    owner: "@Taller-SW-Web/chatbot",
     routes: [
 
     ],
@@ -91,7 +91,7 @@ export const moduleRegistry = [
   {
     id: "mod-checkout",
     name: "Checkout y pago",
-    owner: "@MathiasTL",
+    owner: "@Taller-SW-Web/chatbot",
     routes: [
       { path: "/checkout", description: "Dirección, cotización, tarjeta y pago simulado" },
       { path: "/exito", description: "Confirmación del pedido y calificación" },
@@ -113,7 +113,7 @@ export const moduleRegistry = [
   {
     id: "mod-orders",
     name: "Pedidos y seguimiento",
-    owner: "@MathiasTL",
+    owner: "@Taller-SW-Web/chatbot",
     routes: [
       { path: "/pedidos", description: "Historial de pedidos por estado" },
       { path: "/pedidos/[tab]", description: "Historial filtrado por pestaña" },
@@ -138,7 +138,7 @@ export const moduleRegistry = [
   {
     id: "mod-postventa",
     name: "Postventa",
-    owner: "@MathiasTL",
+    owner: "@Taller-SW-Web/chatbot",
     routes: [
       { path: "/devolucion", description: "Solicitud de cambio o devolución con evidencias" },
       { path: "/reclamo", description: "Libro de Reclamaciones virtual" },
@@ -161,7 +161,7 @@ export const moduleRegistry = [
   {
     id: "mod-chat",
     name: "Chat",
-    owner: "@Ankarmin",
+    owner: "@Taller-SW-Web/chatbot",
     routes: [
       { path: "/chat/[id]", description: "Conversación con historial y bloques en línea" },
       { path: "/sugerencias", description: "Formulario de sugerencias del asistente" },

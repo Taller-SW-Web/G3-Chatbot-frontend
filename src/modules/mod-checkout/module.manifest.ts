@@ -3,7 +3,7 @@ import type { ModuleManifest } from "@/shared/config/moduleManifest";
 export const manifest = {
   id: "mod-checkout",
   name: "Checkout y pago",
-  owner: "@MathiasTL",
+  owner: "@Taller-SW-Web/chatbot",
   routes: [
     { path: "/checkout", description: "Dirección, cotización, tarjeta y pago simulado" },
     { path: "/exito", description: "Confirmación del pedido y calificación" },

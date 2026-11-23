@@ -1,6 +1,6 @@
 # `mod-catalog` — Catálogo
 
-- **Owner:** @SOoOnny
+- **Owner:** @Taller-SW-Web/chatbot
 - **Frontend:** carpeta `mod-catalog`, rutas `[/]`
 - **Depende de:** ninguno
 - **Contrato:** `/catalogo/*`

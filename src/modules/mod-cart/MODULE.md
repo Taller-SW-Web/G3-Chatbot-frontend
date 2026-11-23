@@ -1,6 +1,6 @@
 # `mod-cart` — Carrito
 
-- **Owner:** @SOoOnny
+- **Owner:** @Taller-SW-Web/chatbot
 - **Frontend:** carpeta `mod-cart`, rutas `[/carrito]`
 - **Depende de:** `mod-catalog`
 - **Contrato:** `/carrito/*`
