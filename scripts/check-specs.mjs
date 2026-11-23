@@ -12,7 +12,7 @@
  * - La descripcion del PR debe incluir `openspec/specs/<capability>` de ese modulo.
  * - La spec enlazada debe existir en el checkout del repo de specs.
  */
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,7 +34,10 @@ const base = readArg("base");
 const specsRepo = readArg("specs-repo");
 const body = readFileSync(readArg("body"), "utf8");
 
-const changed = execSync(`git diff --name-only ${base}...HEAD`, { cwd: root, encoding: "utf8" })
+const changed = execFileSync("git", ["diff", "--name-only", `${base}...HEAD`], {
+  cwd: root,
+  encoding: "utf8",
+})
   .split(/\r?\n/)
   .map((line) => line.trim())
   .filter(Boolean);
