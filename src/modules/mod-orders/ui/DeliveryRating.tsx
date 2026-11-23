@@ -14,6 +14,8 @@ type DeliveryRatingProps = {
   initial?: DeliveryMood | null;
   /** Envía la calificación con su comentario; si falla, el bloque permite reintentar. */
   onRate: (orderId: string, mood: DeliveryMood, comentario?: string) => Promise<unknown>;
+  /** SPEC-24: permite refrescar el detalle cuando Ventas responde 422 ORDER_NOT_DELIVERED. */
+  onNotDelivered?: () => void;
 };
 
 type EstadoEnvio = "idle" | "sending" | "rated" | "already" | "not-delivered";
@@ -45,7 +47,7 @@ function MoodIcon({ value, size = 24 }: { value: DeliveryMood; size?: 24 }) {
  * orderId para diferenciar calificaciones cuando haya varios entregados.
  * Paridad con Mockups-Wireframes (SPEC-24).
  */
-export function DeliveryRating({ orderId, initial = null, onRate }: DeliveryRatingProps) {
+export function DeliveryRating({ orderId, initial = null, onRate, onNotDelivered }: DeliveryRatingProps) {
   const [mood, setMood] = useState<DeliveryMood | null>(initial);
   const [comentario, setComentario] = useState("");
   const [estado, setEstado] = useState<EstadoEnvio>(initial ? "rated" : "idle");
@@ -60,17 +62,21 @@ export function DeliveryRating({ orderId, initial = null, onRate }: DeliveryRati
       setEstado("rated");
     } catch (err) {
       const code = problemCode(err);
-      if (code === "CSAT_ALREADY_SUBMITTED" || httpStatus(err) === 409) {
+      const status = httpStatus(err);
+      if (code === "CSAT_ALREADY_SUBMITTED" || status === 409) {
         setEstado("already");
-      } else if (code === "ORDER_NOT_DELIVERED" || httpStatus(err) === 422) {
+      } else if (code === "ORDER_NOT_DELIVERED") {
         setEstado("not-delivered");
+        onNotDelivered?.();
+      } else if (status === 403) {
+        setEstado("idle");
+        setError("No pudimos enviar tu calificación, intenta de nuevo");
+      } else if (status === 503 || isUnavailable(err)) {
+        setEstado("idle");
+        setError("No pudimos enviar tu calificación, intenta de nuevo más tarde");
       } else {
         setEstado("idle");
-        setError(
-          isUnavailable(err)
-            ? "No pudimos enviar tu calificación. Revisa tu conexión e intenta de nuevo."
-            : "No pudimos enviar tu calificación, intenta de nuevo más tarde."
-        );
+        setError("No pudimos enviar tu calificación, intenta de nuevo");
       }
     }
   };

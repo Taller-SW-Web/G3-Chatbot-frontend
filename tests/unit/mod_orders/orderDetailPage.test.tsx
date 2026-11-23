@@ -107,6 +107,30 @@ describe("OrderDetailPage", () => {
     );
   });
 
+  it("si Ventas responde ORDER_NOT_DELIVERED refresca el detalle y oculta el CSAT", async () => {
+    obtenerPedido
+      .mockResolvedValueOnce(PEDIDO)
+      .mockResolvedValueOnce({
+        ...PEDIDO,
+        estado: "ANULADO",
+        estadoEtiqueta: "Anulado",
+      });
+    calificarPedido.mockRejectedValue({
+      response: { status: 422, data: { code: "ORDER_NOT_DELIVERED" } },
+    });
+    renderPage();
+
+    expect(await screen.findByLabelText("Calificar entrega del pedido PED-2026-00002")).toBeDefined();
+    fireEvent.click(screen.getByRole("radio", { name: "Bien" }));
+    fireEvent.click(screen.getByRole("button", { name: "ENVIAR CALIFICACIÓN" }));
+
+    await waitFor(() => expect(obtenerPedido).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Calificar entrega del pedido PED-2026-00002")).toBeNull()
+    );
+    expect(screen.getByText("Anulado")).toBeDefined();
+  });
+
   it("no muestra el CSAT si el pedido no está ENTREGADO", async () => {
     obtenerPedido.mockResolvedValue({
       ...PEDIDO,

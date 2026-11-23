@@ -232,6 +232,7 @@ export function OrderDetailPage() {
               comentario,
             });
           }}
+          onNotDelivered={() => void pedido.refetch()}
         />
       ) : null}
 
