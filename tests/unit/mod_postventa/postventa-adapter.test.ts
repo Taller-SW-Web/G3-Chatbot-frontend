@@ -38,7 +38,7 @@ const DEVOLUCION = {
 const RECLAMO = {
   pedidoId: "PED-2026-00002",
   tipo: "RECLAMO" as const,
-  motivo: "PRODUCTO_DEFECTUOSO",
+  motivo: "PRODUCTO_DEFECTUOSO_O_INCORRECTO",
   detalle: "El producto llegó defectuoso y no funciona correctamente.",
   consumidor: {
     nombreCompleto: "Ana Pérez",

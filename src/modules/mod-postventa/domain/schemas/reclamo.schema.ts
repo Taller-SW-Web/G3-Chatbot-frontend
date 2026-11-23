@@ -1,26 +1,25 @@
 import { z } from "zod";
 
-/** G3 code -> visible label. G5 receives the code, not the label. */
+/**
+ * Motivos reales del contrato de G5 (Ventas F6). Solo existen estos cinco:
+ * no hay `OTRO`. El cliente elige el más cercano y explica el caso en
+ * `descripcion` (mín. 20 caracteres).
+ */
 export const RECLAMO_MOTIVO_VALUES = [
-  "PRODUCTO_DEFECTUOSO",
-  "PRODUCTO_EQUIVOCADO",
-  "PEDIDO_INCOMPLETO",
   "INCUMPLIMIENTO_PLAZO_ENTREGA",
-  "NO_RECIBIDO",
-  "COBRO_INCORRECTO",
-  "ATENCION",
-  "OTRO",
+  "PRODUCTO_DEFECTUOSO_O_INCORRECTO",
+  "COBRO_INDEBIDO_O_NO_RECONOCIDO",
+  "ATENCION_INADECUADA",
+  "INCUMPLIMIENTO_GARANTIA",
 ] as const;
 
+/** G5 code -> visible label. G5 receives the code, not the label. */
 export const RECLAMO_MOTIVOS = [
-  { value: "PRODUCTO_DEFECTUOSO", label: "Producto defectuoso" },
-  { value: "PRODUCTO_EQUIVOCADO", label: "Producto equivocado" },
-  { value: "PEDIDO_INCOMPLETO", label: "Pedido incompleto" },
   { value: "INCUMPLIMIENTO_PLAZO_ENTREGA", label: "Incumplimiento del plazo de entrega" },
-  { value: "NO_RECIBIDO", label: "No recibido" },
-  { value: "COBRO_INCORRECTO", label: "Cobro incorrecto" },
-  { value: "ATENCION", label: "Atención" },
-  { value: "OTRO", label: "Otro" },
+  { value: "PRODUCTO_DEFECTUOSO_O_INCORRECTO", label: "Producto defectuoso o incorrecto" },
+  { value: "COBRO_INDEBIDO_O_NO_RECONOCIDO", label: "Cobro indebido o no reconocido" },
+  { value: "ATENCION_INADECUADA", label: "Atención inadecuada" },
+  { value: "INCUMPLIMIENTO_GARANTIA", label: "Incumplimiento de garantía" },
 ] as const;
 
 export const reclamoSchema = z.object({

@@ -49,7 +49,7 @@ beforeEach(() => {
     codigoSeguimiento: "REC-2026-0119",
     pedidoId: "PED-2026-00002",
     tipo: "RECLAMO",
-    motivo: "PRODUCTO_DEFECTUOSO",
+    motivo: "PRODUCTO_DEFECTUOSO_O_INCORRECTO",
     estado: "REGISTRADO",
     fechaRegistro: "2026-11-20T10:00:00Z",
     fechaLimiteSLA: "2026-12-11T23:59:59Z",
@@ -86,7 +86,7 @@ describe("ReclamoPage", () => {
     await waitFor(() => expect(crearReclamo).toHaveBeenCalledWith(expect.objectContaining({
       pedidoId: "PED-2026-00002",
       tipo: "RECLAMO",
-      motivo: "PRODUCTO_DEFECTUOSO",
+      motivo: "PRODUCTO_DEFECTUOSO_O_INCORRECTO",
       consumidor: expect.objectContaining({
         nombreCompleto: "Ana Pérez",
         documento: "12345678",
