@@ -1,6 +1,6 @@
 # `mod-orders` — Pedidos y seguimiento
 
-- **Owner:** @MathiasTL
+- **Owner:** @Taller-SW-Web/chatbot
 - **Frontend:** carpeta `mod-orders`, rutas `[/pedidos, /pedidos/[tab], /pedido, /seguimiento]`
 - **Depende de:** `mod-checkout`
 - **Contrato:** `/pedidos/*`

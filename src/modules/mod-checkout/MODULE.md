@@ -1,6 +1,6 @@
 # `mod-checkout` — Checkout y pago
 
-- **Owner:** @MathiasTL
+- **Owner:** @Taller-SW-Web/chatbot
 - **Frontend:** carpeta `mod-checkout`, rutas `[/checkout, /exito]`
 - **Depende de:** `mod-cart`, `mod-shipping`
 - **Contrato:** `/checkout/*`

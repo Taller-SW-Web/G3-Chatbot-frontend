@@ -3,7 +3,7 @@ import type { ModuleManifest } from "@/shared/config/moduleManifest";
 export const manifest = {
   id: "mod-orders",
   name: "Pedidos y seguimiento",
-  owner: "@MathiasTL",
+  owner: "@Taller-SW-Web/chatbot",
   routes: [
     { path: "/pedidos", description: "Historial de pedidos por estado" },
     { path: "/pedidos/[tab]", description: "Historial filtrado por pestaña" },
