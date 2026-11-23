@@ -1,6 +1,6 @@
 # `mod-postventa` — Postventa
 
-- **Owner:** @MathiasTL
+- **Owner:** @Taller-SW-Web/chatbot
 - **Frontend:** carpeta `mod-postventa`, rutas `[/devolucion, /reclamo]`
 - **Depende de:** `mod-orders`
 - **Contrato:** `/devoluciones/*`, `/reclamos/*`, `/evidencias`

@@ -3,7 +3,7 @@ import type { ModuleManifest } from "@/shared/config/moduleManifest";
 export const manifest = {
   id: "mod-auth",
   name: "Autenticación y cuenta",
-  owner: "@Ankarmin",
+  owner: "@Taller-SW-Web/chatbot",
   routes: [
     { path: "/cuenta", description: "Datos de la cuenta y verificación del celular" },
     { path: "/verificar-correo", description: "Canje del enlace de verificación de correo" },

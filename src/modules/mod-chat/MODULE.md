@@ -1,6 +1,6 @@
 # `mod-chat` — Chat
 
-- **Owner:** @Ankarmin
+- **Owner:** @Taller-SW-Web/chatbot
 - **Frontend:** carpeta `mod-chat`, rutas `[/chat/[id], /sugerencias]`
 - **Depende de:** todos los módulos de negocio (orquestador)
 - **Contrato:** `/chat/conversaciones*` (REST + SSE)

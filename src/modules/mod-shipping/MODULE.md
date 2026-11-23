@@ -1,6 +1,6 @@
 # `mod-shipping` — Envío
 
-- **Owner:** @SOoOnny
+- **Owner:** @Taller-SW-Web/chatbot
 - **Frontend:** carpeta `mod-shipping`, sin ruta propia
 - **Depende de:** ninguno
 - **Contrato:** `POST /envio/cotizar`
