@@ -30,8 +30,19 @@ describe("pedidosApi", () => {
 
     const detalle = await pedidosApi.obtenerPedido("PED/1");
 
-    expect(peticiones.get).toHaveBeenCalledWith("/pedidos/PED%2F1");
+    expect(peticiones.get).toHaveBeenCalledWith("/pedidos/PED%2F1", { timeout: 60000 });
     expect(detalle).toEqual({ pedidoId: "PED/1" });
+  });
+
+  it("usa el timeout de 60 s al listar pedidos", async () => {
+    peticiones.get.mockResolvedValueOnce({ data: { items: [], total: 0, page: 1, pageSize: 20 } });
+
+    await pedidosApi.listarPedidos({ page: 1, pageSize: 20 });
+
+    expect(peticiones.get).toHaveBeenCalledWith("/pedidos", {
+      params: { page: 1, pageSize: 20 },
+      timeout: 60000,
+    });
   });
 
   it("envía el CSAT con puntuación y comentario opcional", async () => {

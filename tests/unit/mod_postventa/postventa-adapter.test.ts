@@ -62,6 +62,7 @@ describe("adapter Axios de pedidos y postventa", () => {
 
     expect(peticiones.get).toHaveBeenCalledWith("/pedidos", {
       params: { page: 2, pageSize: 5, estado: "PAGADO" },
+      timeout: 60000,
     });
   });
 
@@ -71,6 +72,7 @@ describe("adapter Axios de pedidos y postventa", () => {
 
     expect(peticiones.get).toHaveBeenCalledWith("/pedidos", {
       params: { page: 1, pageSize: 10 },
+      timeout: 60000,
     });
   });
 
@@ -82,8 +84,8 @@ describe("adapter Axios de pedidos y postventa", () => {
     await chatbotApi.obtenerPedido("PED/1");
     await chatbotApi.obtenerSeguimientoPedido("PED/1");
 
-    expect(peticiones.get).toHaveBeenNthCalledWith(1, "/pedidos/PED%2F1");
-    expect(peticiones.get).toHaveBeenNthCalledWith(2, "/pedidos/PED%2F1/seguimiento");
+    expect(peticiones.get).toHaveBeenNthCalledWith(1, "/pedidos/PED%2F1", { timeout: 60000 });
+    expect(peticiones.get).toHaveBeenNthCalledWith(2, "/pedidos/PED%2F1/seguimiento", { timeout: 60000 });
   });
 
   it("sube evidencia como multipart con conversación opcional", async () => {
