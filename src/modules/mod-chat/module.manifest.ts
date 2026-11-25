@@ -6,6 +6,7 @@ export const manifest = {
   owner: "@Taller-SW-Web/chatbot",
   routes: [
     { path: "/chat/[id]", description: "Conversación con historial y bloques en línea" },
+    { path: "/buscar", description: "Búsqueda de conversaciones por título y mensajes" },
     { path: "/sugerencias", description: "Formulario de sugerencias del asistente" },
   ],
   nav: [{ href: "/sugerencias", label: "Sugerencias" }],

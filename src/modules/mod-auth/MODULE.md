@@ -13,7 +13,7 @@ Sesión del cliente, registro, MFA, verificación de correo, datos de cuenta y p
 
 | Tipo | Archivo | Qué expone |
 |---|---|---|
-| Frontend | `public.ts` | `AuthModal`, `MiCuentaPage`, `VerificarCorreoPage`, `TerminosPage`, `PrivacidadPage`, `validarContactoUseCase`, tipos de sesión |
+| Frontend | `public.ts` | `AuthModal`, `ReenviarVerificacionForm`, `MiCuentaPage`, `VerificarCorreoPage`, `TerminosPage`, `PrivacidadPage`, `validarContactoUseCase`, tipos de sesión |
 
 ## Rutas
 

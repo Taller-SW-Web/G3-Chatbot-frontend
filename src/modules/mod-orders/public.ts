@@ -11,6 +11,16 @@ export { ListaPedidos } from "./ui/blocks/ListaPedidos";
 export { EstadoPedido } from "./ui/blocks/EstadoPedido";
 export { DeliveryRating } from "./ui/DeliveryRating";
 
+export type {
+  EnvioBloque,
+  HitoPedido,
+  HitoSeguimiento,
+  ItemPedidoBloque,
+  PedidoBloqueDetalle,
+  PedidoBloqueResumen,
+  SeguimientoBloque,
+} from "./ui/blocks/tipos";
+
 export { reenviarConfirmacionUseCase } from "./application/reenviarConfirmacionUseCase";
 export { mensajeReenvio } from "./application/errors/confirmacionMensajes";
 

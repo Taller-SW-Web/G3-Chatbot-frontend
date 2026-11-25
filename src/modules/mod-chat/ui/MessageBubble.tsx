@@ -5,9 +5,17 @@ import type {
   BloqueCarritoResumen,
   BloqueCarrusel,
   BloqueConfirmacion,
+  BloqueConstanciaDevolucion,
+  BloqueConstanciaReclamo,
   BloqueDetalle,
   BloqueError,
+  BloqueEstadoDevolucion,
+  BloqueEstadoPedido,
+  BloqueEstadoReclamo,
   BloqueFormulario,
+  BloqueListaDevoluciones,
+  BloqueListaPedidos,
+  BloqueListaReclamos,
   BloqueResumenCheckout,
   BloqueSelectorVariante,
   BloqueTexto,
@@ -31,9 +39,18 @@ import { AccionesRapidas } from "@/modules/mod-chat/ui/blocks/AccionesRapidas";
 import { AvisoDegradado } from "@/modules/mod-chat/ui/blocks/AvisoDegradado";
 import { BloqueError as BloqueErrorView } from "@/shared/ui/BloqueError";
 import { CarritoChat, FormularioRegistroChat, SelectorVarianteChat } from "@/modules/mod-chat/ui/blocks/BloquesContenedores";
+import { FormularioLoginChat, FormularioReenvioVerificacionChat } from "@/modules/mod-chat/ui/blocks/FormulariosAuthChat";
 import { OtpCelularChatBlock } from "@/modules/mod-chat/ui/blocks/OtpCelularChatBlock";
 import { CarruselProductos } from "@/modules/mod-catalog/public";
-import { ConfirmacionPedido } from "@/modules/mod-orders/public";
+import { ConfirmacionPedido, EstadoPedido, ListaPedidos } from "@/modules/mod-orders/public";
+import {
+  ConstanciaDevolucion,
+  ConstanciaReclamo,
+  EstadoDevolucion,
+  EstadoReclamo,
+  ListaDevoluciones,
+  ListaReclamos,
+} from "@/modules/mod-postventa/public";
 import { DetalleProducto } from "@/modules/mod-catalog/public";
 import { ResumenCheckout } from "@/modules/mod-checkout/public";
 import { mensajePorCodigo } from "@/modules/mod-chat/ui/chatPresentacion";
@@ -192,10 +209,115 @@ export function renderBloque(
           </div>
         );
       }
+      if (formulario.formulario === "LOGIN") {
+        return (
+          <div key={clave} className="mt-2">
+            <FormularioLoginChat />
+          </div>
+        );
+      }
+      if (formulario.formulario === "REENVIO_VERIFICACION") {
+        return (
+          <div key={clave} className="mt-2">
+            <FormularioReenvioVerificacionChat />
+          </div>
+        );
+      }
       if (!esFormularioRegistro(formulario)) return null;
       return (
         <div key={clave} className="mt-2">
           <FormularioRegistroChat />
+        </div>
+      );
+    }
+    case "LISTA_PEDIDOS": {
+      const b = bloque as BloqueListaPedidos;
+      if (!Array.isArray(b.datos?.pedidos)) return null;
+      return (
+        <div key={clave} className="mt-2">
+          <ListaPedidos
+            pedidos={b.datos.pedidos}
+            mensaje={b.datos.mensaje}
+            onSeleccionar={onQuickAction
+              ? (pedidoId) => onQuickAction({ id: "CONSULTAR_PEDIDOS", etiqueta: "Ver pedido", payload: { pedidoId } })
+              : undefined}
+          />
+        </div>
+      );
+    }
+    case "ESTADO_PEDIDO": {
+      const b = bloque as BloqueEstadoPedido;
+      if (!b.datos || !Array.isArray(b.datos.hitos)) return null;
+      const seguimiento = b.datos.seguimiento && Array.isArray(b.datos.seguimiento.hitos)
+        ? b.datos.seguimiento
+        : undefined;
+      return (
+        <div key={clave} className="mt-2">
+          <EstadoPedido pedido={b.datos.pedido} hitos={b.datos.hitos} seguimiento={seguimiento} />
+        </div>
+      );
+    }
+    case "LISTA_RECLAMOS": {
+      const b = bloque as BloqueListaReclamos;
+      if (!Array.isArray(b.datos?.reclamos)) return null;
+      return (
+        <div key={clave} className="mt-2">
+          <ListaReclamos
+            reclamos={b.datos.reclamos}
+            onSeleccionar={onQuickAction
+              ? (codigoSeguimiento) => onQuickAction({ id: "CONSULTAR_RECLAMO", etiqueta: "Ver reclamo", payload: { codigoSeguimiento } })
+              : undefined}
+          />
+        </div>
+      );
+    }
+    case "ESTADO_RECLAMO": {
+      const b = bloque as BloqueEstadoReclamo;
+      if (!b.datos || typeof b.datos.codigoSeguimiento !== "string") return null;
+      return (
+        <div key={clave} className="mt-2">
+          <EstadoReclamo datos={b.datos} />
+        </div>
+      );
+    }
+    case "CONSTANCIA_RECLAMO": {
+      const b = bloque as BloqueConstanciaReclamo;
+      if (!b.datos || typeof b.datos.codigoSeguimiento !== "string") return null;
+      return (
+        <div key={clave} className="mt-2">
+          <ConstanciaReclamo datos={b.datos} />
+        </div>
+      );
+    }
+    case "LISTA_DEVOLUCIONES": {
+      const b = bloque as BloqueListaDevoluciones;
+      if (!Array.isArray(b.datos?.devoluciones)) return null;
+      return (
+        <div key={clave} className="mt-2">
+          <ListaDevoluciones
+            devoluciones={b.datos.devoluciones}
+            onSeleccionar={onQuickAction
+              ? (devolucionId) => onQuickAction({ id: "CONSULTAR_DEVOLUCION", etiqueta: "Ver solicitud", payload: { devolucionId } })
+              : undefined}
+          />
+        </div>
+      );
+    }
+    case "ESTADO_DEVOLUCION": {
+      const b = bloque as BloqueEstadoDevolucion;
+      if (!b.datos || typeof b.datos.devolucionId !== "string") return null;
+      return (
+        <div key={clave} className="mt-2">
+          <EstadoDevolucion datos={b.datos} />
+        </div>
+      );
+    }
+    case "CONSTANCIA_DEVOLUCION": {
+      const b = bloque as BloqueConstanciaDevolucion;
+      if (!b.datos || typeof b.datos.devolucionId !== "string") return null;
+      return (
+        <div key={clave} className="mt-2">
+          <ConstanciaDevolucion datos={b.datos} />
         </div>
       );
     }

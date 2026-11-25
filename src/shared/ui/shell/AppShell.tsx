@@ -15,7 +15,7 @@ import { Sidebar } from "@/modules/mod-chat/public";
 import { safeInternalPath } from "@/shared/security/safeInternalPath";
 
 export type ScreenKind =
-  | "home" | "chat" | "carrito" | "checkout" | "exito"
+  | "home" | "chat" | "buscar" | "carrito" | "checkout" | "exito"
   | "pedidos" | "pedido" | "seguimiento" | "reclamo" | "devolucion"
   | "cuenta" | "sugerencias" | "verificar-correo";
 
@@ -99,6 +99,7 @@ export function AppShell({
     initialScreen === "carrito" ? "CARRITO" :
     initialScreen === "checkout" ? "CHECKOUT" :
     initialScreen === "exito" ? "PEDIDO" :
+    initialScreen === "buscar" ? "BUSCAR CHATS" :
     initialScreen === "pedidos" ? "HISTORIAL DE PEDIDOS" :
     initialScreen === "pedido" ? "DETALLE DEL PEDIDO" :
     initialScreen === "seguimiento" ? "SEGUIMIENTO" :

@@ -15,6 +15,10 @@ Solicitudes de cambio/devolución con evidencias, Libro de Reclamaciones (reclam
 |---|---|---|
 | Frontend | `public.ts` | `DevolucionPage`, `ReclamoPage`, `HistorialDevoluciones`, `HistorialReclamos`, `ListaDevoluciones`, `ListaReclamos`, formularios, constancias/estados y tipos del contrato |
 
+Los bloques de postventa se adaptan al `datos` del delta M5: `respuestaVisibleCliente` y
+`resolucion.fundamento` se muestran textualmente y el reembolso solo se pinta cuando
+`resolucion.reembolso` existe. Sus tipos se publican para `mod-chat`.
+
 ## Rutas
 
 | Método | Ruta | Caso de uso |

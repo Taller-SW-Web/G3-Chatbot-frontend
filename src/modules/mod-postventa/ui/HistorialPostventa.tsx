@@ -68,11 +68,15 @@ export function HistorialDevoluciones() {
           </button>
         </div>
       )}
-      <ListaDevoluciones items={(devoluciones.data?.items ?? []).map((d) => ({
-        codigo: d.devolucionId,
+      <ListaDevoluciones devoluciones={(devoluciones.data?.items ?? []).map((d) => ({
+        devolucionId: d.devolucionId,
+        pedidoId: d.pedidoId,
+        tipo: d.tipo,
         estado: d.estado,
+        estadoEtiqueta: d.estado,
         motivo: d.motivo,
         fecha: formatDate(d.fechaRegistro),
+        estadoReembolso: d.estadoReembolso ?? undefined,
       }))} />
     </div>
   );
@@ -131,11 +135,15 @@ export function HistorialReclamos() {
           </button>
         </div>
       )}
-      <ListaReclamos items={(reclamos.data?.items ?? []).map((r) => ({
-        codigo: r.codigoSeguimiento,
-        estado: r.estado,
+      <ListaReclamos reclamos={(reclamos.data?.items ?? []).map((r) => ({
+        codigoSeguimiento: r.codigoSeguimiento,
+        fecha: formatDate(r.fechaRegistro),
+        pedidoId: r.pedidoId,
+        tipo: r.tipo,
         motivo: r.motivo,
-        plazo: formatDate(r.fechaLimiteSLA),
+        estado: r.estado,
+        estadoEtiqueta: r.estado,
+        fechaLimiteSLA: r.fechaLimiteSLA ? formatDate(r.fechaLimiteSLA) : null,
       }))} />
     </div>
   );

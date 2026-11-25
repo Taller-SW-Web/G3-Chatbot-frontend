@@ -64,8 +64,8 @@ export function DireccionForm({
   const docNumError = touchedFields.docNum ? errors.docNum?.message : undefined;
 
   return (
-    <form onSubmit={(event) => event.preventDefault()}
-      className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-3">
+    <form id="direccion" onSubmit={(event) => event.preventDefault()}
+      className="scroll-mt-20 rounded-md bg-white border border-border-default p-3 flex flex-col gap-3">
       <p className="font-heading text-[15px] uppercase">Dirección de envío</p>
       <div className="flex flex-col gap-1">
         <label htmlFor="direccion-nombre" className="text-[13px] font-semibold">Nombre completo</label>

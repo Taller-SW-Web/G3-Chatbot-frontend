@@ -130,6 +130,15 @@ describe("AuthModal", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it("retoma IR_A_CHECKOUT tras iniciar sesión y enfoca la dirección", async () => {
+    useChatStore.setState({ accionPendiente: "INICIAR_CHECKOUT" });
+    render(<AuthModal />);
+
+    login();
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/checkout#direccion"));
+    expect(useChatStore.getState().accionPendiente).toBeNull();
+  });
+
   it("cierra sin navegar cuando no hay acción pendiente", async () => {
     render(<AuthModal />);
 

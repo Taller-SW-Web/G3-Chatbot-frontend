@@ -120,6 +120,16 @@ export function CheckoutPage() {
   const totalServidor = checkoutSesion?.total ?? totalEstimado;
   const costoEnvioServidor = Number(checkoutSesion?.summary?.costoEnvio ?? envio);
 
+  // SPEC-05 · delta M5: `IR_A_CHECKOUT` llega con #direccion. El AuthGuard monta el
+  // formulario después del primer render, así que el scroll del hash inicial no basta.
+  useEffect(() => {
+    if (paso !== 1 || typeof window === "undefined" || window.location.hash !== "#direccion") return;
+    const timer = window.setTimeout(() => {
+      document.getElementById("direccion")?.scrollIntoView({ block: "start" });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [paso]);
+
   // Temporizador regresivo de 15 minutos
   useEffect(() => {
     if (paso !== 2 || expirado) return;
