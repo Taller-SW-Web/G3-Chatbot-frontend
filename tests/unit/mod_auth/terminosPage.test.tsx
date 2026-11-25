@@ -2,6 +2,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen, cleanup } from "@testing-library/react";
 import { TerminosPage } from "@/modules/mod-auth/ui/TerminosPage";
+import PrivacidadRoute from "@/app/privacidad/page";
 
 const back = vi.hoisted(() => vi.fn());
 const push = vi.hoisted(() => vi.fn());
@@ -20,14 +21,23 @@ describe("TerminosPage", () => {
     Object.defineProperty(window.history, "length", { value: 1, configurable: true, writable: true });
   });
 
-  it("renderiza el título y los términos principales", () => {
+  it("renderiza el título y los términos principales con enlace válido a /privacidad", () => {
     render(<TerminosPage />);
 
     expect(screen.getByText("TÉRMINOS Y CONDICIONES")).toBeDefined();
     expect(screen.getAllByText(/Inka Athletics/).length).toBeGreaterThan(0);
     expect(screen.getByText(/1\. Ámbito y Uso del Canal/)).toBeDefined();
     expect(screen.getByText(/2\. Asistente Virtual y Seguridad de Datos/)).toBeDefined();
-    expect(screen.getByText(/política de privacidad/i)).toBeDefined();
+
+    const linkPrivacidad = screen.getByRole("link", { name: /política de privacidad/i });
+    expect(linkPrivacidad).toBeDefined();
+    expect(linkPrivacidad.getAttribute("href")).toBe("/privacidad");
+  });
+
+  it("la ruta /privacidad está definida y resuelve el componente PrivacidadRoute", () => {
+    expect(PrivacidadRoute).toBeDefined();
+    render(<PrivacidadRoute />);
+    expect(screen.getByText("POLÍTICA DE PRIVACIDAD")).toBeDefined();
   });
 
   it("en carga directa o pestaña nueva (sin historial, length <= 1), el botón volver redirige a '/'", () => {
