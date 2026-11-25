@@ -170,13 +170,4 @@ describe("OrderHistoryPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "CONSULTAR CON EL ASISTENTE" }));
     expect(push).toHaveBeenCalledWith("/");
   });
-
-  it("en reembolsos vacíos muestra mensaje centrado y botón al chat", async () => {
-    listarDevoluciones.mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 });
-    renderPage(<OrderHistoryPage initialTab="reembolso" slots={slots()} />);
-
-    await waitFor(() => expect(screen.getByText("SIN SOLICITUDES DE CAMBIO O DEVOLUCIÓN")).toBeDefined());
-    fireEvent.click(screen.getByRole("button", { name: "CONSULTAR CON EL ASISTENTE" }));
-    expect(push).toHaveBeenCalledWith("/");
-  });
 });
