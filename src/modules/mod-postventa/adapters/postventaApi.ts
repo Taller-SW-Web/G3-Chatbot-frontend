@@ -1,6 +1,7 @@
 "use client";
 
 import { http } from "@/shared/api/http";
+import { apiConfig } from "@/shared/config/apiConfig";
 import { newIdempotencyKey } from "@/shared/api/idempotency";
 import type {
   CrearDevolucionInput,
@@ -19,12 +20,15 @@ export const postventaApi: PostventaPort = {
     const form = new FormData();
     form.append("file", file);
     if (conversacionId) form.append("conversacionId", conversacionId);
-    const { data } = await http.post("/evidencias", form);
+    const { data } = await http.post("/evidencias", form, {
+      timeout: apiConfig.timeouts.postventa,
+    });
     return data as EvidenciaSubida;
   },
   async crearDevolucion(input: CrearDevolucionInput, idempotencyKey?: string): Promise<DevolucionDetalle> {
     const { data } = await http.post("/devoluciones", input, {
       headers: { "Idempotency-Key": idempotencyKey || newIdempotencyKey() },
+      timeout: apiConfig.timeouts.postventa,
     });
     return data as DevolucionDetalle;
   },
@@ -36,16 +40,20 @@ export const postventaApi: PostventaPort = {
         ...(input.estado ? { estado: input.estado } : {}),
         ...(input.tipo ? { tipo: input.tipo } : {}),
       },
+      timeout: apiConfig.timeouts.postventa,
     });
     return data as PaginaDevoluciones;
   },
   async obtenerDevolucion(devolucionId: string): Promise<DevolucionDetalle> {
-    const { data } = await http.get(`/devoluciones/${encodeURIComponent(devolucionId)}`);
+    const { data } = await http.get(`/devoluciones/${encodeURIComponent(devolucionId)}`, {
+      timeout: apiConfig.timeouts.postventa,
+    });
     return data as DevolucionDetalle;
   },
   async crearReclamo(input: CrearReclamoInput, idempotencyKey?: string): Promise<ReclamoDetalle> {
     const { data } = await http.post("/reclamos", input, {
       headers: { "Idempotency-Key": idempotencyKey || newIdempotencyKey() },
+      timeout: apiConfig.timeouts.postventa,
     });
     return data as ReclamoDetalle;
   },
@@ -56,11 +64,14 @@ export const postventaApi: PostventaPort = {
         pageSize: input.pageSize ?? 10,
         ...(input.estado ? { estado: input.estado } : {}),
       },
+      timeout: apiConfig.timeouts.postventa,
     });
     return data as PaginaReclamos;
   },
   async obtenerReclamo(codigoSeguimiento: string): Promise<ReclamoDetalle> {
-    const { data } = await http.get(`/reclamos/${encodeURIComponent(codigoSeguimiento)}`);
+    const { data } = await http.get(`/reclamos/${encodeURIComponent(codigoSeguimiento)}`, {
+      timeout: apiConfig.timeouts.postventa,
+    });
     return data as ReclamoDetalle;
   },
 };
