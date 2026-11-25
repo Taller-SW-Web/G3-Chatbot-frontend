@@ -62,6 +62,7 @@ describe("adapter Axios de pedidos y postventa", () => {
 
     expect(peticiones.get).toHaveBeenCalledWith("/pedidos", {
       params: { page: 2, pageSize: 5, estado: "PAGADO" },
+      timeout: 60000,
     });
   });
 
@@ -71,6 +72,7 @@ describe("adapter Axios de pedidos y postventa", () => {
 
     expect(peticiones.get).toHaveBeenCalledWith("/pedidos", {
       params: { page: 1, pageSize: 10 },
+      timeout: 60000,
     });
   });
 
@@ -82,8 +84,8 @@ describe("adapter Axios de pedidos y postventa", () => {
     await chatbotApi.obtenerPedido("PED/1");
     await chatbotApi.obtenerSeguimientoPedido("PED/1");
 
-    expect(peticiones.get).toHaveBeenNthCalledWith(1, "/pedidos/PED%2F1");
-    expect(peticiones.get).toHaveBeenNthCalledWith(2, "/pedidos/PED%2F1/seguimiento");
+    expect(peticiones.get).toHaveBeenNthCalledWith(1, "/pedidos/PED%2F1", { timeout: 60000 });
+    expect(peticiones.get).toHaveBeenNthCalledWith(2, "/pedidos/PED%2F1/seguimiento", { timeout: 60000 });
   });
 
   it("sube evidencia como multipart con conversación opcional", async () => {
@@ -96,6 +98,7 @@ describe("adapter Axios de pedidos y postventa", () => {
     expect(peticiones.post.mock.calls[0][0]).toBe("/evidencias");
     expect(form.get("file")).toBe(file);
     expect(form.get("conversacionId")).toBe("conv/1");
+    expect(peticiones.post.mock.calls[0][2]).toEqual({ timeout: 60000 });
   });
 
   it("crea devoluciones con Idempotency-Key", async () => {
@@ -104,6 +107,7 @@ describe("adapter Axios de pedidos y postventa", () => {
 
     expect(peticiones.post).toHaveBeenCalledWith("/devoluciones", DEVOLUCION, {
       headers: { "Idempotency-Key": "idem-dev" },
+      timeout: 60000,
     });
   });
 
@@ -117,8 +121,9 @@ describe("adapter Axios de pedidos y postventa", () => {
 
     expect(peticiones.get).toHaveBeenNthCalledWith(1, "/devoluciones", {
       params: { page: 2, pageSize: 5, estado: "SOLICITADA", tipo: "CAMBIO" },
+      timeout: 60000,
     });
-    expect(peticiones.get).toHaveBeenNthCalledWith(2, "/devoluciones/DEV%2F1");
+    expect(peticiones.get).toHaveBeenNthCalledWith(2, "/devoluciones/DEV%2F1", { timeout: 60000 });
   });
 
   it("crea reclamos con Idempotency-Key", async () => {
@@ -127,6 +132,7 @@ describe("adapter Axios de pedidos y postventa", () => {
 
     expect(peticiones.post).toHaveBeenCalledWith("/reclamos", RECLAMO, {
       headers: { "Idempotency-Key": "idem-rec" },
+      timeout: 60000,
     });
   });
 
@@ -140,8 +146,9 @@ describe("adapter Axios de pedidos y postventa", () => {
 
     expect(peticiones.get).toHaveBeenNthCalledWith(1, "/reclamos", {
       params: { page: 2, pageSize: 5, estado: "REGISTRADO" },
+      timeout: 60000,
     });
-    expect(peticiones.get).toHaveBeenNthCalledWith(2, "/reclamos/REC%2F1");
+    expect(peticiones.get).toHaveBeenNthCalledWith(2, "/reclamos/REC%2F1", { timeout: 60000 });
   });
 
   it("califica un pedido entregado", async () => {

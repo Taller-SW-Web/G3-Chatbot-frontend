@@ -1,6 +1,7 @@
 "use client";
 
 import { http } from "@/shared/api/http";
+import { apiConfig } from "@/shared/config/apiConfig";
 import type {
   PaginaPedidos,
   PedidoDetalle,
@@ -18,15 +19,20 @@ export const pedidosApi: PedidosPort = {
         pageSize: input.pageSize ?? 10,
         ...(input.estado ? { estado: input.estado } : {}),
       },
+      timeout: apiConfig.timeouts.pedidos,
     });
     return data as PaginaPedidos;
   },
   async obtenerPedido(pedidoId: string): Promise<PedidoDetalle> {
-    const { data } = await http.get(`/pedidos/${encodeURIComponent(pedidoId)}`);
+    const { data } = await http.get(`/pedidos/${encodeURIComponent(pedidoId)}`, {
+      timeout: apiConfig.timeouts.pedidos,
+    });
     return data as PedidoDetalle;
   },
   async obtenerSeguimientoPedido(pedidoId: string): Promise<SeguimientoPedido> {
-    const { data } = await http.get(`/pedidos/${encodeURIComponent(pedidoId)}/seguimiento`);
+    const { data } = await http.get(`/pedidos/${encodeURIComponent(pedidoId)}/seguimiento`, {
+      timeout: apiConfig.timeouts.pedidos,
+    });
     return data as SeguimientoPedido;
   },
   async calificarPedido(pedidoId: string, puntuacion: 1 | 3 | 5, comentario?: string): Promise<void> {

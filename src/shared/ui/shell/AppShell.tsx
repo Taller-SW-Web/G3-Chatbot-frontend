@@ -31,11 +31,27 @@ export function AppShell({
 }) {
   const router = useRouter();
   const [sidebar, setSidebar] = useState(false);
+  const [badgeAnimated, setBadgeAnimated] = useState(false);
   // El badge del header es siempre verdad del servidor (no del store inventado).
   useCarrito();
   const carrito = useChatStore((s) => s.carrito);
   const authOpen = useChatStore((s) => s.authOpen);
   const setUltimaConversacionId = useChatStore((s) => s.setUltimaConversacionId);
+
+  useEffect(() => {
+    if (carrito.count > 0) {
+      const animTimer = setTimeout(() => {
+        setBadgeAnimated(true);
+      }, 0);
+      const resetTimer = setTimeout(() => {
+        setBadgeAnimated(false);
+      }, 350);
+      return () => {
+        clearTimeout(animTimer);
+        clearTimeout(resetTimer);
+      };
+    }
+  }, [carrito.count]);
 
   // La conversación abierta ubica el carrito anónimo en cualquier pantalla.
   useEffect(() => {
@@ -124,14 +140,14 @@ export function AppShell({
             <ShoppingCartIcon size={20} />
           </button>
           {carrito.count > 0 && (
-            <span className="absolute -bottom-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-accent-volt text-surface-ink text-[11px] font-bold flex items-center justify-center border border-surface-ink">
+            <span className={`absolute -bottom-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-accent-volt text-surface-ink text-[11px] font-bold flex items-center justify-center border border-surface-ink ${badgeAnimated ? "badge-pop" : ""}`}>
               {carrito.count}
             </span>
           )}
         </div>
       </header>
 
-      <main className={`flex-1 min-h-0 bg-surface-cloud ${initialScreen === "home" ? "overflow-hidden" : "overflow-y-auto no-scrollbar"}`}>
+      <main key={initialScreen} className={`flex-1 min-h-0 bg-surface-cloud screen-enter ${initialScreen === "home" ? "overflow-hidden" : "overflow-y-auto no-scrollbar"}`}>
         {children}
       </main>
 
