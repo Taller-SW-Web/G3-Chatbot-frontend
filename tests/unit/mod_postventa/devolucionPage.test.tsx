@@ -134,6 +134,32 @@ describe("DevolucionPage", () => {
     })));
     expect(await screen.findByText(/SOLICITUD ENVIADA/)).toBeDefined();
     expect(screen.getByText(/DEV-2026-00099/)).toBeDefined();
+    expect(screen.getByText(/Sin evidencia adjunta/)).toBeDefined();
+    expect(screen.queryByText(/La evidencia quedó adjunta/)).toBeNull();
+  });
+
+  it("confirma la evidencia solo cuando G5 la devuelve registrada", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    crearDevolucion.mockResolvedValueOnce({
+      devolucionId: "DEV-2026-00100",
+      pedidoId: "PED-2026-00002",
+      tipo: "CAMBIO",
+      estado: "SOLICITADA",
+      motivo: "PRODUCTO_DEFECTUOSO_O_INCORRECTO",
+      fechaRegistro: "2026-11-20T10:00:00Z",
+      items: [],
+      evidencias: [{ tipo: "IMAGEN", url: "https://example.test/evidencia.jpg" }],
+      historial: [],
+      recepciones: [],
+    });
+    renderPage();
+
+    await screen.findByText(/Solicitar devolución/);
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR SOLICITUD/ }));
+
+    expect(await screen.findByText(/SOLICITUD ENVIADA/)).toBeDefined();
+    expect(screen.getByText(/La evidencia quedó adjunta/)).toBeDefined();
+    expect(screen.queryByText(/Sin evidencia adjunta/)).toBeNull();
   });
 
   it("muestra la devolución duplicada y permite registrarla igual con forzar", async () => {

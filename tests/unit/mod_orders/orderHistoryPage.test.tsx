@@ -159,4 +159,15 @@ describe("OrderHistoryPage", () => {
     expect(listarDevoluciones).not.toHaveBeenCalled();
     expect(listarReclamos).not.toHaveBeenCalled();
   });
+
+  it("muestra el estado vacío centrado con botón al chat cuando no hay pedidos", async () => {
+    listarPedidos.mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 });
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("NO TIENES PEDIDOS EN PROCESO")).toBeDefined());
+    expect(screen.getByText(/Aún no tienes pedidos en esta pestaña/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "CONSULTAR CON EL ASISTENTE" }));
+    expect(push).toHaveBeenCalledWith("/");
+  });
 });
