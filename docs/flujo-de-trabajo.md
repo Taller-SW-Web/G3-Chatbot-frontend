@@ -70,7 +70,12 @@ pnpm test
 pnpm test:coverage
 pnpm build
 pnpm modules:check
+pnpm audit --audit-level=high
 ```
+
+`pnpm audit --audit-level=high` es bloqueante en CI: un advisory `high` o
+`critical` tumba el PR. Las excepciones aceptadas se justifican en
+[`docs/seguridad/pnpm-audit-exceptions.md`](seguridad/pnpm-audit-exceptions.md).
 
 `modules:check` cubre estructura, fronteras, registry y contrato
 (`OPENAPI_PATH`, default `../G3-Chatbot-backend/docs/openapi.json`). Si el
