@@ -11,6 +11,10 @@ export const apiConfig = {
     catalogo: 10000,
     // Catalog lists aggregate taxonomy, details and bounded pricing.
     listadoCatalogo: 20000,
+    // G5 cold start: Ventas confirmed 60 s for the order history query.
+    pedidos: 60000,
+    // G5 M2 (returns/claims) can also cold start; same 60 s window.
+    postventa: 60000,
     defecto: 20000,
     pago: 30000,
   },
