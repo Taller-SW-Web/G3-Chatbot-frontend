@@ -172,7 +172,39 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   const errorTexto = hayError ? mensajeCarrito(errorCode) : null;
 
   if (carritoQuery.isPending) {
-    return <p className="text-sm text-text-secondary text-center py-8">Cargando carrito…</p>;
+    return (
+      <div className="flex flex-col min-h-full p-4 gap-3 screen-enter" role="status" aria-label="Cargando carrito">
+        <p className="sr-only">Cargando carrito…</p>
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="rounded-md bg-white border border-border-default p-3 flex gap-3 wf-card">
+              <div className="w-20 h-20 shrink-0 rounded-md shimmer" />
+              <div className="flex-1 min-w-0 flex flex-col gap-2">
+                <div className="h-4 w-3/4 rounded shimmer" />
+                <div className="h-3 w-1/3 rounded shimmer" />
+                <div className="h-4 w-20 rounded shimmer mt-1" />
+                <div className="h-6 w-24 rounded shimmer mt-1" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-md bg-white border border-border-default p-3.5 flex flex-col gap-2.5 mt-2 wf-card">
+          <div className="flex justify-between">
+            <div className="h-3.5 w-20 rounded shimmer" />
+            <div className="h-3.5 w-16 rounded shimmer" />
+          </div>
+          <div className="flex justify-between">
+            <div className="h-3.5 w-28 rounded shimmer" />
+            <div className="h-3.5 w-14 rounded shimmer" />
+          </div>
+          <div className="border-t border-border-default pt-2 flex justify-between">
+            <div className="h-5 w-24 rounded shimmer" />
+            <div className="h-5 w-20 rounded shimmer" />
+          </div>
+          <div className="h-11 w-full rounded shimmer mt-2" />
+        </div>
+      </div>
+    );
   }
 
   if (carritoQuery.isError && !carrito) {
@@ -395,7 +427,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
           </div>
         )}
         {deshacer && (
-          <div className="rounded-md bg-surface-ink text-text-inverse px-3 py-2.5 flex items-center justify-between text-[13px]" role="status">
+          <div className="toast-in rounded-md bg-surface-ink text-text-inverse px-3 py-2.5 flex items-center justify-between text-[13px] shadow-lg" role="status">
             <span>Línea eliminada.</span>
             <button
               onClick={() => reagregar.mutate({ sku: deshacer.sku, cantidad: Math.min(10, deshacer.cantidad) })}

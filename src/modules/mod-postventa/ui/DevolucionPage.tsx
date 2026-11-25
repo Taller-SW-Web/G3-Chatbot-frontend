@@ -31,6 +31,7 @@ export function DevolucionPage() {
   const params = useSearchParams();
   const pedidoId = params.get("pedidoId") ?? "";
   const [codigo, setCodigo] = useState<string | null>(null);
+  const [evidenciaAdjunta, setEvidenciaAdjunta] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicado, setDuplicado] = useState<SolicitudDuplicada | null>(null);
   const [ultimoEnvio, setUltimoEnvio] = useState<EnvioDevolucion | null>(null);
@@ -64,6 +65,8 @@ export function DevolucionPage() {
     onSuccess: (data) => {
       setError(null);
       setDuplicado(null);
+      // G5 returns the persisted evidence list: only claim it when it is non-empty.
+      setEvidenciaAdjunta(data.evidencias.length > 0);
       setCodigo(data.devolucionId);
     },
     onError: (err) => {
@@ -124,7 +127,9 @@ export function DevolucionPage() {
       <div className="p-6 flex flex-col items-center gap-3 text-center">
         <div className="wf-check w-16 h-16 rounded-full flex items-center justify-center bg-success-background text-success-default"><CheckIcon size={24} /></div>
         <h2 className="font-heading text-[24px] leading-8">¡SOLICITUD ENVIADA!</h2>
-        <p className="text-[14px] text-text-secondary">Código {codigo} · La evidencia quedó adjunta.</p>
+        <p className="text-[14px] text-text-secondary">
+          Código {codigo} · {evidenciaAdjunta ? "La evidencia quedó adjunta." : "Sin evidencia adjunta."}
+        </p>
         <div className="rounded-md bg-white border border-border-default w-full p-3 text-[12px] text-text-secondary">
           Puedes hacerle seguimiento por el chat o en Historial de pedidos → Reembolso/Cambio.
         </div>

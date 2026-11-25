@@ -155,7 +155,7 @@ export function Sidebar({
             <EstadoListado consulta={consulta} vacio={termino ? "Sin resultados." : "Aún no tienes conversaciones."} claro />
           </div>
         </aside>
-        <button type="button" tabIndex={-1} aria-hidden="true" className="flex-1 bg-surface-ink/60 order-2" onClick={onClose} />
+        <button type="button" tabIndex={-1} aria-hidden="true" className="flex-1 bg-surface-ink/60 order-2 fade-in" onClick={onClose} />
       </div>
     );
   }
@@ -208,7 +208,7 @@ export function Sidebar({
           <span className="ml-auto text-text-muted-dark"><SettingsIcon size={20} /></span>
         </button>
       </aside>
-      <button type="button" tabIndex={-1} aria-hidden="true" className="flex-1 bg-surface-ink/60 order-2" onClick={onClose} />
+      <button type="button" tabIndex={-1} aria-hidden="true" className="flex-1 bg-surface-ink/60 order-2 fade-in" onClick={onClose} />
     </div>
   );
 }
@@ -240,7 +240,24 @@ type ConsultaConversaciones = {
 /** Carga, error con reintento, vacío y "Ver más" del listado o de la búsqueda. */
 function EstadoListado({ consulta, vacio, claro = false }: { consulta: ConsultaConversaciones; vacio: string; claro?: boolean }) {
   const tono = claro ? "text-text-secondary" : "text-text-muted-dark";
-  if (consulta.isPending) return <p className={`text-[13px] ${tono} py-4 text-center`}>Cargando…</p>;
+  if (consulta.isPending) {
+    return (
+      <div className="flex flex-col gap-2 p-3">
+        <p className={`text-[13px] ${tono} text-center`}>Cargando…</p>
+        <div className="flex flex-col gap-3 py-1 opacity-60" aria-hidden="true">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-border-inverse shimmer" />
+              <div className="flex-1 flex flex-col gap-1.5">
+                <div className="h-3.5 w-3/5 rounded bg-surface-ink-soft shimmer" />
+                <div className="h-2.5 w-4/5 rounded bg-surface-ink-soft shimmer" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (consulta.isError)
     return (
       <p role="alert" className={`text-[13px] ${tono} py-4 text-center`}>
