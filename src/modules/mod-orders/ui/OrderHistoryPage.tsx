@@ -74,11 +74,61 @@ export function OrderHistoryPage({
 
       {(tab === "proceso" || tab === "entregados") && (
         <div className="flex flex-col gap-3">
-          {pedidos.isLoading ? <p className="text-[14px] text-text-secondary">Cargando pedidos…</p> : null}
-          {pedidos.isError ? <p className="text-[14px] text-error-default">No puedo consultar tus pedidos en este momento.</p> : null}
-          {!pedidos.isLoading && !pedidos.isError && visibleOrders.length === 0 ? (
-            <p className="text-[14px] text-text-secondary">Aún no tienes pedidos en esta pestaña.</p>
-          ) : null}
+          {pedidos.isLoading && (
+            <div role="status" aria-label="Cargando pedidos" className="flex flex-col gap-3 screen-enter">
+              <p className="sr-only">Cargando pedidos…</p>
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="rounded-md bg-white border border-border-default p-3.5 flex flex-col gap-2.5 wf-card">
+                  <div className="flex justify-between items-center">
+                    <div className="h-4 w-32 rounded shimmer" />
+                    <div className="h-6 w-24 rounded-full shimmer" />
+                  </div>
+                  <div className="flex justify-between items-center py-0.5">
+                    <div className="h-4 w-12 rounded shimmer" />
+                    <div className="h-4 w-20 rounded shimmer" />
+                  </div>
+                  <div className="flex justify-between items-center py-0.5">
+                    <div className="h-4 w-16 rounded shimmer" />
+                    <div className="h-4 w-24 rounded shimmer" />
+                  </div>
+                  <div className="h-9 w-full rounded shimmer mt-1" />
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    <div className="h-9 rounded shimmer" />
+                    <div className="h-9 rounded shimmer" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {pedidos.isError && (
+            <p className="text-[14px] text-error-default bg-white p-4 rounded-md border border-border-default text-center">
+              No puedo consultar tus pedidos en este momento.
+            </p>
+          )}
+          {!pedidos.isLoading && !pedidos.isError && visibleOrders.length === 0 && (
+            <div className="py-10 px-4 flex flex-col items-center justify-center text-center gap-3.5 bg-white rounded-md border border-border-default screen-enter my-1">
+              <div className="w-14 h-14 rounded-full bg-surface-cloud flex items-center justify-center text-text-secondary border border-border-default">
+                {tab === "proceso" ? <TruckIcon size={24} /> : <CheckIcon size={24} />}
+              </div>
+              <div className="flex flex-col gap-1 items-center max-w-[280px]">
+                <h3 className="font-heading text-[16px] tracking-wide text-text-primary uppercase">
+                  {tab === "proceso" ? "NO TIENES PEDIDOS EN PROCESO" : "NO TIENES PEDIDOS ENTREGADOS"}
+                </h3>
+                <p className="text-[13px] text-text-secondary leading-relaxed">
+                  {tab === "proceso"
+                    ? "Aún no tienes pedidos en esta pestaña. ¿Buscas tu próxima compra o necesitas ayuda con un pedido?"
+                    : "Aún no tienes pedidos entregados registrados en tu cuenta."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push("/")}
+                className="wf-btn px-6 py-2.5 text-[12px] font-bold bg-action-primary text-surface-ink hover:bg-action-primary-hover active:scale-95 transition-all shadow-sm rounded-sm tracking-wide uppercase mt-1 inline-flex items-center gap-2"
+              >
+                CONSULTAR CON EL ASISTENTE
+              </button>
+            </div>
+          )}
           {visibleOrders.map((order) => (
             <div key={order.pedidoId} className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2 wf-card">
               <div className="flex justify-between items-center">
