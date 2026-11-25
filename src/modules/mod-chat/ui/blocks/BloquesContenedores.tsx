@@ -30,8 +30,8 @@ export function CarritoChat({ datos }: { datos: DatosCarritoBloque }) {
       setAuthOpen(true);
       return;
     }
-    // Phone verification lives in the account page, same rule as the cart page.
-    router.push(cliente.celularVerificado ? "/checkout" : "/cuenta");
+    // La cuenta con correo verificado es suficiente: el celular es opcional.
+    router.push("/checkout");
   }
 
   return (
