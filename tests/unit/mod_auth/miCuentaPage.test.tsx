@@ -64,6 +64,7 @@ describe("MiCuentaPage", () => {
 
     expect(screen.getByText("Ana Torres")).toBeDefined();
     expect(screen.getByText("ana@ejemplo.pe")).toBeDefined();
+    expect(screen.getByText("Celular (opcional)")).toBeDefined();
     expect(screen.getByText("*****321")).toBeDefined();
     expect(screen.getByText("Sin verificar")).toBeDefined();
     expect(screen.getByText("No registrado")).toBeDefined();
