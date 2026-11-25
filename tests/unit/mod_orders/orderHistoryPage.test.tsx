@@ -159,4 +159,24 @@ describe("OrderHistoryPage", () => {
     expect(listarDevoluciones).not.toHaveBeenCalled();
     expect(listarReclamos).not.toHaveBeenCalled();
   });
+
+  it("muestra el estado vacío centrado con botón al chat cuando no hay pedidos", async () => {
+    listarPedidos.mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 });
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("NO TIENES PEDIDOS EN PROCESO")).toBeDefined());
+    expect(screen.getByText(/Aún no tienes pedidos en esta pestaña/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "CONSULTAR CON EL ASISTENTE" }));
+    expect(push).toHaveBeenCalledWith("/");
+  });
+
+  it("en reembolsos vacíos muestra mensaje centrado y botón al chat", async () => {
+    listarDevoluciones.mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 });
+    renderPage(<OrderHistoryPage initialTab="reembolso" slots={slots()} />);
+
+    await waitFor(() => expect(screen.getByText("SIN SOLICITUDES DE CAMBIO O DEVOLUCIÓN")).toBeDefined());
+    fireEvent.click(screen.getByRole("button", { name: "CONSULTAR CON EL ASISTENTE" }));
+    expect(push).toHaveBeenCalledWith("/");
+  });
 });
