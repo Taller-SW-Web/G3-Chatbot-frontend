@@ -1,7 +1,7 @@
 # `mod-auth` — Autenticación y cuenta
 
 - **Owner:** @Taller-SW-Web/chatbot
-- **Frontend:** carpeta `mod-auth`, rutas `[/cuenta, /verificar-correo]`
+- **Frontend:** carpeta `mod-auth`, rutas `[/cuenta, /verificar-correo, /terminos, /privacidad]`
 - **Depende de:** ninguno
 - **Contrato:** `/sesion/*`, `/contacto/celular/solicitar-otp` y `/contacto/celular/verificar-otp`
 
@@ -13,7 +13,7 @@ Sesión del cliente, registro, MFA, verificación de correo, datos de cuenta y p
 
 | Tipo | Archivo | Qué expone |
 |---|---|---|
-| Frontend | `public.ts` | `AuthModal`, `MiCuentaPage`, `VerificarCorreoPage`, `validarContactoUseCase`, tipos de sesión |
+| Frontend | `public.ts` | `AuthModal`, `MiCuentaPage`, `VerificarCorreoPage`, `TerminosPage`, `PrivacidadPage`, `validarContactoUseCase`, tipos de sesión |
 
 ## Rutas
 
@@ -21,6 +21,8 @@ Sesión del cliente, registro, MFA, verificación de correo, datos de cuenta y p
 |---|---|---|
 | GET | `/cuenta` | Ver datos, verificar celular con OTP |
 | GET | `/verificar-correo` | Canjear el enlace del correo |
+| GET | `/terminos` | Consultar términos y condiciones de compra y servicio |
+| GET | `/privacidad` | Consultar política de privacidad y protección de datos personales |
 
 ## Endpoints
 

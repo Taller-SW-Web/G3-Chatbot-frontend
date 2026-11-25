@@ -18,11 +18,11 @@ export function PasswordPolicyChecklist({
   return (
     <ul id={id} className="flex flex-col gap-1" aria-live="polite">
       {reglas.map((regla) => (
-        <li key={regla.clave} className="flex items-center gap-1.5 text-[12px]">
-          <span className={regla.cumple ? "text-success-default" : "text-text-disabled"}>
+        <li key={regla.clave} className="flex items-center gap-1.5 text-[12px] transition-colors duration-150">
+          <span className={`transition-all duration-200 ${regla.cumple ? "text-success-default scale-105" : "text-text-disabled scale-100"}`}>
             <CheckIcon size={16} />
           </span>
-          <span className={regla.cumple ? "text-success-default" : "text-text-secondary"}>
+          <span className={`transition-colors duration-150 ${regla.cumple ? "text-success-default font-medium" : "text-text-secondary"}`}>
             {regla.etiqueta}
           </span>
           <span className="sr-only">{regla.cumple ? "cumplida" : "pendiente"}</span>

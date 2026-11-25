@@ -171,4 +171,12 @@ describe("MiCuentaPage", () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith("/"));
     expect(useChatStore.getState().accessToken).toBeNull();
   });
+
+  it("muestra la sección informativa de seguridad/marketplace sin campos editables", () => {
+    useChatStore.setState({ cliente: cliente() });
+    render(<MiCuentaPage />);
+
+    expect(screen.getByText(/SE EDITA EN SEGURIDAD/)).toBeDefined();
+    expect(screen.getByText("Contraseña y MFA")).toBeDefined();
+  });
 });

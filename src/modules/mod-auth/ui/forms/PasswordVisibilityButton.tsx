@@ -14,7 +14,7 @@ export function PasswordVisibilityButton({
       type="button"
       aria-label={`${visible ? "Ocultar" : "Mostrar"} ${fieldLabel}`}
       onClick={onToggle}
-      className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-sm text-text-secondary hover:text-text-primary"
+      className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-sm text-text-secondary hover:text-text-primary active:scale-90 transition-transform duration-150"
     >
       <EyeIcon crossed={visible} />
     </button>

@@ -5,6 +5,8 @@
 export { AuthModal } from "./ui/AuthModal";
 export { MiCuentaPage } from "./ui/MiCuentaPage";
 export { VerificarCorreoPage } from "./ui/VerificarCorreoPage";
+export { TerminosPage } from "./ui/TerminosPage";
+export { PrivacidadPage } from "./ui/PrivacidadPage";
 export { validarContactoUseCase } from "./application/validarContactoUseCase";
 export {
   solicitarOtpCelularUseCase,

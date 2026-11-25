@@ -77,17 +77,18 @@ export function RegistroForm({
   }, [erroresCampo, setError]);
 
   const campoTexto =
-    "wf-input px-3 py-2.5 text-sm outline-none border border-border-default rounded-sm";
+    "wf-input px-3 py-2.5 text-sm outline-none border border-border-default rounded-sm transition-all duration-150 focus:border-accent-signal focus:ring-1 focus:ring-accent-signal/20";
   const celular = register("celular");
 
   return (
-    <form onSubmit={handleSubmit(onOk)} className="flex flex-col gap-2" noValidate>
+    <form onSubmit={handleSubmit(onOk)} className="flex flex-col gap-2.5 screen-enter" noValidate>
       <label htmlFor="reg-nombres" className="text-[12px] font-semibold text-text-primary">
         Nombres
       </label>
       <input
         id="reg-nombres"
         {...register("nombres")}
+        placeholder="Ej. Juan Carlos"
         autoComplete="given-name"
         aria-invalid={!!errors.nombres}
         className={campoTexto}
@@ -100,6 +101,7 @@ export function RegistroForm({
       <input
         id="reg-apellidos"
         {...register("apellidos")}
+        placeholder="Ej. Pérez Quispe"
         autoComplete="family-name"
         aria-invalid={!!errors.apellidos}
         className={campoTexto}
@@ -150,6 +152,7 @@ export function RegistroForm({
           id="reg-contrasena"
           type={verContrasena ? "text" : "password"}
           {...register("contrasena")}
+          placeholder="********"
           autoComplete="new-password"
           aria-invalid={!!errors.contrasena}
           aria-describedby="reg-politica"
@@ -168,6 +171,7 @@ export function RegistroForm({
           id="reg-confirmar"
           type={verConfirmacion ? "text" : "password"}
           {...register("confirmar")}
+          placeholder="********"
           autoComplete="new-password"
           aria-invalid={!!errors.confirmar}
           className={`${campoTexto} w-full pr-12`}
@@ -184,7 +188,7 @@ export function RegistroForm({
         <input id="reg-terminos" type="checkbox" {...register("aceptaTerminos")} className="mt-0.5" />
         <span>
           Acepto los{" "}
-          <a href="/terminos" className="underline text-text-primary">
+          <a href="/terminos" target="_blank" rel="noopener noreferrer" className="underline text-text-primary">
             términos y condiciones
           </a>
         </span>
@@ -211,7 +215,7 @@ export function RegistroForm({
       <button
         type="submit"
         disabled={cargando}
-        className="wf-btn py-3 text-[12px] font-bold bg-action-primary text-surface-ink disabled:opacity-60"
+        className="wf-btn py-3 text-[12px] font-bold bg-action-primary text-surface-ink hover:bg-action-primary-hover active:scale-[0.98] transition-all duration-150 shadow-sm disabled:opacity-60"
       >
         {cargando ? "CREANDO CUENTA…" : "REGISTRARSE"}
       </button>
