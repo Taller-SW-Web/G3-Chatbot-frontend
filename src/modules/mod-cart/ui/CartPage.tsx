@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon, MinusIcon, PlusIcon } from "@/shared/ui/icons";
-import { AvisoCelularModal } from "@/shared/auth/AvisoCelularModal";
 import { BloqueError } from "@/shared/ui/BloqueError";
 import { useChatStore } from "@/shared/auth/chatStore";
 import { useCarrito } from "@/modules/mod-cart/application/useCarrito";
@@ -45,7 +44,6 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   const conv = conversacionParaCarrito(conversacionId, Boolean(cliente)) ??
     conversacionParaCarrito(conversacion, Boolean(cliente));
 
-  const [avisoCelular, setAvisoCelular] = useState(false);
   const [deshacer, setDeshacer] = useState<{ sku: string; cantidad: number; nombre: string } | null>(null);
   const [confirmarVaciar, setConfirmarVaciar] = useState(false);
   const [codigoCupon, setCodigoCupon] = useState("");
@@ -153,10 +151,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
       setAuthOpen(true);
       return;
     }
-    if (!cliente.celularVerificado) {
-      setAvisoCelular(true);
-      return;
-    }
+    // El correo de la cuenta es el contacto verificado: el celular es opcional.
     router.push("/checkout");
   }
 
@@ -468,16 +463,6 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
           IR A PAGAR
         </button>
       </div>
-
-      {avisoCelular && (
-        <AvisoCelularModal
-          onVerificar={() => {
-            setAvisoCelular(false);
-            router.push("/cuenta");
-          }}
-          onClose={() => setAvisoCelular(false)}
-        />
-      )}
     </div>
   );
 }

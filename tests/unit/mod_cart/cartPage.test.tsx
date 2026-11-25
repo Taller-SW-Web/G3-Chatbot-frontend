@@ -40,6 +40,7 @@ const h = vi.hoisted(() => {
     agregar: vi.fn(),
     aplicarCupon: vi.fn(),
     quitarCupon: vi.fn(),
+    push: vi.fn(),
   };
 });
 
@@ -62,7 +63,7 @@ vi.mock("@/modules/mod-cart/application/quitarCuponUseCase", () => ({
   quitarCuponUseCase: h.quitarCupon,
 }));
 vi.mock("@/shared/di/container", () => ({ container: { carrito: {} } }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: h.push }) }));
 // El GET resuelve la conversación del store; la página NO recibe la prop.
 vi.mock("@/modules/mod-cart/application/useCarrito", () => ({
   useCarrito: () => ({
@@ -337,5 +338,45 @@ describe("CartPage: cupón (SPEC-13)", () => {
     renderCart();
 
     expect(screen.queryByTestId("cupon-carrito")).toBeNull();
+  });
+});
+
+describe("CartPage: ir a pagar sin celular verificado", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.cartData = undefined;
+    h.CARRITO.descuentos = [];
+    h.CARRITO.total = 100;
+    useChatStore.setState({
+      cliente: {
+        id: "cli-1",
+        nombreCompleto: "Ana Díaz",
+        correo: "ana@test.pe",
+        celularVerificado: false,
+      },
+      ultimaConversacionId: null,
+    });
+  });
+
+  afterEach(cleanup);
+
+  it("navega a /checkout sin exigir el celular", () => {
+    renderCart();
+
+    fireEvent.click(screen.getByTestId("btn-ir-a-pagar"));
+
+    expect(h.push).toHaveBeenCalledWith("/checkout");
+    expect(h.push).not.toHaveBeenCalledWith("/cuenta");
+  });
+
+  it("sin cliente abre auth y recuerda el checkout", () => {
+    useChatStore.setState({ cliente: null });
+    renderCart();
+
+    fireEvent.click(screen.getByTestId("btn-ir-a-pagar"));
+
+    expect(h.push).not.toHaveBeenCalled();
+    expect(useChatStore.getState().authOpen).toBe(true);
+    expect(useChatStore.getState().accionPendiente).toBe("/checkout");
   });
 });
