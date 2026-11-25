@@ -9,6 +9,18 @@ import { ArrowLeftIcon } from "@/shared/ui/icons/ArrowLeftIcon";
 export function TerminosPage() {
   const router = useRouter();
 
+  const handleVolver = () => {
+    // Si la página se abrió en una nueva pestaña (target="_blank" desde RegistroForm)
+    // o por carga directa, no hay historial previo en la pestaña (history.length <= 1).
+    // En ese caso, router.back() no tiene efecto; se usa fallback a la raíz "/" para
+    // que el usuario pueda volver a la aplicación.
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  };
+
   return (
     <div className="wf-phone flex flex-col h-screen max-h-[880px] bg-surface-cloud">
       <header className="flex items-center justify-between px-4 py-2 border-b border-border-inverse bg-surface-ink text-text-inverse sticky top-0 z-20">
@@ -16,7 +28,7 @@ export function TerminosPage() {
           <button
             type="button"
             aria-label="Volver"
-            onClick={() => router.back()}
+            onClick={handleVolver}
             className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse text-lg leading-none hover:bg-surface-ink cursor-pointer"
           >
             <ArrowLeftIcon size={20} />
@@ -50,7 +62,10 @@ export function TerminosPage() {
             2. Asistente Virtual y Seguridad de Datos
           </h2>
           <p className="text-text-secondary">
-            La atención y recomendaciones son procesadas con asistencia de inteligencia artificial. Por tu estricta seguridad, nunca debes compartir contraseñas, códigos de verificación OTP ni datos sensibles de tarjetas de crédito o débito a través del chat.
+            La atención y recomendaciones son procesadas con asistencia de inteligencia artificial. Por tu estricta seguridad, nunca debes compartir contraseñas, códigos de verificación OTP ni datos sensibles de tarjetas de crédito o débito a través del chat. Para detalles sobre el tratamiento de tus datos, consulta la{" "}
+            <a href="/privacidad" className="underline text-text-primary font-medium hover:text-action-primary">
+              política de privacidad
+            </a>.
           </p>
         </section>
 
@@ -93,8 +108,8 @@ export function TerminosPage() {
         <div className="pt-2 pb-4">
           <button
             type="button"
-            onClick={() => router.back()}
-            className="wf-btn w-full py-3 text-[12px] font-bold bg-action-primary text-surface-ink hover:bg-action-primary-hover active:scale-[0.98] transition-all shadow-sm"
+            onClick={handleVolver}
+            className="wf-btn w-full py-3 text-[12px] font-bold bg-action-primary text-surface-ink hover:bg-action-primary-hover active:scale-[0.98] transition-all shadow-sm cursor-pointer"
           >
             VOLVER
           </button>
