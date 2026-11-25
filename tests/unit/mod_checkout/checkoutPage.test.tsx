@@ -533,6 +533,82 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
     expect(screen.getByText("Paso 2 de 2")).toBeDefined();
   });
 
+  it("muestra el correo verificado de la cuenta como contacto de compra", () => {
+    renderCheckout();
+
+    const contacto = screen.getByTestId("contacto-compra");
+    expect(contacto.textContent).toContain("Contacto de compra");
+    expect(contacto.textContent).toContain("diego@test.pe");
+    expect(contacto.textContent).toContain("Verificado");
+  });
+
+  it("ante 403 CONTACTO_NO_VERIFICADO muestra el error y no abre el OTP del celular", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({
+      response: { status: 403, data: { code: "CONTACTO_NO_VERIFICADO" } },
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    expect(
+      await screen.findByText("No pudimos confirmar tu correo. Revisa tu cuenta o inténtalo de nuevo.")
+    ).toBeDefined();
+    expect(screen.queryByTestId("checkout-otp-celular")).toBeNull();
+    expect(screen.getByText("Paso 1 de 2")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "IR A MI CUENTA" }));
+    expect(navMock.push).toHaveBeenCalledWith("/cuenta");
+  });
+
+  it("ante 403 CONTACTO_NO_VERIFICADO con SEGURIDAD_NO_DISPONIBLE pide reintentar", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({
+      response: {
+        status: 403,
+        data: { code: "CONTACTO_NO_VERIFICADO", motivo: "SEGURIDAD_NO_DISPONIBLE" },
+      },
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    expect(
+      await screen.findByText(
+        "No pudimos confirmar tu contacto ahora. Inténtalo de nuevo en unos minutos."
+      )
+    ).toBeDefined();
+    expect(screen.queryByTestId("checkout-otp-celular")).toBeNull();
+  });
+
+  it("resetea el aviso de contacto al reintentar y avanza al paso 2", async () => {
+    mockApi.iniciarCheckout.mockRejectedValueOnce({
+      response: { status: 403, data: { code: "CONTACTO_NO_VERIFICADO" } },
+    });
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-contacto-ok",
+      total: 132.5,
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    await screen.findByRole("button", { name: "IR A MI CUENTA" });
+    fireEvent.click(btn);
+
+    await waitFor(() => expect(screen.getByText("Paso 2 de 2")).toBeDefined());
+    expect(screen.queryByRole("button", { name: "IR A MI CUENTA" })).toBeNull();
+  });
+
   it("envía guardarDireccion solo cuando el cliente marca la casilla", async () => {
     mockApi.iniciarCheckout.mockResolvedValueOnce({
       id: "chk-guardar",
