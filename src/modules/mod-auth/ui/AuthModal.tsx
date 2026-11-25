@@ -102,9 +102,15 @@ export function AuthModal() {
   }
 
   function continuar() {
-    const destino = safeInternalPath(accionPendiente);
+    const pendiente = accionPendiente;
     setAccionPendiente(null);
     cerrar();
+    // SPEC-05 · delta M5: el login solicitado desde `IR_A_CHECKOUT` retoma la navegación.
+    if (pendiente === "INICIAR_CHECKOUT") {
+      router.push("/checkout#direccion");
+      return;
+    }
+    const destino = safeInternalPath(pendiente);
     if (destino) router.push(destino);
   }
 

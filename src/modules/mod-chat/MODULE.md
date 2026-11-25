@@ -13,7 +13,7 @@ Conversación, historial, stream SSE del turno, render de bloques, sidebar de co
 
 | Tipo | Archivo | Qué expone |
 |---|---|---|
-| Frontend | `public.ts` | `ChatPage`, `Sidebar`, `SugerenciasPage`, `MessageBubble`, `ChatWindow`, `useChat`, `crearConversacionUseCase`, `MENSAJE_MAX_CARACTERES` y tipos de chat/stream |
+| Frontend | `public.ts` | `ChatPage`, `Sidebar`, `SearchChatsPage`, `SugerenciasPage`, `MessageBubble`, `ChatWindow`, `useChat`, `crearConversacionUseCase`, `MENSAJE_MAX_CARACTERES` y tipos de chat/stream |
 
 El store de sesión (`useChatStore`) vive en `shared/auth/chatStore` porque lo usan todas las pantallas.
 
@@ -22,6 +22,7 @@ El store de sesión (`useChatStore`) vive en `shared/auth/chatStore` porque lo u
 | Método | Ruta | Caso de uso |
 |---|---|---|
 | GET | `/chat/[id]` | Historial y turno en vivo |
+| GET | `/buscar?q=` | Búsqueda de conversaciones por título y mensajes |
 | GET | `/sugerencias` | Formulario de sugerencias |
 
 ## Endpoints
@@ -39,7 +40,18 @@ El compositor acepta hasta 3 imágenes JPG/PNG/WebP de 5 MB (`validateImageFile`
 
 ## Dependencias externas
 
-`mod-catalog`, `mod-cart`, `mod-checkout`, `mod-orders` para renderizar sus bloques dentro de la conversación, siempre por `public.ts`. `mod-auth`, `mod-shipping` y `mod-postventa` están declarados para futuros bloques.
+`mod-catalog`, `mod-cart`, `mod-checkout`, `mod-orders` y `mod-postventa` para renderizar sus bloques dentro de la conversación, siempre por `public.ts`. `mod-auth`, `mod-shipping` y `mod-postventa` están declarados para futuros bloques.
+
+### Bloques de pedidos y postventa (delta M5)
+
+`MessageBubble` renderiza `LISTA_PEDIDOS`, `ESTADO_PEDIDO`, `LISTA_RECLAMOS`, `ESTADO_RECLAMO`,
+`CONSTANCIA_RECLAMO`, `LISTA_DEVOLUCIONES`, `ESTADO_DEVOLUCION` y `CONSTANCIA_DEVOLUCION` con los
+componentes publicados por `mod-orders` y `mod-postventa`. `FORMULARIO/LOGIN` abre el `AuthModal`
+global y `FORMULARIO/REENVIO_VERIFICACION` reutiliza `ReenviarVerificacionForm` de `mod-auth`.
+
+Las acciones de cliente `IR_A_CHECKOUT`, `CERRAR_SESION`, `NUEVO_CHAT` y `BUSCAR_CHATS` se
+interceptan en `ChatPage` antes de `ejecutarAccionChatUseCase`: una sola vez por turno, nunca al
+rehidratar el historial. `/buscar` recibe el término en `payload.q`.
 
 ## Pruebas
 

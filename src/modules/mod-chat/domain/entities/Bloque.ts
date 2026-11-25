@@ -7,6 +7,20 @@ import type { BloqueTipo } from "@/modules/mod-chat/domain/types/BloqueTipo";
 import type { PromotionSummary } from "@/modules/mod-catalog/public";
 import type { BackendCarouselItem, BackendProductDetail } from "@/modules/mod-catalog/public";
 import type { DatosCarritoBloque, LineaCarritoBloque } from "@/modules/mod-cart/public";
+import type {
+  HitoPedido,
+  PedidoBloqueDetalle,
+  PedidoBloqueResumen,
+  SeguimientoBloque,
+} from "@/modules/mod-orders/public";
+import type {
+  ConstanciaDevolucionDatos,
+  ConstanciaReclamoDatos,
+  DevolucionBloqueResumen,
+  EstadoDevolucionDatos,
+  EstadoReclamoDatos,
+  ReclamoBloqueResumen,
+} from "@/modules/mod-postventa/public";
 
 export type { DatosCarritoBloque, LineaCarritoBloque };
 
@@ -92,6 +106,61 @@ export type BloqueError = BloqueBase & {
   disponible?: number;
 };
 
+/** LISTA_PEDIDOS: varios pedidos para elegir (SPEC-17 · delta M5). */
+export type BloqueListaPedidos = BloqueBase & {
+  tipo: "LISTA_PEDIDOS";
+  datos: {
+    pedidos: PedidoBloqueResumen[];
+    mensaje?: string;
+  };
+};
+
+/** ESTADO_PEDIDO: pedido, hitos de Ventas y seguimiento opcional de Despacho (SPEC-17, 18). */
+export type BloqueEstadoPedido = BloqueBase & {
+  tipo: "ESTADO_PEDIDO";
+  datos: {
+    pedido: PedidoBloqueDetalle;
+    hitos: HitoPedido[];
+    seguimiento?: SeguimientoBloque;
+  };
+};
+
+/** LISTA_RECLAMOS: varios reclamos para elegir (SPEC-20 · delta M5). */
+export type BloqueListaReclamos = BloqueBase & {
+  tipo: "LISTA_RECLAMOS";
+  datos: { reclamos: ReclamoBloqueResumen[] };
+};
+
+/** ESTADO_RECLAMO: detalle con la respuesta visible de Ventas (SPEC-20). */
+export type BloqueEstadoReclamo = BloqueBase & {
+  tipo: "ESTADO_RECLAMO";
+  datos: EstadoReclamoDatos;
+};
+
+/** CONSTANCIA_RECLAMO: la produce la acción CONFIRMAR_RECLAMO (SPEC-19, 20). */
+export type BloqueConstanciaReclamo = BloqueBase & {
+  tipo: "CONSTANCIA_RECLAMO";
+  datos: ConstanciaReclamoDatos;
+};
+
+/** LISTA_DEVOLUCIONES: solicitudes para elegir (SPEC-22 · delta M5). */
+export type BloqueListaDevoluciones = BloqueBase & {
+  tipo: "LISTA_DEVOLUCIONES";
+  datos: { devoluciones: DevolucionBloqueResumen[] };
+};
+
+/** ESTADO_DEVOLUCION: detalle con resolución y reembolso opcionales (SPEC-22). */
+export type BloqueEstadoDevolucion = BloqueBase & {
+  tipo: "ESTADO_DEVOLUCION";
+  datos: EstadoDevolucionDatos;
+};
+
+/** CONSTANCIA_DEVOLUCION: la produce la acción CONFIRMAR_DEVOLUCION (SPEC-21, 22). */
+export type BloqueConstanciaDevolucion = BloqueBase & {
+  tipo: "CONSTANCIA_DEVOLUCION";
+  datos: ConstanciaDevolucionDatos;
+};
+
 /** Unión de bloques. Los 19 tipos del enum caen aquí; los no listados usan payload genérico. */
 export type Bloque =
   | BloqueTexto
@@ -105,4 +174,12 @@ export type Bloque =
   | BloqueResumenCheckout
   | BloqueConfirmacion
   | BloqueError
+  | BloqueListaPedidos
+  | BloqueEstadoPedido
+  | BloqueListaReclamos
+  | BloqueEstadoReclamo
+  | BloqueConstanciaReclamo
+  | BloqueListaDevoluciones
+  | BloqueEstadoDevolucion
+  | BloqueConstanciaDevolucion
   | (BloqueBase & { payload?: unknown });

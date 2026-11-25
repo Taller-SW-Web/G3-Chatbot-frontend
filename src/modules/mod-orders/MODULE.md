@@ -15,6 +15,10 @@ Historial de pedidos por estado, detalle, seguimiento del despacho, reenvío de 
 |---|---|---|
 | Frontend | `public.ts` | `OrderHistoryPage` (+ `OrderHistorySlots`), `OrderDetailPage`, `SeguimientoPage`, `ConfirmacionPedido`, `ListaPedidos`, `EstadoPedido`, `pedidosPort`, casos de uso y tipos |
 
+Los bloques `ListaPedidos` y `EstadoPedido` siguen el contrato de `datos` del delta M5
+(`pedidoId`, `fecha`, `total`, `estado`, `estadoEtiqueta`, `canal`; `hitos` y `seguimiento`), y sus
+tipos se publican para que `mod-chat` los use sin importar el interior del módulo.
+
 ## Rutas
 
 | Método | Ruta | Caso de uso |

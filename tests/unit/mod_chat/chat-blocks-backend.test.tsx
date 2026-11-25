@@ -225,13 +225,14 @@ describe("chat blocks with the backend contract", () => {
     expect(useChatStore.getState().authVista).toBe("registro");
   });
 
-  it("does not paint FORMULARIO for other forms and keeps unknown types silent", () => {
+  it("pinta FORMULARIO LOGIN con el modal global y no inventa bloques sin datos", () => {
     const otros = [
       { id: "f2", tipo: "FORMULARIO", formulario: "LOGIN" },
       { id: "x", tipo: "LISTA_PEDIDOS" },
     ] as unknown as Bloque[];
     const { container } = bubble(otros);
-    expect(screen.queryByTestId("bloque-formulario-registro")).toBeNull();
-    expect(container.querySelectorAll("[data-testid^='bloque-']").length).toBe(0);
+    expect(screen.getByTestId("bloque-formulario-login")).toBeTruthy();
+    expect(screen.queryByTestId("bloque-lista-pedidos")).toBeNull();
+    expect(container.querySelectorAll("[data-testid^='bloque-']").length).toBe(1);
   });
 });

@@ -141,7 +141,7 @@ describe("OrderHistoryPage", () => {
     renderPage();
 
     fireEvent.click(screen.getByText(/Reembolso\/ ?Cambio/));
-    await waitFor(() => expect(screen.getByText("DEV-2026-00045")).toBeDefined());
+    await waitFor(() => expect(screen.getByText(/DEV-2026-00045/)).toBeDefined());
 
     fireEvent.click(screen.getByText("Reclamos"));
     await waitFor(() => expect(screen.getByText(/REC-2026-0118/)).toBeDefined());

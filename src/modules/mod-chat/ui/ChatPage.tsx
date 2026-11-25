@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpIcon } from "@/shared/ui/icons";
@@ -18,6 +18,13 @@ import { useChat } from "@/modules/mod-chat/application/useChat";
 import { useAdjuntosChat } from "@/modules/mod-chat/application/useAdjuntosChat";
 import { useChatStore } from "@/shared/auth/chatStore";
 import { ejecutarAccionChatUseCase } from "@/modules/mod-chat/application/ejecutarAccionChatUseCase";
+import { crearConversacionUseCase } from "@/modules/mod-chat/application/crearConversacionUseCase";
+import {
+  accionesClienteDeBloques,
+  esAccionCliente,
+  terminoDeBusqueda,
+  type AccionClienteChat,
+} from "@/modules/mod-chat/domain/utils/accionesCliente";
 import { container } from "@/shared/di/container";
 import { MENSAJE_MAX_CARACTERES } from "@/modules/mod-chat/application/enviarMensajeUseCase";
 import { ADJUNTOS_MAX_POR_MENSAJE } from "@/modules/mod-chat/domain/entities/Adjunto";
@@ -64,8 +71,20 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
   const archivoAdjuntoRef = useRef<HTMLInputElement>(null);
   const adjuntos = useAdjuntosChat(conversationId);
   const accionOcupadaRef = useRef(false);
+  /** Claves `mensajeId:acción:índice` ya ejecutadas; evita repetir al rehidratar. */
+  const accionesClienteHechasRef = useRef<Set<string>>(new Set());
+  /** Mensajes que ya existían al cargar el historial: no disparan acciones de cliente. */
+  const mensajesVistosRef = useRef<Set<string>>(new Set());
+  const historialBaseHechoRef = useRef(false);
   const adjuntosBloquean =
     adjuntos.pendientes.length > 0 && !adjuntos.puedeEnviarAdjuntos;
+
+  // Cambiar de conversación convierte la carga siguiente en historial, nunca en un turno nuevo.
+  useEffect(() => {
+    accionesClienteHechasRef.current = new Set();
+    mensajesVistosRef.current = new Set();
+    historialBaseHechoRef.current = false;
+  }, [conversationId]);
 
   // Si el mensaje no llegó a aceptarse (error previo al stream) el texto vuelve al campo.
   if (error !== errorVisto) {
@@ -83,6 +102,68 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
     setPrimerMensaje(null);
     if (mensajes.length === 0) void enviar(texto);
   }, [historialCargado, mensajes.length, enviar, setPrimerMensaje]);
+
+  /**
+   * Las cuatro acciones de cliente las ejecuta el navegador (SPEC-05 · delta M5).
+   * `IR_A_CHECKOUT` sin sesión abre el login y conserva `INICIAR_CHECKOUT`.
+   */
+  const ejecutarAccionCliente = useCallback(
+    async (accion: AccionClienteChat) => {
+      const store = useChatStore.getState();
+      switch (accion.id) {
+        case "IR_A_CHECKOUT":
+          if (!store.accessToken) {
+            store.setAccionPendiente("INICIAR_CHECKOUT");
+            store.setAuthOpen(true);
+            return;
+          }
+          router.push("/checkout#direccion");
+          return;
+        case "CERRAR_SESION":
+          try {
+            await container.auth.logout();
+          } catch {
+            // `authApi.logout` limpia el token local en `finally`: la sesión ya quedó cerrada.
+          }
+          return;
+        case "NUEVO_CHAT": {
+          const { conversacionId } = await crearConversacionUseCase(container.chat);
+          await queryClient.invalidateQueries({ queryKey: ["conversaciones"] });
+          router.push(`/chat/${conversacionId}`);
+          return;
+        }
+        case "BUSCAR_CHATS": {
+          const q = terminoDeBusqueda(accion.payload);
+          router.push(q ? `/buscar?q=${encodeURIComponent(q)}` : "/buscar");
+          return;
+        }
+      }
+    },
+    [queryClient, router]
+  );
+
+  // Ejecuta una acción de cliente una sola vez por turno. El historial inicial solo se
+  // marca como visto: rehidratar nunca dispara navegación, logout ni creación de chats.
+  useEffect(() => {
+    if (!historialCargado) return;
+    if (!historialBaseHechoRef.current) {
+      historialBaseHechoRef.current = true;
+      for (const mensaje of mensajes) mensajesVistosRef.current.add(mensaje.id);
+      return;
+    }
+    if (estado === "enviando" || estado === "cargando" || accionOcupadaRef.current) return;
+    const ultimo = mensajes[mensajes.length - 1];
+    if (!ultimo || ultimo.rol !== "bot" || mensajesVistosRef.current.has(ultimo.id)) return;
+    mensajesVistosRef.current.add(ultimo.id);
+    const [accion] = accionesClienteDeBloques(ultimo.bloques);
+    if (!accion) return;
+    const clave = `${ultimo.id}:${accion.id}:${accion.indice}`;
+    if (accionesClienteHechasRef.current.has(clave)) return;
+    accionesClienteHechasRef.current.add(clave);
+    void ejecutarAccionCliente(accion).catch(() => {
+      setErrorAccion("No se pudo completar la acción. Inténtalo de nuevo.");
+    });
+  }, [ejecutarAccionCliente, estado, historialCargado, mensajes, pendingActionId]);
 
   function enviarTexto(texto: string) {
     if (accionOcupadaRef.current || adjuntosBloquean) return;
@@ -140,6 +221,28 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
     ) {
       setErrorAccion(null);
       setEligeCategoria(true);
+      return;
+    }
+
+    if (esAccionCliente(accion.id)) {
+      if (accionOcupadaRef.current) return;
+      accionOcupadaRef.current = true;
+      setPendingActionId(accion.id);
+      setErrorAccion(null);
+      try {
+        await ejecutarAccionCliente({
+          id: accion.id,
+          etiqueta: accion.etiqueta,
+          payload: accion.payload ?? {},
+          indice: 0,
+        });
+        setEligeCategoria(false);
+      } catch {
+        setErrorAccion("No se pudo completar la acción. Inténtalo de nuevo.");
+      } finally {
+        accionOcupadaRef.current = false;
+        setPendingActionId(null);
+      }
       return;
     }
 

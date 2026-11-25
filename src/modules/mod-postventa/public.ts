@@ -15,6 +15,17 @@ export { DevolucionForm } from "./ui/forms/DevolucionForm";
 export { ReclamoForm } from "./ui/forms/ReclamoForm";
 
 export type {
+  ConstanciaDevolucionDatos,
+  ConstanciaReclamoDatos,
+  DevolucionBloqueResumen,
+  EstadoDevolucionDatos,
+  EstadoReclamoDatos,
+  ReclamoBloqueResumen,
+  ReembolsoBloque,
+  ResolucionDevolucion,
+} from "./ui/blocks/tipos";
+
+export type {
   CrearDevolucionInput,
   CrearReclamoInput,
   DevolucionDetalle,

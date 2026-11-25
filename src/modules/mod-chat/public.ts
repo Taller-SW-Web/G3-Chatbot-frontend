@@ -3,6 +3,7 @@
  * Otros módulos solo pueden importar desde aquí; nunca su domain/application/adapters.
  */
 export { ChatPage } from "./ui/ChatPage";
+export { SearchChatsPage } from "./ui/SearchChatsPage";
 export { Sidebar } from "./ui/Sidebar";
 export { SugerenciasPage } from "./ui/SugerenciasPage";
 export { MessageBubble, renderChatText, renderBloque } from "./ui/MessageBubble";
