@@ -105,7 +105,10 @@ jobs:
           OPENAPI_PATH: ${{ runner.temp }}/openapi.json
         run: pnpm modules:check
 
-  # Advisory during Fase 2: a finding is reported but does not block the gate yet.
+  # Gate bloqueante (H5-C1): una vulnerabilidad high/critical en el lockfile
+  # tumba el job y, como `check` depende de él, también el check requerido.
+  # Las excepciones aceptadas se documentan y justifican en
+  # docs/seguridad/pnpm-audit-exceptions.md.
   security:
     name: Dependency audit
     runs-on: ubuntu-latest
@@ -121,10 +124,8 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Audit dependencies (advisory)
-        run: |
-          pnpm audit --audit-level=high \
-            || echo "::warning::pnpm audit encontró vulnerabilidades (advisory durante la Fase 2)"
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=high
 
   # Revisa las dependencias que el PR agrega/cambia contra el Dependency Graph.
   # El job corre siempre (aunque en `push` no revisa nada) para no romper el
