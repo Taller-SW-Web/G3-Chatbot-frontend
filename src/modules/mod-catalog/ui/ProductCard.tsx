@@ -27,15 +27,17 @@ export function ProductCard({
     <article
       data-testid="product-card"
       aria-label={nombre}
-      className="relative rounded-md bg-white border border-border-default wf-card flex flex-col gap-2 p-2"
+      className="group relative rounded-md bg-white border border-border-default wf-card flex flex-col gap-2 p-2 hover:border-text-secondary hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
     >
       {/* Una sola parada de tabulación para el detalle: imagen + textos. */}
       <button
         data-testid="btn-detalle"
         onClick={() => onDetalle(producto)}
-        className="w-full text-left flex flex-col gap-2"
+        className="w-full text-left flex flex-col gap-2 cursor-pointer"
       >
-        <ProductImage src={producto.image} alt={nombre} className="h-28 w-full" />
+        <div className="overflow-hidden rounded-md">
+          <ProductImage src={producto.image} alt={nombre} className="h-28 w-full transition-transform duration-300 ease-out group-hover:scale-105" />
+        </div>
         <span data-testid="product-marca" className="block text-[11px] font-bold text-text-secondary">
           {producto.brand ? sanitize(producto.brand).toUpperCase() : "CATÁLOGO"}
         </span>
@@ -56,7 +58,7 @@ export function ProductCard({
         title={agotado ? "Agotado" : producto.hasVariants ? "Elegir talla y color" : "Agregar al carrito"}
         disabled={!canAddCard(producto) || (!producto.hasVariants && !onAdd)}
         onClick={() => producto.hasVariants ? onDetalle(producto) : onAdd?.(producto)}
-        className="absolute top-3 right-3 w-9 h-9 wf-btn flex items-center justify-center bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-40 disabled:cursor-not-allowed"
+        className="absolute top-3 right-3 w-9 h-9 wf-btn flex items-center justify-center bg-action-primary text-surface-ink hover:bg-action-primary-hover active:scale-90 transition-transform duration-150 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <PlusIcon size={16} />
       </button>

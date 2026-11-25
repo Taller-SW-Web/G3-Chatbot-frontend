@@ -256,7 +256,13 @@ export function MessageBubble({
       {texto && <TextoMarkdown texto={sanitize(texto)} />}
       {adjuntos.length > 0 && <MessageAttachments adjuntos={adjuntos} />}
       {bloques.map((bloque, i) => renderBloque(bloque, i, onQuickAction, actionsBusy))}
-      {streaming && <span data-testid="typing-indicator" aria-label="escribiendo" />}
+      {streaming && (
+        <span data-testid="typing-indicator" aria-label="escribiendo" className="inline-flex items-center gap-1 ml-1.5 align-middle">
+          <span className="tdot" style={{ animationDelay: "0ms" }} />
+          <span className="tdot" style={{ animationDelay: "200ms" }} />
+          <span className="tdot" style={{ animationDelay: "400ms" }} />
+        </span>
+      )}
     </div>
   );
 }
