@@ -20,14 +20,28 @@ describe("PrivacidadPage", () => {
     Object.defineProperty(window.history, "length", { value: 1, configurable: true, writable: true });
   });
 
-  it("renderiza el título y las secciones normativas de privacidad", () => {
+  it("renderiza el título, el aviso de proyecto y todas las secciones mínimas de docs/conversacion/privacidad.md §5", () => {
     render(<PrivacidadPage />);
 
     expect(screen.getByText("POLÍTICA DE PRIVACIDAD")).toBeDefined();
+    expect(screen.getByText(/Aviso del proyecto académico/i)).toBeDefined();
     expect(screen.getAllByText(/Inka Athletics/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/1\. Marco Normativo y Finalidad/)).toBeDefined();
-    expect(screen.getByText(/2\. Asistente con Inteligencia Artificial/)).toBeDefined();
-    expect(screen.getByText(/5\. Derechos ARCO/)).toBeDefined();
+
+    // Secciones requeridas por §5 y revisión
+    expect(screen.getByText(/1\. Responsable del Tratamiento/i)).toBeDefined();
+    expect(screen.getByText(/2\. Datos Personales que se Tratan/i)).toBeDefined();
+    expect(screen.getByText(/3\. Finalidades del Tratamiento/i)).toBeDefined();
+    expect(screen.getByText(/4\. Destinatarios de los Datos/i)).toBeDefined();
+    expect(screen.getByText(/5\. Transferencia Internacional de Datos/i)).toBeDefined();
+    expect(screen.getByText(/6\. Uso de Inteligencia Artificial y Reglas de Protección/i)).toBeDefined();
+    expect(screen.getByText(/7\. Conservación de Datos/i)).toBeDefined();
+    expect(screen.getByText(/8\. Derechos del Titular \(ARCO\)/i)).toBeDefined();
+    expect(screen.getByText(/9\. Banco de Datos Personales/i)).toBeDefined();
+    expect(screen.getByText(/10\. Almacenamiento en el Navegador/i)).toBeDefined();
+    expect(screen.getByText(/11\. Consecuencia de no Proporcionar los Datos/i)).toBeDefined();
+
+    // Verificación de cláusula de pendiente de definición en puntos institucionales
+    expect(screen.getAllByText(/pendiente de definición/i).length).toBeGreaterThan(0);
   });
 
   it("en carga directa o pestaña nueva (sin historial, length <= 1), el botón volver redirige a '/'", () => {
