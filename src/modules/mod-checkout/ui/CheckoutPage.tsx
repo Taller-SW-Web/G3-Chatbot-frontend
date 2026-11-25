@@ -83,9 +83,12 @@ export function CheckoutPage() {
   const [dir, setDir] = useState<DireccionInput | null>(null);
   const [pago, setPago] = useState<PagoInput | null>(null);
   const [guardarDireccion, setGuardarDireccion] = useState(false);
-  // SPEC-04: el backend bloquea el checkout con 403 CELULAR_NO_VERIFICADO.
+  // SPEC-04: el backend bloquea el checkout con 403 CELULAR_NO_VERIFICADO (modo legado).
   const [otpRequerido, setOtpRequerido] = useState(false);
   const [celularOtp, setCelularOtp] = useState<string | undefined>();
+  // El correo es el contacto verificado por defecto: si el backend no lo puede
+  // confirmar, se ofrece revisar la cuenta en lugar de abrir el OTP del celular.
+  const [contactoNoVerificado, setContactoNoVerificado] = useState(false);
   const [pagando, setPagando] = useState(false);
   const [creandoCheckout, setCreandoCheckout] = useState(false);
 
@@ -143,6 +146,7 @@ export function CheckoutPage() {
     if (!dir) return;
     setCreandoCheckout(true);
     setErrorPago(null);
+    setContactoNoVerificado(false);
 
     try {
       const customerEmail = typeof cliente?.correo === "string" ? cliente.correo.trim() : "";
@@ -169,6 +173,7 @@ export function CheckoutPage() {
       setResumenActualizado(null);
       setLineasCambiadas([]);
       setOtpRequerido(false);
+      setContactoNoVerificado(false);
       setAccionPendiente(null);
 
       setCheckoutSesion(sesion);
@@ -184,7 +189,18 @@ export function CheckoutPage() {
       const status = errorAxios?.response?.status;
       const data = errorAxios?.response?.data;
 
-      if (status === 403 && data?.code === "CELULAR_NO_VERIFICADO") {
+      if (status === 403 && data?.code === "CONTACTO_NO_VERIFICADO") {
+        // El correo de la cuenta es el contacto verificado: no se pide OTP de celular.
+        checkoutKeyRef.current = null;
+        setOtpRequerido(false);
+        setAccionPendiente(null);
+        setContactoNoVerificado(true);
+        setErrorPago(
+          data?.motivo === "SEGURIDAD_NO_DISPONIBLE"
+            ? "No pudimos confirmar tu contacto ahora. Inténtalo de nuevo en unos minutos."
+            : "No pudimos confirmar tu correo. Revisa tu cuenta o inténtalo de nuevo."
+        );
+      } else if (status === 403 && data?.code === "CELULAR_NO_VERIFICADO") {
         // SPEC-04: se ofrece la verificación en ese momento y se recuerda la acción pendiente.
         checkoutKeyRef.current = null;
         setAccionPendiente("INICIAR_CHECKOUT");
@@ -323,9 +339,18 @@ export function CheckoutPage() {
           {errorPago && (
             <div
               role="alert"
-              className="rounded-md bg-action-primary-soft text-ember-deep border border-border-default p-3 text-[13px] font-medium"
+              className="rounded-md bg-action-primary-soft text-ember-deep border border-border-default p-3 text-[13px] font-medium flex flex-col gap-2 items-start"
             >
-              {errorPago}
+              <span>{errorPago}</span>
+              {contactoNoVerificado && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/cuenta")}
+                  className="wf-btn px-4 py-2 text-[12px] font-bold bg-white border border-border-default"
+                >
+                  IR A MI CUENTA
+                </button>
+              )}
             </div>
           )}
           {!totalDisponible && carritoQuery.isError && (
@@ -364,6 +389,22 @@ export function CheckoutPage() {
               >
                 VOLVER AL CARRITO
               </button>
+            </div>
+          )}
+          {cliente?.correo && (
+            <div
+              data-testid="contacto-compra"
+              className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-1 text-[13px]"
+            >
+              <p className="text-[12px] uppercase tracking-[0.08em] text-text-secondary font-semibold">
+                Contacto de compra
+              </p>
+              <p className="font-semibold text-text-primary flex items-center gap-2 flex-wrap">
+                {cliente.correo}
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent-volt-soft text-accent-volt-ink text-[10px] font-bold px-2 py-0.5">
+                  Verificado
+                </span>
+              </p>
             </div>
           )}
           <DireccionForm
