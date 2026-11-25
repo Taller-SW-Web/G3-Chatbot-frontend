@@ -297,8 +297,8 @@ export function AuthModal() {
               <>
                 <p className="text-[12px] text-text-secondary">Necesitas una cuenta para pagar y ver tu historial. Como invitado puedes chatear y ver ofertas.</p>
                 <div className="grid grid-cols-2 gap-2 rounded-md bg-surface-cloud-subtle p-1">
-                  <button onClick={irAIniciarSesion} className={`wf-btn py-2.5 text-[12px] font-bold ${tab === "login" ? "bg-surface-ink text-text-inverse" : "text-text-secondary"}`}>INICIAR SESIÓN</button>
-                  <button onClick={() => { setTab("registro"); setError(null); setOfrecerLogin(false); }} className={`wf-btn py-2.5 text-[12px] font-bold ${tab === "registro" ? "bg-surface-ink text-text-inverse" : "text-text-secondary"}`}>CREAR CUENTA</button>
+                  <button onClick={irAIniciarSesion} className={`wf-btn py-2.5 text-[12px] font-bold transition-all duration-200 ${tab === "login" ? "bg-surface-ink text-text-inverse shadow-sm" : "text-text-secondary hover:text-text-primary"}`}>INICIAR SESIÓN</button>
+                  <button onClick={() => { setTab("registro"); setError(null); setOfrecerLogin(false); }} className={`wf-btn py-2.5 text-[12px] font-bold transition-all duration-200 ${tab === "registro" ? "bg-surface-ink text-text-inverse shadow-sm" : "text-text-secondary hover:text-text-primary"}`}>CREAR CUENTA</button>
                 </div>
                 {tab === "login" ? (
                   <LoginForm onOk={ingresar} correoInicial={correoIngresado} onReenviar={abrirReenvio} error={error} cargando={cargando} />
