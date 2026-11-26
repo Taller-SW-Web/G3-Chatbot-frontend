@@ -13,10 +13,10 @@ mediante `rewrites` hacia `API_PROXY_TARGET` ([ADR-0023](https://github.com/Tall
 3. Verificar que `NEXT_PUBLIC_API_BASE_URL` **no** apunte a una URL directa del
    backend (dejarla sin definir o en `/api/v1` para mantener mismo origen y
    `connect-src 'self'` en la CSP).
-4. Redesplegar y comprobar:
+4. Redesplegar y comprobar (evidencia manual requerida para cerrar `#142`, ya que el job `e2e` de CI corre sin Kong y solo valida mismo origen):
    - `curl -i https://<frontend>/api/v1/catalogo/productos` → `200` con
      `x-gateway: kong` y `x-request-id`.
-   - `PLAYWRIGHT_VERIFY_GATEWAY=true BASE_URL=https://<frontend> pnpm exec playwright test tests/e2e/gateway.spec.ts`
+   - `PLAYWRIGHT_VERIFY_GATEWAY=true E2E_BASE_URL=https://<frontend> pnpm exec playwright test tests/e2e/gateway.spec.ts`
 
 ## Rollback
 
