@@ -151,14 +151,26 @@ describe("adapter Axios de pedidos y postventa", () => {
     expect(peticiones.get).toHaveBeenNthCalledWith(2, "/reclamos/REC%2F1", { timeout: 60000 });
   });
 
-  it("califica un pedido entregado", async () => {
+  it("califica un pedido entregado con el id codificado y timeout de postventa", async () => {
     peticiones.post.mockResolvedValueOnce({ data: undefined });
     await chatbotApi.calificarPedido("PED/1", 5, "Excelente");
 
-    expect(peticiones.post).toHaveBeenCalledWith("/pedidos/PED%2F1/csat", {
-      puntuacion: 5,
-      comentario: "Excelente",
-    });
+    expect(peticiones.post).toHaveBeenCalledWith(
+      "/pedidos/PED%2F1/csat",
+      { puntuacion: 5, comentario: "Excelente" },
+      { timeout: 60000 }
+    );
+  });
+
+  it("omite el comentario del CSAT cuando no viene", async () => {
+    peticiones.post.mockResolvedValueOnce({ data: undefined });
+    await chatbotApi.calificarPedido("PED-2026-00002", 3);
+
+    expect(peticiones.post).toHaveBeenCalledWith(
+      "/pedidos/PED-2026-00002/csat",
+      { puntuacion: 3 },
+      { timeout: 60000 }
+    );
   });
 
   it("inicia, consulta y paga un checkout con idempotencia", async () => {

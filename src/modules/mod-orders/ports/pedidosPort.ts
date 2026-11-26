@@ -41,6 +41,8 @@ export type PedidoDetalle = PedidoResumen & {
   envio: PedidoEnvio | null;
   historial: { estado: string; etiqueta: string; fecha: string; completado: boolean }[];
   seguimientoDisponible?: boolean;
+  /** SPEC-24: el cliente ya calificó la entrega; el slot de CSAT no debe mostrarse. */
+  csatEnviado?: boolean;
 };
 
 /** Seguimiento del despacho (`GET /pedidos/{id}/seguimiento`, SPEC-18). */
@@ -70,8 +72,6 @@ export interface PedidosPort {
   obtenerPedido(pedidoId: string): Promise<PedidoDetalle>;
   /** SPEC-18: hitos del despacho de un pedido propio. */
   obtenerSeguimientoPedido(pedidoId: string): Promise<SeguimientoPedido>;
-  /** SPEC-24: califica la entrega de un pedido ENTREGADO. */
-  calificarPedido(pedidoId: string, puntuacion: 1 | 3 | 5, comentario?: string): Promise<void>;
   /** SPEC-16 Req. 3: reenvía el correo de confirmación (máx. 2). Propaga 429 LIMITE_REENVIOS_EXCEDIDO. */
   reenviarConfirmacion(pedidoId: string, idempotencyKey: string): Promise<ReenvioConfirmacion>;
 }

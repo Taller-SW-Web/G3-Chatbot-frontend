@@ -61,8 +61,8 @@ G3-Chatbot-frontend/
 | `mod-cart` | carrito, items, cupón, carrito anónimo por conversación | `/carrito` | `mod-catalog` |
 | `mod-shipping` | cotización de envío y direcciones | bloque en `/checkout` | — |
 | `mod-checkout` | checkout, pago simulado, confirmación | `/checkout`, `/exito` | `mod-cart`, `mod-shipping` |
-| `mod-orders` | pedidos, seguimiento, CSAT, reenvío de confirmación | `/pedidos`, `/pedidos/[tab]`, `/seguimiento` | `mod-checkout` |
-| `mod-postventa` | devoluciones, reclamos, evidencias, constancias | `/devolucion`, `/reclamo` | `mod-orders` |
+| `mod-orders` | pedidos, detalle, seguimiento, reenvío de confirmación | `/pedidos`, `/pedidos/[tab]`, `/pedido`, `/seguimiento` | `mod-checkout` |
+| `mod-postventa` | devoluciones, reclamos, evidencias, constancias y CSAT (`DeliveryRating` + adapter) | `/devolucion`, `/reclamo` | `mod-orders` |
 | `mod-chat` | turnos, SSE, historial, sidebar, bloques, sugerencias | `/chat/[id]`, `/sugerencias` | todos |
 
 ### DAG
@@ -76,9 +76,12 @@ auth → usado por todos vía shared/auth
 ```
 
 `mod-orders` no conoce `mod-postventa`: las pestañas de devoluciones y reclamos
-se inyectan como slots desde `app/pedidos/page.tsx`. `mod-postventa` consume
-`pedidosPort` del `public.ts` de `mod-orders` y el perfil con `usePerfil` de
-`shared/auth`.
+se inyectan como slots desde `app/pedidos/page.tsx`, y el CSAT como `csatSlot`
+desde `app/pedido/page.tsx`. `mod-postventa` es el dueño canónico del CSAT
+(decisión #186): `DeliveryRating` y `calificarPedido` viven en su `ui/` y su
+adapter; `mod-orders` solo expone el detalle y decide cuándo mostrar el slot
+(`ENTREGADO` y `!csatEnviado`). `mod-postventa` consume `pedidosPort` del
+`public.ts` de `mod-orders` y el perfil con `usePerfil` de `shared/auth`.
 
 ## 4. Fronteras que verifica `pnpm modules:check`
 
@@ -106,7 +109,8 @@ excepciones hardcodeadas.
 - `contractPending`: endpoints que el backend todavía no publica
   (`TODO(H-17)` para el OTP de celular).
 - `contractTagExceptions`: endpoints cuyo tag del openapi no coincide con el
-  módulo dueño (hoy CSAT, que el backend etiqueta como `mod-postventa`).
+  módulo dueño (hoy vacío: `POST /pedidos/{pedidoId}/csat` está declarado en
+  `mod-postventa` y el backend ya lo etiqueta así, decisión #186).
 - Toda entrada temporal lleva `todo` y `reviewBy`; el checker falla cuando la
   fecha vence.
 
@@ -120,6 +124,7 @@ excepciones hardcodeadas.
 | `/exito` | `app/exito/page.tsx` | `AppShell` + `OrderSuccessPage` |
 | `/pedidos` | `app/pedidos/page.tsx` | `AppShell` + `AuthGuard` + `OrderHistoryPage` + slots de `mod-postventa` |
 | `/pedidos/[tab]` | `app/pedidos/[tab]/page.tsx` | igual, con pestaña inicial validada |
+| `/pedido` | `app/pedido/page.tsx` (client) | `AppShell` + `AuthGuard` + `Suspense` + `OrderDetailPage` + `DeliveryRating` de `mod-postventa` como `csatSlot` |
 | `/seguimiento` | `app/seguimiento/page.tsx` | `AppShell` + `AuthGuard` + `SeguimientoPage` |
 | `/devolucion` | `app/devolucion/page.tsx` | `AppShell` + `AuthGuard` + `Suspense` + `DevolucionPage` |
 | `/reclamo` | `app/reclamo/page.tsx` | `AppShell` + `AuthGuard` + `Suspense` + `ReclamoPage` |
@@ -156,8 +161,10 @@ módulo necesita una operación sin duplicar el adapter.
   2. al menos una operación lleva `tags: ["mod-<id>"]`.
 - Si el backend no está clonado, el contrato se omite con aviso. Si
   `OPENAPI_PATH` está definido y no existe, falla.
-- El tag de CSAT y los endpoints de OTP pendientes están en la allowlist del
-  JSON con `reviewBy`; al vencer, el gate falla.
+- El CSAT (`POST /pedidos/{pedidoId}/csat`) se declara en el manifiesto de
+  `mod-postventa`, no en el de `mod-orders`.
+- Los endpoints de OTP pendientes están en la allowlist del JSON con `reviewBy`;
+  al vencer, el gate falla.
 
 ## 8. Manifiestos y registry
 
