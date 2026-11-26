@@ -31,5 +31,8 @@ Antes de escribir código:
    (estructura + fronteras + registry + contrato `openapi`).
 6. Si cambias un endpoint, actualiza el `openapi.json` del backend con el tag
    `mod-<id>` y el `module.manifest.ts`; el gate de contrato lo exige.
+7. **No cierres un issue hasta que el PR esté mergeado en `development`** y
+   verificado. El cierre cita PR, commit y evidencia; duplicado u obsoleto se
+   cierra con motivo, nunca como `completed` si el trabajo sigue pendiente.
 
 Detalle operativo: `docs/flujo-de-trabajo.md`. Estructura: `arquitectura-frontend.md`.
