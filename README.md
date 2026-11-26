@@ -16,7 +16,9 @@ Flujo de trabajo (spec primero, un PR por módulo, gates):
 
 ## Requisitos
 
-- Node 22
+- Node 22 (`engines.node` en `package.json`; Vercel lo respeta). Node 20 no carga
+  `jsdom`/`isomorphic-dompurify` y devuelve 500 en las rutas dinámicas, incluida
+  `/verificar-correo`.
 - pnpm 10.34.6 (versión fijada en el campo `packageManager` de `package.json`)
 
 ## Comandos
