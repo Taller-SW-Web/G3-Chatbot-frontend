@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpIcon, PhotoIcon } from "@/shared/ui/icons";
 import { ProductCard } from "@/modules/mod-catalog/ui/ProductCard";
@@ -196,7 +197,26 @@ export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomeP
           disabled={catalogo.isFetching || catalogo.isPending}
         />
 
-        {catalogo.isPending && <p role="status" className="text-[13px] text-text-secondary">Cargando productos…</p>}
+        {catalogo.isPending && (
+          <div
+            role="status"
+            className="grid grid-cols-2 gap-3 screen-enter"
+          >
+            <p className="sr-only">Cargando productos…</p>
+            {[1, 2, 3, 4].map((n) => (
+              <div
+                key={n}
+                className="rounded-md bg-white border border-border-default p-2 flex flex-col gap-2 wf-card"
+              >
+                <div className="h-28 w-full rounded-md shimmer" />
+                <div className="h-3 w-16 rounded shimmer" />
+                <div className="h-5 w-3/4 rounded shimmer" />
+                <div className="h-4 w-20 rounded shimmer" />
+                <div className="h-4 w-14 rounded-full shimmer" />
+              </div>
+            ))}
+          </div>
+        )}
         {catalogo.isError && (
           <div role="alert" className="text-[13px] text-text-secondary rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
             <p>
@@ -233,7 +253,10 @@ export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomeP
         </div>
 
         <p className="text-[12px] text-text-secondary rounded-md bg-white border border-border-default p-3">
-          Conversas con un asistente virtual con IA. No compartas contraseñas ni datos de tarjeta en el chat. <span className="underline">Política de privacidad</span>
+          Conversas con un asistente virtual con IA. No compartas contraseñas ni datos de tarjeta en el chat.{" "}
+          <Link href="/privacidad" className="underline hover:text-text-primary transition-colors">
+            Política de privacidad
+          </Link>
         </p>
 
         <div className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
