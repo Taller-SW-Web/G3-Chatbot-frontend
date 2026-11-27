@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
@@ -60,6 +60,13 @@ function shell(initialScreen: Parameters<typeof AppShell>[0]["initialScreen"], c
 beforeEach(resetStore);
 afterEach(cleanup);
 
+// Los chunks del sidebar y del modal se cargan bajo demanda; precalentarlos
+// evita que el timeout del test dependa de la transformación de Vite.
+beforeAll(async () => {
+  await import("@/modules/mod-chat/public");
+  await import("@/modules/mod-auth/public");
+});
+
 describe("AppShell", () => {
   it("en el inicio muestra el menú, el logo y el badge del carrito", () => {
     useChatStore.setState({ carrito: { lineas: [], subtotal: 0, count: 3 } });
@@ -100,38 +107,40 @@ describe("AppShell", () => {
     expect(screen.getByText(titulo)).toBeDefined();
   });
 
-  it("abre y cierra la barra lateral", () => {
+  it("abre y cierra la barra lateral", async () => {
     montar(shell("home"));
 
     fireEvent.click(screen.getByLabelText("Abrir menú"));
-    expect(screen.getByText("Nuevo chat")).toBeDefined();
+    expect(await screen.findByText("Nuevo chat", {}, { timeout: 5000 })).toBeDefined();
 
     fireEvent.click(screen.getByLabelText("Cerrar menú"));
-    expect(screen.queryByText("Nuevo chat")).toBeNull();
+    await waitFor(() => expect(screen.queryByText("Nuevo chat")).toBeNull());
   });
 
-  it("pide iniciar sesión al entrar a una sección privada sin cuenta", () => {
+  it("pide iniciar sesión al entrar a una sección privada sin cuenta", async () => {
     montar(shell("home"));
 
     fireEvent.click(screen.getByLabelText("Abrir menú"));
-    fireEvent.click(screen.getByText("Historial de pedidos"));
+    fireEvent.click(await screen.findByText("Historial de pedidos", {}, { timeout: 5000 }));
 
     expect(useChatStore.getState().authOpen).toBe(true);
     expect(useChatStore.getState().accionPendiente).toBe("/pedidos");
     expect(nav.push).not.toHaveBeenCalled();
   });
 
-  it("navega a la sección privada cuando hay sesión", () => {
+  it("navega a la sección privada cuando hay sesión", async () => {
     useChatStore.setState({
+      accessToken: "token-vigente",
+      expiraEn: Date.now() + 10 * 60_000,
       cliente: { id: "u1", nombreCompleto: "Ana", correo: "ana@ejemplo.pe" } as never,
     });
     montar(shell("home"));
 
     fireEvent.click(screen.getByLabelText("Abrir menú"));
-    fireEvent.click(screen.getByText("Historial de pedidos"));
+    fireEvent.click(await screen.findByText("Historial de pedidos", {}, { timeout: 5000 }));
 
     expect(nav.push).toHaveBeenCalledWith("/pedidos");
-    expect(screen.queryByText("Nuevo chat")).toBeNull();
+    await waitFor(() => expect(screen.queryByText("Nuevo chat")).toBeNull());
   });
 
   it("lleva al carrito desde el header", () => {
@@ -140,14 +149,14 @@ describe("AppShell", () => {
     expect(nav.push).toHaveBeenCalledWith("/carrito");
   });
 
-  it("abre el modal con ?abrirLogin=1 y conserva el destino pendiente", () => {
+  it("abre el modal con ?abrirLogin=1 y conserva el destino pendiente", async () => {
     window.history.replaceState(null, "", "/?abrirLogin=1&destino=/checkout");
     montar(shell("home"));
 
     expect(useChatStore.getState().authOpen).toBe(true);
     expect(useChatStore.getState().accionPendiente).toBe("/checkout");
     expect(window.location.search).toBe("");
-    expect(screen.getByText("Inicia sesión")).toBeDefined();
+    expect(await screen.findByText("Inicia sesión", {}, { timeout: 5000 })).toBeDefined();
   });
 
   it.each(["//evil.com", "https://evil.example", "javascript:alert(1)", "/\\evil.com"])(

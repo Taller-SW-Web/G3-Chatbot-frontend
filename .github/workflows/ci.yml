@@ -188,6 +188,7 @@ jobs:
       - name: Build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
+          API_PROXY_TARGET: http://127.0.0.1:4010
         run: pnpm run build
       - name: Run Lighthouse CI (mobile preset)
         run: pnpm run lhci

@@ -1,18 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, Menu2Icon, ShoppingCartIcon, XIcon } from "@/shared/ui/icons";
 import { BrandLogo } from "@/shared/ui/BrandLogo";
-import { AuthModal } from "@/modules/mod-auth/public";
 import { SesionIndicator } from "@/shared/auth/SesionIndicator";
 import { useChatStore } from "@/shared/auth/chatStore";
 import { container } from "@/shared/di/container";
 import { clienteDesdePerfil, clienteDesdeUsuario } from "@/shared/auth/sesion";
 import { conversacionParaCarrito, useCarrito } from "@/modules/mod-cart/public";
-import { Sidebar } from "@/modules/mod-chat/public";
 import { safeInternalPath } from "@/shared/security/safeInternalPath";
+
+// Chunks bajo demanda: el sidebar del chat y el modal de auth no son parte del
+// render inicial de ninguna pantalla y suman JS que bloquea la hidratación.
+const Sidebar = lazy(() =>
+  import("@/modules/mod-chat/public").then((m) => ({ default: m.Sidebar }))
+);
+const AuthModal = lazy(() =>
+  import("@/modules/mod-auth/public").then((m) => ({ default: m.AuthModal }))
+);
 
 export type ScreenKind =
   | "home" | "chat" | "buscar" | "carrito" | "checkout" | "exito"
@@ -153,14 +160,20 @@ export function AppShell({
       </main>
 
       {sidebar && (
-        <Sidebar
-          onClose={() => setSidebar(false)}
-          onNavigate={(href) => { setSidebar(false); router.push(href); }}
-          conversacionActual={conversationId}
-        />
+        <Suspense fallback={null}>
+          <Sidebar
+            onClose={() => setSidebar(false)}
+            onNavigate={(href) => { setSidebar(false); router.push(href); }}
+            conversacionActual={conversationId}
+          />
+        </Suspense>
       )}
 
-      {authOpen && <AuthModal />}
+      {authOpen && (
+        <Suspense fallback={null}>
+          <AuthModal />
+        </Suspense>
+      )}
     </div>
   );
 }

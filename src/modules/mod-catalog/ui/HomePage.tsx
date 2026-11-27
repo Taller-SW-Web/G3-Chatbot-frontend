@@ -197,6 +197,7 @@ export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomeP
           disabled={catalogo.isFetching || catalogo.isPending}
         />
 
+        <div className="flex min-h-[420px] flex-col gap-3">
         {catalogo.isPending && (
           <div
             role="status"
@@ -250,6 +251,7 @@ export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomeP
                 }
               }} />
           ))}
+        </div>
         </div>
 
         <p className="text-[12px] text-text-secondary rounded-md bg-white border border-border-default p-3">
