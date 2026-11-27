@@ -1,4 +1,4 @@
-/** Contrato REST de postventa: evidencias, devoluciones y reclamos (SPEC-19..22). */
+/** Contrato REST de postventa: evidencias, devoluciones, reclamos y CSAT (SPEC-19..22, SPEC-24). */
 
 /** Evidencia devuelta por `POST /evidencias` (proxy a G5 F3 §2.1). */
 export type EvidenciaSubida = {
@@ -119,4 +119,6 @@ export interface PostventaPort {
   listarReclamos(input?: { page?: number; pageSize?: number; estado?: string }): Promise<PaginaReclamos>;
   /** SPEC-20: detalle de un reclamo propio por código de seguimiento. */
   obtenerReclamo(codigoSeguimiento: string): Promise<ReclamoDetalle>;
+  /** SPEC-24: califica la entrega de un pedido ENTREGADO. */
+  calificarPedido(pedidoId: string, puntuacion: 1 | 3 | 5, comentario?: string): Promise<void>;
 }

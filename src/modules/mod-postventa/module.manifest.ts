@@ -18,6 +18,7 @@ export const manifest = {
     "/devoluciones/{devolucionId}",
     "/reclamos",
     "/reclamos/{codigoSeguimiento}",
+    "/pedidos/{pedidoId}/csat",
   ],
   dependsOn: ["mod-orders"],
 } satisfies ModuleManifest;

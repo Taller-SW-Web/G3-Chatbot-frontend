@@ -13,6 +13,8 @@ export { ConstanciaReclamo } from "./ui/blocks/ConstanciaReclamo";
 export { EstadoReclamo } from "./ui/blocks/EstadoReclamo";
 export { DevolucionForm } from "./ui/forms/DevolucionForm";
 export { ReclamoForm } from "./ui/forms/ReclamoForm";
+export { DeliveryRating, puntuacionDeMood } from "./ui/DeliveryRating";
+export type { DeliveryMood } from "./ui/DeliveryRating";
 
 export type {
   ConstanciaDevolucionDatos,

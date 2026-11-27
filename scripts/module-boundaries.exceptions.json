@@ -8,12 +8,5 @@
     }
   ],
   "contractPending": [],
-  "contractTagExceptions": [
-    {
-      "module": "mod-orders",
-      "path": "/pedidos/{pedidoId}/csat",
-      "todo": "TODO: el openapi del backend etiqueta CSAT como mod-postventa, pero el adapter y la pantalla viven en mod-orders. Alinear el tag en backend o mover el contrato.",
-      "reviewBy": "2026-12-19"
-    }
-  ]
+  "contractTagExceptions": []
 }

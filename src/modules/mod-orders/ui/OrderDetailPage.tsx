@@ -1,10 +1,10 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, TruckIcon } from "@/shared/ui/icons";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
-import { DeliveryRating, puntuacionDeMood } from "@/modules/mod-orders/ui/DeliveryRating";
 import { container } from "@/shared/di/container";
 import { httpStatus, problemCode } from "@/shared/api/httpError";
 
@@ -33,8 +33,12 @@ function varianteEstado(estado: string) {
   return "warning" as const;
 }
 
-/** `/pedido?pedidoId=...`: detalle real con items, envío, historial y CSAT (SPEC-17, SPEC-24). */
-export function OrderDetailPage() {
+/**
+ * `/pedido?pedidoId=...`: detalle real con items, envío e historial (SPEC-17).
+ * El CSAT es de `mod-postventa` y se inyecta como slot desde
+ * `app/pedido/page.tsx`, solo si el pedido está ENTREGADO y sin calificar.
+ */
+export function OrderDetailPage({ csatSlot }: { csatSlot?: ReactNode }) {
   const router = useRouter();
   const params = useSearchParams();
   const pedidoId = params.get("pedidoId") ?? "";
@@ -45,11 +49,6 @@ export function OrderDetailPage() {
     enabled: Boolean(pedidoId),
     retry: false,
     staleTime: 30_000,
-  });
-
-  const calificar = useMutation({
-    mutationFn: ({ pedidoId: id, puntuacion, comentario }: { pedidoId: string; puntuacion: 1 | 3 | 5; comentario?: string }) =>
-      container.pedidos.calificarPedido(id, puntuacion, comentario),
   });
 
   if (!pedidoId) {
@@ -222,19 +221,7 @@ export function OrderDetailPage() {
         )}
       </section>
 
-      {data.estado === "ENTREGADO" ? (
-        <DeliveryRating
-          orderId={data.pedidoId}
-          onRate={async (orderId, mood, comentario) => {
-            await calificar.mutateAsync({
-              pedidoId: orderId,
-              puntuacion: puntuacionDeMood(mood),
-              comentario,
-            });
-          }}
-          onNotDelivered={() => void pedido.refetch()}
-        />
-      ) : null}
+      {data.estado === "ENTREGADO" && !data.csatEnviado ? csatSlot ?? null : null}
 
       <button
         onClick={() => router.push("/pedidos")}

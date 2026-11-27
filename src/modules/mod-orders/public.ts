@@ -9,7 +9,6 @@ export { SeguimientoPage } from "./ui/SeguimientoPage";
 export { ConfirmacionPedido } from "./ui/blocks/ConfirmacionPedido";
 export { ListaPedidos } from "./ui/blocks/ListaPedidos";
 export { EstadoPedido } from "./ui/blocks/EstadoPedido";
-export { DeliveryRating } from "./ui/DeliveryRating";
 
 export type {
   EnvioBloque,
