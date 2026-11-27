@@ -82,8 +82,50 @@ it("muestra el aviso de privacidad solo antes de la primera carga", async () => 
   fireEvent.click(screen.getByRole("button", { name: "Adjuntar imagen" }));
   expect(screen.getByRole("dialog", { name: /Antes de adjuntar una imagen/ })).toBeDefined();
   fireEvent.click(screen.getByRole("button", { name: "Entendido, adjuntar" }));
-  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.queryByRole("dialog", { name: /Antes de adjuntar una imagen/ })).toBeNull();
+  expect(screen.getByRole("dialog", { name: "Agregar imagen" })).toBeDefined();
   expect(window.localStorage.getItem("chat-adjunto-privacidad")).toBe("1");
+});
+
+it("ofrece Galería y Tomar foto con el recordatorio de formatos (SPEC-23 · Scenario: Elegir el origen de la imagen)", () => {
+  window.localStorage.setItem("chat-adjunto-privacidad", "1");
+  montar();
+
+  fireEvent.click(screen.getByRole("button", { name: "Adjuntar imagen" }));
+  const hoja = screen.getByRole("dialog", { name: "Agregar imagen" });
+  expect(hoja.textContent).toContain("JPG, PNG o WEBP de hasta 5 MB");
+  expect(screen.getByRole("button", { name: "Galería" })).toBeDefined();
+  expect(screen.getByRole("button", { name: "Tomar foto" })).toBeDefined();
+
+  const camara = screen.getByLabelText("Tomar foto con la cámara", { selector: "input" });
+  expect(camara.getAttribute("capture")).toBe("environment");
+  expect(camara.getAttribute("accept")).toBe("image/jpeg,image/png,image/webp");
+  const clic = vi.spyOn(camara, "click").mockImplementation(() => {});
+  fireEvent.click(screen.getByRole("button", { name: "Tomar foto" }));
+  expect(clic).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("la foto de la cámara pasa por las mismas validaciones (SPEC-23 · Scenario: Tomar una foto con la cámara)", async () => {
+  window.localStorage.setItem("chat-adjunto-privacidad", "1");
+  montar();
+
+  fireEvent.change(screen.getByLabelText("Tomar foto con la cámara", { selector: "input" }), {
+    target: { files: [archivo()] },
+  });
+
+  expect(await screen.findByAltText("Imagen adjunta 1 de 1")).toBeDefined();
+  await waitFor(() => expect(h.subir).toHaveBeenCalledWith("c-1", expect.any(File), expect.any(Function)));
+});
+
+it("Escape cierra la hoja de origen sin adjuntar", () => {
+  window.localStorage.setItem("chat-adjunto-privacidad", "1");
+  montar();
+
+  fireEvent.click(screen.getByRole("button", { name: "Adjuntar imagen" }));
+  fireEvent.keyDown(window, { key: "Escape" });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(h.subir).not.toHaveBeenCalled();
 });
 
 it("sube la imagen, la envía como adjuntoIds y permite quitarla antes", async () => {

@@ -58,4 +58,15 @@ describe("BotFeedback (SPEC-24 Req. 1)", () => {
     expect(screen.getByText("¡Copiado!")).toBeDefined();
     expect(h.enviarReaccion).not.toHaveBeenCalled();
   });
+
+  it("no confirma la copia si el portapapeles la rechaza", async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error("denegado"));
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    render(<BotFeedback text="Texto plano" mensajeId="m-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Copiar respuesta" }));
+
+    expect(await screen.findByText("No pudimos copiar")).toBeDefined();
+    expect(screen.queryByText("¡Copiado!")).toBeNull();
+  });
 });

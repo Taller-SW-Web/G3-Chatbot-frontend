@@ -7,16 +7,18 @@ import { useReaccion } from "@/modules/mod-chat/application/useReaccion";
 /** Reacciones y copia bajo cada respuesta del bot (SPEC-24 Req. 1). */
 export function BotFeedback({ text, mensajeId }: { text: string; mensajeId: string }) {
   const { reaccion, votar } = useReaccion(mensajeId);
-  const [copied, setCopied] = useState(false);
+  const [copia, setCopia] = useState<"inicial" | "copiado" | "fallo">("inicial");
+  const copied = copia === "copiado";
 
   async function copiar() {
     try {
       await navigator.clipboard.writeText(text);
+      setCopia("copiado");
     } catch {
-      /* portapapeles no disponible */
+      // Portapapeles no disponible o denegado: no se confirma una copia que no ocurrió.
+      setCopia("fallo");
     }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopia("inicial"), 1500);
   }
 
   const btn = (active: boolean) =>
@@ -45,7 +47,10 @@ export function BotFeedback({ text, mensajeId }: { text: string; mensajeId: stri
       <button aria-label="Copiar respuesta" title={copied ? "¡Copiado!" : "Copiar"} onClick={copiar} className={btn(copied)}>
         {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
       </button>
-      {copied && <span className="text-[11px] font-semibold text-success-default">¡Copiado!</span>}
+      <span aria-live="polite" className="text-[11px] font-semibold">
+        {copied && <span className="text-success-default">¡Copiado!</span>}
+        {copia === "fallo" && <span className="text-error-default">No pudimos copiar</span>}
+      </span>
     </div>
   );
 }
