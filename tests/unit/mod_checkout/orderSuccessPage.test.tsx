@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { OrderSuccessPage } from "@/modules/mod-checkout/ui/OrderSuccessPage";
 import { useChatStore } from "@/shared/auth/chatStore";
 
@@ -71,5 +71,40 @@ describe("OrderSuccessPage: confirmación real sin datos demo (SPEC-16, SPEC-24)
     expect(screen.getByText(/Te enviaremos la confirmación a r\*\*\*@test\.pe/)).toBeDefined();
     expect(screen.queryByText(/PED-2026-00891/)).toBeNull();
     expect(screen.queryByText(/cliente\.demo@correo\.com/)).toBeNull();
+  });
+
+  it("en incógnito permite volver a mis pedidos o seguir comprando", () => {
+    render(<OrderSuccessPage />);
+    fireEvent.click(screen.getByRole("button", { name: "VER MIS PEDIDOS" }));
+    expect(navMock.push).toHaveBeenCalledWith("/pedidos");
+
+    fireEvent.click(screen.getByRole("button", { name: "SEGUIR COMPRANDO" }));
+    expect(navMock.push).toHaveBeenCalledWith("/");
+  });
+
+  it("con pedido permite ver estado, seguir comprando o calificar compra", () => {
+    useChatStore.setState({
+      cliente: { id: "cli-1", nombreCompleto: "Rosa", correo: "rosa@test.pe" },
+      ultimoPedido: {
+        orderId: "PED-1",
+        total: 100,
+        subtotal: 100,
+        costoEnvio: 0,
+        lineas: [{ nombre: "P1", cantidad: 1, precio: 100 }],
+        tarjetaMarca: "Visa",
+        tarjetaLast4: "1234",
+      },
+    });
+
+    render(<OrderSuccessPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "VER ESTADO DEL PEDIDO" }));
+    expect(navMock.push).toHaveBeenCalledWith("/pedidos");
+
+    fireEvent.click(screen.getByRole("button", { name: "SEGUIR COMPRANDO" }));
+    expect(navMock.push).toHaveBeenCalledWith("/");
+
+    fireEvent.click(screen.getByText("Calificar mi compra"));
+    expect(screen.getByText("Califica tu compra")).toBeDefined();
   });
 });

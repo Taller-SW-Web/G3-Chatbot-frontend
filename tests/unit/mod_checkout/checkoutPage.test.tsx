@@ -720,4 +720,29 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
     await waitFor(() => expect(mockApi.iniciarCheckout).toHaveBeenCalledTimes(2));
     expect(screen.queryByTestId("btn-reintentar-checkout")).toBeNull();
   });
+
+  it("permite modificar dirección desde el paso 2 y volver al paso 1", async () => {
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-uuid-mod",
+      cartId: "cart-uuid-1",
+      status: "PENDING_PAYMENT",
+      total: 132.5,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    await screen.findByText("Paso 2 de 2");
+    const volverBtn = screen.getByRole("button", { name: "VOLVER" });
+    fireEvent.click(volverBtn);
+
+    expect(await screen.findByRole("button", { name: /Continuar al pago/i })).toBeDefined();
+    expect(screen.getByText("Paso 1 de 2")).toBeDefined();
+  });
 });
