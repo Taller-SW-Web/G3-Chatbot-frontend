@@ -49,6 +49,9 @@ export type ResultadoPago = {
   idTransaccion?: string;
   correoEnmascarado?: string;
   mensaje?: string;
+  nuevoEstado?: string;
+  estado?: string;
+  motivo?: string;
 };
 
 export interface CheckoutPort {

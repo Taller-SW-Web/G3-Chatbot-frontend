@@ -348,9 +348,20 @@ export function renderBloque(
       const b = bloque as BloqueConfirmacion;
       const pedidoId = b.datos?.pedidoId ?? b.pedidoId ?? "";
       const correoEnmascarado = b.datos?.correoEnmascarado ?? b.correoEnmascarado ?? "";
+      const estado = b.datos?.estado ?? b.estado;
+      const nuevoEstado = b.datos?.nuevoEstado ?? b.nuevoEstado;
+      const motivo = b.datos?.motivo ?? b.motivo;
+      const reembolso = b.datos?.reembolso ?? b.reembolso;
       return (
         <div key={clave} data-testid="bloque-confirmacion-pedido" className="mt-2">
-          <ConfirmacionPedido pedidoId={pedidoId} correoEnmascarado={correoEnmascarado} />
+          <ConfirmacionPedido
+            pedidoId={pedidoId}
+            correoEnmascarado={correoEnmascarado}
+            estado={estado}
+            nuevoEstado={nuevoEstado}
+            motivo={motivo}
+            reembolso={reembolso}
+          />
         </div>
       );
     }

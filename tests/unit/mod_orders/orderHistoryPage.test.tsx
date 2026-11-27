@@ -168,4 +168,29 @@ describe("OrderHistoryPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "CONSULTAR CON EL ASISTENTE" }));
     expect(push).toHaveBeenCalledWith("/");
   });
+
+  it("en 'Entregados' muestra motivo de anulación y reembolso para pedidos ANULADO", async () => {
+    renderPage();
+    fireEvent.click(screen.getByText("Entregados"));
+
+    await waitFor(() => expect(screen.getByText("Pedido PED-2026-00003")).toBeDefined());
+    expect(screen.getAllByText("Anulado por falta de stock").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByText("Si corresponde un reembolso, se procesará al medio de pago original.")
+    ).toBeDefined();
+  });
+
+  it("muestra estado de error y permite reintentar la consulta de pedidos", async () => {
+    listarPedidos.mockRejectedValueOnce(new Error("network failure"));
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText("No puedo consultar tus pedidos en este momento.")).toBeDefined()
+    );
+    const retryBtn = screen.getByRole("button", { name: "REINTENTAR" });
+    expect(retryBtn).toBeDefined();
+
+    fireEvent.click(retryBtn);
+    await waitFor(() => expect(listarPedidos).toHaveBeenCalledTimes(2));
+  });
 });

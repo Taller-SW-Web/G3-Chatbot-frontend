@@ -8,6 +8,14 @@ export type ReenvioConfirmacion = {
   correoEnmascarado: string;
 };
 
+export type ReembolsoDetalle = {
+  estado?: string | null;
+  monto?: number | null;
+  moneda?: string | null;
+  fecha?: string | null;
+  mensaje?: string | null;
+};
+
 /** Fila de pedido (`GET /pedidos` y `GET /pedidos/me`, SPEC-17). */
 export type PedidoResumen = {
   pedidoId: string;
@@ -17,6 +25,10 @@ export type PedidoResumen = {
   total: number;
   moneda: string;
   fechaCreacion: string;
+  motivoAnulacion?: string | null;
+  motivo?: string | null;
+  reembolso?: string | ReembolsoDetalle | null;
+  estadoReembolso?: string | null;
 };
 
 export type PedidoLinea = {
@@ -39,7 +51,7 @@ export type PedidoEnvio = {
 export type PedidoDetalle = PedidoResumen & {
   items: PedidoLinea[];
   envio: PedidoEnvio | null;
-  historial: { estado: string; etiqueta: string; fecha: string; completado: boolean }[];
+  historial: { estado: string; etiqueta: string; fecha: string; completado: boolean; motivo?: string | null }[];
   seguimientoDisponible?: boolean;
   /** SPEC-24: el cliente ya calificó la entrega; el slot de CSAT no debe mostrarse. */
   csatEnviado?: boolean;

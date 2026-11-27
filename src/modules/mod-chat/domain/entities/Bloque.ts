@@ -93,10 +93,18 @@ export type BloqueConfirmacion = BloqueBase & {
   pedidoId?: string;
   correoEnmascarado?: string;
   total?: number;
+  estado?: string;
+  nuevoEstado?: string;
+  motivo?: string;
+  reembolso?: string;
   datos?: {
     pedidoId?: string;
     correoEnmascarado?: string;
     total?: number;
+    estado?: string;
+    nuevoEstado?: string;
+    motivo?: string;
+    reembolso?: string;
   };
 };
 

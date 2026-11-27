@@ -273,6 +273,9 @@ export function CheckoutPage() {
         tarjetaLast4: res.ultimos4 || pago.tarjetaNum.replace(/\D/g, "").slice(-4) || "••••",
         correoEnmascarado: res.correoEnmascarado,
         mensajeConfirmacion: res.mensaje,
+        estado: res.nuevoEstado || res.estado,
+        nuevoEstado: res.nuevoEstado,
+        motivo: res.motivo,
       });
 
       router.push("/exito");

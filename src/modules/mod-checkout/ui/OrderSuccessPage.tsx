@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { CheckIcon } from "@/shared/ui/icons";
+import { CheckIcon, XIcon } from "@/shared/ui/icons";
 import {
   RatingPopup,
   calificacionCompraDescartada,
@@ -39,12 +39,64 @@ export function OrderSuccessPage() {
   const orderId = pedido?.orderId || "PED-2026-00891";
   const total = pedido?.total ?? pedido?.subtotal ?? 0;
   const aviso = avisoConfirmacion(pedido?.correoEnmascarado, correo);
+  const esAnulado = pedido?.estado === "ANULADO" || pedido?.nuevoEstado === "ANULADO";
+  const esFaltaStock =
+    !pedido?.motivo ||
+    /stock|agotado/i.test(pedido.motivo);
+  const motivoTexto = esFaltaStock
+    ? "Anulado por falta de stock"
+    : pedido?.motivo || "Pedido anulado";
+  const reembolsoTexto =
+    pedido?.reembolso ||
+    "Si corresponde un reembolso, se procesará al medio de pago original.";
+
   // SPEC-24: "Ahora no" se recuerda por pedido en este navegador.
   const descartada = useSyncExternalStore(
     sinSuscripcion,
     () => calificacionCompraDescartada(orderId),
     () => false
   );
+
+  if (esAnulado) {
+    return (
+      <div className="relative min-h-full p-6 flex flex-col items-center gap-3 text-center">
+        <div className="wf-check w-16 h-16 rounded-full flex items-center justify-center bg-error-background text-error-default">
+          <XIcon size={24} />
+        </div>
+        <h2 className="font-heading text-[24px] leading-8 text-error-default">PEDIDO ANULADO</h2>
+        <p className="text-[14px] font-bold text-text-primary">{motivoTexto}</p>
+        <p className="text-[14px] text-text-secondary">
+          Pedido {orderId} · {reembolsoTexto}
+        </p>
+        <div className="rounded-md bg-white border border-border-default w-full p-3 text-left flex flex-col gap-2">
+          <div className="flex justify-between text-[14px]">
+            <span className="text-text-secondary">Total a reembolsar</span>
+            <span className="font-heading text-[18px]">S/ {total.toFixed(2)}</span>
+          </div>
+          <div className="border-t border-dashed border-border-default pt-2 flex flex-col gap-1 text-[13px]">
+            {(pedido?.lineas ?? []).map((it) => (
+              <div key={it.nombre} className="flex justify-between gap-2">
+                <span className="truncate">{it.nombre} × {it.cantidad}</span>
+                <span className="font-semibold shrink-0">S/ {(it.precio * it.cantidad).toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <button
+          onClick={() => router.push("/pedidos")}
+          className="wf-btn w-full py-3 text-sm font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover"
+        >
+          VER ESTADO DEL PEDIDO
+        </button>
+        <button
+          onClick={() => router.push("/")}
+          className="wf-btn w-full py-3 text-sm font-bold tracking-wide bg-white border border-border-default"
+        >
+          SEGUIR COMPRANDO
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-full p-6 flex flex-col items-center gap-3 text-center">
