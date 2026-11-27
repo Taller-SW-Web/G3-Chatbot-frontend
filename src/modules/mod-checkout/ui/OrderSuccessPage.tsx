@@ -20,7 +20,10 @@ export function avisoConfirmacion(correoEnmascarado?: string, fallbackEmail?: st
       : `${correoEnmascarado}.`;
     return `Te enviaremos la confirmación a ${emailConPuntos}`;
   }
-  return `Te enviaremos la confirmación a ${maskEmail(fallbackEmail ?? "cliente.demo@correo.com")}.`;
+  if (fallbackEmail) {
+    return `Te enviaremos la confirmación a ${maskEmail(fallbackEmail)}.`;
+  }
+  return "Te enviaremos la confirmación a tu correo.";
 }
 
 /**
@@ -33,18 +36,46 @@ export function OrderSuccessPage() {
   const cliente = useChatStore((s) => s.cliente);
   const [showRating, setShowRating] = useState(true);
 
-  const correo = cliente?.correo ?? "cliente.demo@correo.com";
-  const last4 = pedido?.tarjetaLast4 ?? "••••";
-  const marca = pedido?.tarjetaMarca || "Tarjeta";
-  const orderId = pedido?.orderId || "PED-2026-00891";
-  const total = pedido?.total ?? pedido?.subtotal ?? 0;
-  const aviso = avisoConfirmacion(pedido?.correoEnmascarado, correo);
+  const orderId = pedido?.orderId;
+
   // SPEC-24: "Ahora no" se recuerda por pedido en este navegador.
   const descartada = useSyncExternalStore(
     sinSuscripcion,
-    () => calificacionCompraDescartada(orderId),
+    () => (orderId ? calificacionCompraDescartada(orderId) : true),
     () => false
   );
+
+  if (!pedido || !orderId) {
+    return (
+      <div
+        className="relative min-h-full p-6 flex flex-col items-center justify-center gap-4 text-center"
+        data-testid="pedido-no-encontrado"
+      >
+        <h2 className="font-heading text-[20px] leading-7">No se encontró información del pedido</h2>
+        <p className="text-[14px] text-text-secondary">
+          No hay un pedido confirmado en esta sesión. Si acabas de realizar una compra, revisa tu historial o tu correo.
+        </p>
+        <button
+          onClick={() => router.push("/pedidos")}
+          className="wf-btn w-full max-w-xs py-3 text-sm font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover"
+        >
+          VER MIS PEDIDOS
+        </button>
+        <button
+          onClick={() => router.push("/")}
+          className="wf-btn w-full max-w-xs py-3 text-sm font-bold tracking-wide bg-white border border-border-default"
+        >
+          SEGUIR COMPRANDO
+        </button>
+      </div>
+    );
+  }
+
+  const correo = cliente?.correo;
+  const last4 = pedido.tarjetaLast4 || "••••";
+  const marca = pedido.tarjetaMarca || "Tarjeta";
+  const total = pedido.total ?? pedido.subtotal ?? 0;
+  const aviso = avisoConfirmacion(pedido.correoEnmascarado, correo);
 
   return (
     <div className="relative min-h-full p-6 flex flex-col items-center gap-3 text-center">
@@ -63,7 +94,7 @@ export function OrderSuccessPage() {
         </div>
         <div className="border-t border-dashed border-border-default pt-2 text-[13px] flex flex-col gap-1">
           <div className="flex justify-between gap-2"><span className="text-text-secondary">Tarjeta</span><span className="font-semibold">{marca} •••• {last4}</span></div>
-          <div className="flex justify-between gap-2"><span className="text-text-secondary">Entrega</span><span className="font-semibold text-right">{pedido?.direccion || "Dirección de envío"}{pedido?.distrito ? ` · ${pedido.distrito}` : ""}</span></div>
+          <div className="flex justify-between gap-2"><span className="text-text-secondary">Entrega</span><span className="font-semibold text-right">{pedido.direccion ? (pedido.distrito ? `${pedido.direccion} · ${pedido.distrito}` : pedido.direccion) : "Dirección registrada"}</span></div>
           {pedido?.nombre ? <div className="flex justify-between gap-2"><span className="text-text-secondary">Recibe</span><span className="font-semibold text-right">{pedido.nombre}</span></div> : null}
         </div>
       </div>

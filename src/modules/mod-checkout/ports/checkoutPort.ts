@@ -1,4 +1,5 @@
 /** Contrato REST de checkout y pago (SPEC-12, SPEC-14). */
+import type { TipoDocumento } from "@/shared/auth/Cliente";
 
 /** Body of `POST /checkout`: the server computes lines and amounts (contratos-integracion §2.8). */
 export type CrearCheckoutInput = {
@@ -29,6 +30,17 @@ export type CheckoutSesionData = {
   expiresAt: string;
   intentosRestantes: number;
   summary: Record<string, unknown>;
+  /** SPEC-12: aviso cuando Seguridad falla al guardar la dirección. */
+  avisoDireccion?: string | null;
+  /** SPEC-12: dirección guardada o predeterminada del cliente. */
+  direccionGuardada?: {
+    nombre?: string;
+    direccion?: string;
+    distrito?: string;
+    referencia?: string;
+    docTipo?: TipoDocumento;
+    docNum?: string;
+  } | null;
 };
 
 export type ProcesarPagoInput = {
@@ -49,6 +61,8 @@ export type ResultadoPago = {
   idTransaccion?: string;
   correoEnmascarado?: string;
   mensaje?: string;
+  /** SPEC-12: aviso cuando Seguridad falla al guardar la dirección. */
+  avisoDireccion?: string | null;
 };
 
 export interface CheckoutPort {
