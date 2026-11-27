@@ -4,11 +4,10 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { CheckIcon } from "@/shared/ui/icons";
-import { DevolucionForm } from "@/modules/mod-postventa/ui/forms/DevolucionForm";
+import { DevolucionForm, type DevolucionFormPayload } from "@/modules/mod-postventa/ui/forms/DevolucionForm";
 import { pedidosPort } from "@/modules/mod-orders/public";
 import { container } from "@/shared/di/container";
 import { useChatStore } from "@/shared/auth/chatStore";
-import type { DevolucionInput } from "@/modules/mod-postventa/domain/schemas/devolucion.schema";
 import type { DevolucionEvidenciaInput } from "@/modules/mod-postventa/ports/postventaPort";
 import {
   esDevolucionDuplicada,
@@ -19,10 +18,11 @@ import { DuplicateNotice } from "@/modules/mod-postventa/ui/blocks/DuplicateNoti
 import { isUnavailable, problemCode } from "@/shared/api/httpError";
 
 type EnvioDevolucion = {
-  input: DevolucionInput;
+  input: DevolucionFormPayload;
   archivo?: File;
+  archivos?: File[];
   /** URL ya subida: "Registrar igual" no vuelve a subir la evidencia. */
-  evidencia?: DevolucionEvidenciaInput;
+  evidencias?: DevolucionEvidenciaInput[];
 };
 
 /** `/devolucion?pedidoId=...`: solicitud real de cambio/devolución (SPEC-21). */
@@ -46,19 +46,38 @@ export function DevolucionPage() {
 
   const crear = useMutation({
     mutationFn: async ({ envio, forzar }: { envio: EnvioDevolucion; forzar?: boolean }) => {
-      const evidenciaSubida = envio.evidencia
-        ? envio.evidencia
-        : envio.archivo
-          ? await container.postventa.subirEvidencia(envio.archivo, conversacionId ?? undefined)
-          : null;
-      if (evidenciaSubida) setUltimoEnvio({ ...envio, evidencia: { tipo: evidenciaSubida.tipo, url: evidenciaSubida.url } });
+      const evidenciasSubidas: DevolucionEvidenciaInput[] = envio.evidencias ?? [];
+      if (evidenciasSubidas.length === 0) {
+        const archivos =
+          envio.archivos && envio.archivos.length > 0
+            ? envio.archivos
+            : envio.archivo
+              ? [envio.archivo]
+              : [];
+        for (const arch of archivos) {
+          const subida = await container.postventa.subirEvidencia(arch, conversacionId ?? undefined);
+          if (subida) {
+            evidenciasSubidas.push({ tipo: subida.tipo, url: subida.url });
+          }
+        }
+      }
+      if (evidenciasSubidas.length > 0) {
+        setUltimoEnvio({ ...envio, evidencias: evidenciasSubidas });
+      }
+
+      const items =
+        envio.input.items && envio.input.items.length > 0
+          ? envio.input.items
+          : [{ productoId: envio.input.linea, cantidad: 1 }];
+
       return container.postventa.crearDevolucion({
         pedidoId,
         tipo: envio.input.tipo,
         motivo: envio.input.motivo,
         descripcion: envio.input.descripcion,
-        items: [{ productoId: envio.input.linea, cantidad: 1 }],
-        evidencias: evidenciaSubida ? [{ tipo: evidenciaSubida.tipo, url: evidenciaSubida.url }] : [],
+        items,
+        evidencias: evidenciasSubidas,
+        varianteDeseada: envio.input.varianteDeseada,
         ...(forzar ? { forzar: true } : {}),
       });
     },
@@ -74,12 +93,19 @@ export function DevolucionPage() {
       if (esDevolucionDuplicada(err)) {
         setError(null);
         setDuplicado(solicitudDuplicada(err));
-      } else if (isUnavailable(err)) setError("El servicio de postventa no está disponible. Intenta de nuevo.");
-      else if (code === "PLAZO_VENCIDO") setError("El plazo de 7 días para solicitar el cambio o devolución ya venció.");
-      else if (code === "PEDIDO_NO_ENTREGADO") setError("Solo puedes solicitar un cambio o devolución de un pedido entregado.");
-      else if (code === "EVIDENCIA_REQUERIDA") setError("Este motivo exige adjuntar al menos una evidencia.");
-      else if (code === "DEVOLUCION_EN_CURSO") setError("Ya tienes una solicitud abierta para esas unidades.");
-      else setError("No pudimos registrar tu solicitud. Revisa los datos e intenta de nuevo.");
+      } else if (isUnavailable(err)) {
+        setError("El servicio de postventa no está disponible. Intenta de nuevo.");
+      } else if (code === "PLAZO_VENCIDO") {
+        setError("El plazo de 7 días para solicitar el cambio o devolución ya venció.");
+      } else if (code === "PEDIDO_NO_ENTREGADO") {
+        setError("Solo puedes solicitar un cambio o devolución de un pedido entregado.");
+      } else if (code === "EVIDENCIA_REQUERIDA") {
+        setError("Este motivo exige adjuntar al menos una evidencia.");
+      } else if (code === "DEVOLUCION_EN_CURSO") {
+        setError("Ya tienes una solicitud abierta para esas unidades.");
+      } else {
+        setError("No pudimos registrar tu solicitud. Revisa los datos e intenta de nuevo.");
+      }
     },
   });
 
@@ -99,7 +125,34 @@ export function DevolucionPage() {
     return <p className="p-6 text-[14px] text-text-secondary">Cargando pedido…</p>;
   }
 
-  if (pedido.isError || !pedido.data) {
+  if (pedido.isError) {
+    if (isUnavailable(pedido.error)) {
+      return (
+        <div className="p-6 flex flex-col items-center gap-3 text-center">
+          <h2 className="font-heading text-[20px]">Servicio no disponible</h2>
+          <p className="text-[14px] text-text-secondary">
+            No pudimos consultar la información del pedido. Por favor intenta de nuevo.
+          </p>
+          <button
+            onClick={() => void pedido.refetch()}
+            className="wf-btn w-full py-3 text-[12px] font-bold bg-action-primary text-surface-ink"
+          >
+            REINTENTAR
+          </button>
+        </div>
+      );
+    }
+    return (
+      <div className="p-6 flex flex-col items-center gap-3 text-center">
+        <h2 className="font-heading text-[20px]">No encontré ese pedido</h2>
+        <button onClick={() => router.push("/pedidos")} className="wf-btn w-full py-3 text-[12px] font-bold bg-action-primary text-surface-ink">
+          VOLVER A MIS PEDIDOS
+        </button>
+      </div>
+    );
+  }
+
+  if (!pedido.data) {
     return (
       <div className="p-6 flex flex-col items-center gap-3 text-center">
         <h2 className="font-heading text-[20px]">No encontré ese pedido</h2>
@@ -143,6 +196,7 @@ export function DevolucionPage() {
   const lineas = pedido.data.items.map((item) => ({
     productoId: item.productoId,
     label: `${item.descripcion} · ${item.sku}`,
+    cantidadMaxima: item.cantidad,
   }));
 
   return (
@@ -164,7 +218,11 @@ export function DevolucionPage() {
       <DevolucionForm
         lineas={lineas}
         onOk={async (input) => {
-          const envio = { input, archivo: input.evidenciaArchivo };
+          const envio: EnvioDevolucion = {
+            input,
+            archivo: input.evidenciaArchivo,
+            archivos: input.evidenciasArchivos,
+          };
           setUltimoEnvio(envio);
           try {
             await crear.mutateAsync({ envio });

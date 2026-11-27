@@ -18,6 +18,8 @@ export function ReclamoForm({
   pedidoId,
   documentoInicial = "",
   telefonoInicial = "",
+  nombreInicial = "",
+  emailInicial = "",
   tipoInicial,
   motivoInicial,
   descripcionInicial,
@@ -28,6 +30,8 @@ export function ReclamoForm({
   pedidoId: string;
   documentoInicial?: string;
   telefonoInicial?: string;
+  nombreInicial?: string;
+  emailInicial?: string;
   /** Valores que el chat puede precargar al abrir el formulario. */
   tipoInicial?: "RECLAMO" | "QUEJA";
   motivoInicial?: (typeof RECLAMO_MOTIVO_VALUES)[number];
@@ -43,6 +47,8 @@ export function ReclamoForm({
       tipo: tipoInicial ?? "RECLAMO",
       motivo: motivoInicial ?? "PRODUCTO_DEFECTUOSO_O_INCORRECTO",
       descripcion: descripcionInicial ?? undefined,
+      nombre: nombreInicial || undefined,
+      email: emailInicial || undefined,
       documento: documentoInicial,
       telefono: telefonoInicial,
       solucion: solucionInicial ?? undefined,
@@ -52,7 +58,16 @@ export function ReclamoForm({
   const tipo = watch("tipo");
 
   return (
-    <form onSubmit={handleSubmit((d) => onOk(d))} className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2">
+    <form
+      onSubmit={handleSubmit((d) => {
+        const clean: ReclamoInput = { ...d };
+        if (!clean.nombre?.trim()) delete (clean as Record<string, unknown>).nombre;
+        if (!clean.email?.trim()) delete (clean as Record<string, unknown>).email;
+        if (!clean.solucion?.trim()) delete (clean as Record<string, unknown>).solucion;
+        return onOk(clean);
+      })}
+      className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2"
+    >
       <p className="font-heading text-[15px] tracking-[0.06em] uppercase text-text-primary">Crear reclamo · Pedido {pedidoId}</p>
       <div className="grid grid-cols-2 gap-2">
         <label className="flex items-center gap-2 text-[13px]">
@@ -90,12 +105,53 @@ export function ReclamoForm({
       <textarea {...register("descripcion")} placeholder="Describe lo ocurrido (20 a 1000 caracteres)..." aria-label="Descripción del reclamo" rows={4} maxLength={1000} className="wf-input px-3 py-2.5 text-sm outline-none" />
       <p className="text-[11px] text-text-secondary text-right">{descripcion.length}/1000</p>
       {errors.descripcion && <span className="text-[12px] text-error-default">{errors.descripcion.message}</span>}
-      <input {...register("documento")} placeholder="Documento (prellenado)" aria-label="Documento" className="wf-input px-3 py-2.5 text-sm outline-none" />
-      <input {...register("telefono")} placeholder="Teléfono de contacto" aria-label="Teléfono" className="wf-input px-3 py-2.5 text-sm outline-none" />
+      <input
+        {...register("nombre")}
+        placeholder="Nombre completo"
+        aria-label="Nombre completo"
+        className="wf-input px-3 py-2.5 text-sm outline-none"
+      />
+      <input
+        {...register("email")}
+        type="email"
+        placeholder="Correo electrónico"
+        aria-label="Correo electrónico"
+        className="wf-input px-3 py-2.5 text-sm outline-none"
+      />
+      <input
+        {...register("documento")}
+        placeholder="Documento (prellenado)"
+        aria-label="Documento"
+        aria-invalid={Boolean(errors.documento)}
+        aria-describedby={errors.documento ? "error-reclamo-documento" : undefined}
+        className="wf-input px-3 py-2.5 text-sm outline-none"
+      />
+      {errors.documento && (
+        <span id="error-reclamo-documento" role="alert" className="text-[12px] text-error-default">
+          {errors.documento.message}
+        </span>
+      )}
+      <input
+        {...register("telefono")}
+        placeholder="Teléfono de contacto"
+        aria-label="Teléfono"
+        aria-invalid={Boolean(errors.telefono)}
+        aria-describedby={errors.telefono ? "error-reclamo-telefono" : undefined}
+        className="wf-input px-3 py-2.5 text-sm outline-none"
+      />
+      {errors.telefono && (
+        <span id="error-reclamo-telefono" role="alert" className="text-[12px] text-error-default">
+          {errors.telefono.message}
+        </span>
+      )}
       <input {...register("solucion")} placeholder="¿Qué solución esperas?" aria-label="Solución esperada" className="wf-input px-3 py-2.5 text-sm outline-none" />
       <div className="grid grid-cols-2 gap-2">
         <button type="button" onClick={onCancelar} className="wf-btn py-3 text-[12px] font-bold bg-white border border-border-default">CANCELAR</button>
-        <button type="submit" disabled={descripcion.trim().length < 20 || isSubmitting} className="wf-btn py-3 text-[12px] font-bold bg-action-primary text-surface-ink disabled:opacity-45 inline-flex items-center justify-center gap-2">
+        <button
+          type="submit"
+          disabled={descripcion.trim().length < 20 || isSubmitting}
+          className="wf-btn py-3 text-[12px] font-bold bg-action-primary text-surface-ink disabled:opacity-45 inline-flex items-center justify-center gap-2"
+        >
           <FileAlertIcon size={16} />{isSubmitting ? "ENVIANDO..." : "ENVIAR RECLAMO"}
         </button>
       </div>

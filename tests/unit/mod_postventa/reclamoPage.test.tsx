@@ -144,4 +144,13 @@ describe("ReclamoPage", () => {
 
     expect(await screen.findByText(/Revisa los datos del formulario/)).toBeDefined();
   });
+
+  it("prellena documento, nombre y correo del perfil", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    renderPage();
+
+    expect((await screen.findByDisplayValue("Ana Pérez"))).toBeDefined();
+    expect(screen.getByDisplayValue("ana@example.com")).toBeDefined();
+    expect(screen.getByDisplayValue("+51999888777")).toBeDefined();
+  });
 });

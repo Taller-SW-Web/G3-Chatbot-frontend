@@ -15,6 +15,37 @@ function formatDate(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? value : DATE.format(date);
 }
 
+const ETIQUETAS_ESTADO: Record<string, string> = {
+  REGISTRADO: "Registrado",
+  REGISTRADA: "Registrada",
+  EN_REVISION: "En revisión",
+  PENDIENTE: "Pendiente",
+  APROBADO: "Aprobado",
+  APROBADA: "Aprobada",
+  RECHAZADO: "Rechazado",
+  RECHAZADA: "Rechazada",
+  RESUELTO: "Resuelto",
+  RESUELTA: "Resuelta",
+  ATENDIDO: "Atendido",
+  ATENDIDA: "Atendida",
+  EN_PROCESO: "En proceso",
+  REEMBOLSADO: "Reembolsado",
+  REEMBOLSADA: "Reembolsada",
+  ANULADO: "Anulado",
+  ANULADA: "Anulada",
+  SOLICITADA: "Solicitada",
+  SOLICITADO: "Solicitado",
+  PENDIENTE_ENVIO: "Pendiente de envío",
+  RECIBIDO: "Recibido",
+  FINALIZADO: "Finalizado",
+};
+
+export function humanizarEstado(estado: string): string {
+  if (!estado) return "—";
+  const norm = estado.trim().toUpperCase();
+  return ETIQUETAS_ESTADO[norm] ?? (estado.charAt(0).toUpperCase() + estado.slice(1).toLowerCase());
+}
+
 /** Pestaña Reembolso/Cambio del historial de pedidos (SPEC-22). */
 export function HistorialDevoluciones() {
   const router = useRouter();
@@ -73,7 +104,7 @@ export function HistorialDevoluciones() {
         pedidoId: d.pedidoId,
         tipo: d.tipo,
         estado: d.estado,
-        estadoEtiqueta: d.estado,
+        estadoEtiqueta: humanizarEstado(d.estado),
         motivo: d.motivo,
         fecha: formatDate(d.fechaRegistro),
         estadoReembolso: d.estadoReembolso ?? undefined,
@@ -142,7 +173,7 @@ export function HistorialReclamos() {
         tipo: r.tipo,
         motivo: r.motivo,
         estado: r.estado,
-        estadoEtiqueta: r.estado,
+        estadoEtiqueta: humanizarEstado(r.estado),
         fechaLimiteSLA: r.fechaLimiteSLA ? formatDate(r.fechaLimiteSLA) : null,
       }))} />
     </div>

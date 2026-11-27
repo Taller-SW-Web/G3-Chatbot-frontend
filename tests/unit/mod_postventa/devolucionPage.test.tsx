@@ -59,6 +59,10 @@ function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks();
   params.value = new URLSearchParams();
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: vi.fn(() => "blob:evidencia"),
+  });
   obtenerPedido.mockResolvedValue(pedidoEntregado);
   crearDevolucion.mockResolvedValue({
     devolucionId: "DEV-2026-00099",
@@ -207,5 +211,57 @@ describe("DevolucionPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /ENVIAR SOLICITUD/ }));
 
     expect(await screen.findByText(/Solo puedes solicitar un cambio o devolución de un pedido entregado/)).toBeDefined();
+  });
+
+  it("genera un solo POST con 2 items y 3 evidencias subidas", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    obtenerPedido.mockResolvedValueOnce({
+      ...pedidoEntregado,
+      items: [
+        { productoId: "P-100", sku: "SKU-100", descripcion: "Zapatilla A", cantidad: 2, precioUnitario: 100 },
+        { productoId: "P-101", sku: "SKU-101", descripcion: "Zapatilla B", cantidad: 1, precioUnitario: 100 },
+      ],
+    });
+    renderPage();
+
+    await screen.findByText(/Solicitar devolución/);
+
+    fireEvent.click(screen.getByLabelText("Seleccionar Zapatilla B · SKU-101"));
+
+    const f1 = new File(["a"], "f1.png", { type: "image/png" });
+    const f2 = new File(["b"], "f2.png", { type: "image/png" });
+    const f3 = new File(["c"], "f3.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("Subir evidencia"), { target: { files: [f1, f2, f3] } });
+
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR SOLICITUD/ }));
+
+    await waitFor(() => expect(subirEvidencia).toHaveBeenCalledTimes(3));
+    expect(crearDevolucion).toHaveBeenCalledTimes(1);
+    expect(crearDevolucion).toHaveBeenCalledWith(expect.objectContaining({
+      pedidoId: "PED-2026-00002",
+      items: [
+        { productoId: "P-100", cantidad: 1 },
+        { productoId: "P-101", cantidad: 1 },
+      ],
+      evidencias: expect.arrayContaining([
+        expect.objectContaining({ tipo: "IMAGEN" }),
+      ]),
+    }));
+  });
+
+  it("muestra servicio no disponible ante 503 y permite reintentar", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-503");
+    obtenerPedido
+      .mockRejectedValueOnce({ response: { status: 503, data: { code: "SERVICIO_NO_DISPONIBLE" } } })
+      .mockResolvedValueOnce(pedidoEntregado);
+
+    renderPage();
+
+    expect(await screen.findByText("Servicio no disponible")).toBeDefined();
+    const reintentar = screen.getByRole("button", { name: "REINTENTAR" });
+    fireEvent.click(reintentar);
+
+    expect(await screen.findByText(/Solicitar devolución/)).toBeDefined();
+  });
   });
 });

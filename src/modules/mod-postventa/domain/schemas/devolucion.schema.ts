@@ -21,9 +21,17 @@ export const DEVOLUCION_MOTIVOS = [
   { value: "OTRO", label: "Otro" },
 ] as const;
 
+export type DevolucionVariante = {
+  sku: string;
+  label: string;
+  disponible: boolean;
+};
+
 export type DevolucionLinea = {
   productoId: string;
   label: string;
+  cantidadMaxima?: number;
+  variantes?: DevolucionVariante[];
 };
 
 export const devolucionSchema = z.object({
