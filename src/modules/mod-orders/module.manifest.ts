@@ -7,7 +7,7 @@ export const manifest = {
   routes: [
     { path: "/pedidos", description: "Historial de pedidos por estado" },
     { path: "/pedidos/[tab]", description: "Historial filtrado por pestaña" },
-    { path: "/pedido", description: "Detalle de un pedido con su CSAT" },
+    { path: "/pedido", description: "Detalle de un pedido y su historial" },
     { path: "/seguimiento", description: "Hitos del despacho de un pedido" },
   ],
   nav: [
@@ -18,7 +18,6 @@ export const manifest = {
     "/pedidos",
     "/pedidos/{pedidoId}",
     "/pedidos/{pedidoId}/seguimiento",
-    "/pedidos/{pedidoId}/csat",
     "/pedidos/{pedidoId}/reenviar-confirmacion",
   ],
   dependsOn: ["mod-checkout"],

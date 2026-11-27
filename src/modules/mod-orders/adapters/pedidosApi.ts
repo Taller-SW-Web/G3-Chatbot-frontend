@@ -10,7 +10,7 @@ import type {
   SeguimientoPedido,
 } from "@/modules/mod-orders/ports/pedidosPort";
 
-/** Adapter REST de pedidos, seguimiento y reenvío de confirmación (SPEC-15..18, SPEC-24). */
+/** Adapter REST de pedidos, seguimiento y reenvío de confirmación (SPEC-15..18). */
 export const pedidosApi: PedidosPort = {
   async listarPedidos(input = {}): Promise<PaginaPedidos> {
     const { data } = await http.get("/pedidos", {
@@ -34,12 +34,6 @@ export const pedidosApi: PedidosPort = {
       timeout: apiConfig.timeouts.pedidos,
     });
     return data as SeguimientoPedido;
-  },
-  async calificarPedido(pedidoId: string, puntuacion: 1 | 3 | 5, comentario?: string): Promise<void> {
-    await http.post(`/pedidos/${encodeURIComponent(pedidoId)}/csat`, {
-      puntuacion,
-      ...(comentario ? { comentario } : {}),
-    });
   },
   // Real backend, no fallback: a fake "ok" would tell the customer the e-mail was resent.
   async reenviarConfirmacion(pedidoId, idempotencyKey) {

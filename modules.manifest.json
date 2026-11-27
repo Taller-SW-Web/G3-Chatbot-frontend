@@ -43,7 +43,7 @@
       "name": "Pedidos y seguimiento",
       "owner": "@Taller-SW-Web/chatbot",
       "dependsOn": ["mod-checkout"],
-      "specs": ["consulta-estado-pedido", "seguimiento-despacho", "notificacion-confirmacion", "grabacion-pedido", "retroalimentacion-cliente"]
+      "specs": ["consulta-estado-pedido", "seguimiento-despacho", "notificacion-confirmacion", "grabacion-pedido"]
     },
     {
       "id": "mod-postventa",

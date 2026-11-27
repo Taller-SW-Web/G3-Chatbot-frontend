@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { DeliveryRating } from "@/modules/mod-orders/ui/DeliveryRating";
+import { DeliveryRating } from "@/modules/mod-postventa/ui/DeliveryRating";
 
 const onRate = vi.fn();
 const onNotDelivered = vi.fn();
@@ -16,7 +16,7 @@ afterEach(cleanup);
 function abrir() {
   return render(
     <DeliveryRating
-      orderId="PED-2026-00002"
+      pedidoId="PED-2026-00002"
       onRate={onRate}
       onNotDelivered={onNotDelivered}
     />

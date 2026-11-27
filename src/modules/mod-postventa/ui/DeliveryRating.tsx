@@ -10,10 +10,10 @@ import { httpStatus, isUnavailable, problemCode } from "@/shared/api/httpError";
 export type DeliveryMood = "mal" | "regular" | "bien";
 
 type DeliveryRatingProps = {
-  orderId: string;
+  pedidoId: string;
   initial?: DeliveryMood | null;
   /** Envía la calificación con su comentario; si falla, el bloque permite reintentar. */
-  onRate: (orderId: string, mood: DeliveryMood, comentario?: string) => Promise<unknown>;
+  onRate: (pedidoId: string, mood: DeliveryMood, comentario?: string) => Promise<unknown>;
   /** SPEC-24: permite refrescar el detalle cuando Ventas responde 422 ORDER_NOT_DELIVERED. */
   onNotDelivered?: () => void;
 };
@@ -44,10 +44,12 @@ function MoodIcon({ value, size = 24 }: { value: DeliveryMood; size?: 24 }) {
 /**
  * DeliveryRating — CSAT de la entrega (SPEC-24): 3 caritas, comentario opcional
  * y envío a Ventas. Client Component (interactivo). Uno por pedido: recibe
- * orderId para diferenciar calificaciones cuando haya varios entregados.
+ * pedidoId para diferenciar calificaciones cuando haya varios entregados.
+ * La inyecta `app/pedido/page.tsx` como slot de `OrderDetailPage`; el adapter
+ * que envía la calificación vive en este módulo (mod-postventa).
  * Paridad con Mockups-Wireframes (SPEC-24).
  */
-export function DeliveryRating({ orderId, initial = null, onRate, onNotDelivered }: DeliveryRatingProps) {
+export function DeliveryRating({ pedidoId, initial = null, onRate, onNotDelivered }: DeliveryRatingProps) {
   const [mood, setMood] = useState<DeliveryMood | null>(initial);
   const [comentario, setComentario] = useState("");
   const [estado, setEstado] = useState<EstadoEnvio>(initial ? "rated" : "idle");
@@ -58,7 +60,7 @@ export function DeliveryRating({ orderId, initial = null, onRate, onNotDelivered
     setEstado("sending");
     setError(null);
     try {
-      await onRate(orderId, mood, comentario.trim() || undefined);
+      await onRate(pedidoId, mood, comentario.trim() || undefined);
       setEstado("rated");
     } catch (err) {
       const code = problemCode(err);
@@ -85,7 +87,7 @@ export function DeliveryRating({ orderId, initial = null, onRate, onNotDelivered
     return (
       <div
         className="rounded-md bg-surface-cloud-subtle border border-border-default p-3 flex flex-col gap-2"
-        aria-label={`Calificar entrega del pedido ${orderId}`}
+        aria-label={`Calificar entrega del pedido ${pedidoId}`}
       >
         <div className="flex items-center gap-1.5" role="status">
           <span className="w-9 h-9 shrink-0 rounded-full bg-surface-ink text-text-inverse flex items-center justify-center">
@@ -104,7 +106,7 @@ export function DeliveryRating({ orderId, initial = null, onRate, onNotDelivered
     return (
       <div
         className="rounded-md bg-surface-cloud-subtle border border-border-default p-3"
-        aria-label={`Calificar entrega del pedido ${orderId}`}
+        aria-label={`Calificar entrega del pedido ${pedidoId}`}
         role="status"
       >
         <p className="text-[13px] text-text-secondary">Solo puedes calificar pedidos entregados.</p>
@@ -115,7 +117,7 @@ export function DeliveryRating({ orderId, initial = null, onRate, onNotDelivered
   return (
     <div
       className="rounded-md bg-surface-cloud-subtle border border-border-default p-3 flex flex-col gap-2"
-      aria-label={`Calificar entrega del pedido ${orderId}`}
+      aria-label={`Calificar entrega del pedido ${pedidoId}`}
     >
       <p className="font-heading text-[15px] tracking-[0.06em] uppercase text-text-primary">
         Califica tu entrega
@@ -145,11 +147,11 @@ export function DeliveryRating({ orderId, initial = null, onRate, onNotDelivered
           );
         })}
       </div>
-      <label htmlFor={`comentario-${orderId}`} className="text-[12px] font-semibold text-text-primary">
+      <label htmlFor={`comentario-${pedidoId}`} className="text-[12px] font-semibold text-text-primary">
         Comentario (opcional)
       </label>
       <textarea
-        id={`comentario-${orderId}`}
+        id={`comentario-${pedidoId}`}
         value={comentario}
         onChange={(e) => setComentario(e.target.value)}
         maxLength={COMENTARIO_MAX}

@@ -14,7 +14,7 @@ import type {
   ReclamoDetalle,
 } from "@/modules/mod-postventa/ports/postventaPort";
 
-/** Adapter REST de devoluciones, reclamos y evidencias (SPEC-19..22). */
+/** Adapter REST de devoluciones, reclamos, evidencias y CSAT (SPEC-19..22, SPEC-24). */
 export const postventaApi: PostventaPort = {
   async subirEvidencia(file: File, conversacionId?: string): Promise<EvidenciaSubida> {
     const form = new FormData();
@@ -73,5 +73,15 @@ export const postventaApi: PostventaPort = {
       timeout: apiConfig.timeouts.postventa,
     });
     return data as ReclamoDetalle;
+  },
+  async calificarPedido(pedidoId: string, puntuacion: 1 | 3 | 5, comentario?: string): Promise<void> {
+    await http.post(
+      `/pedidos/${encodeURIComponent(pedidoId)}/csat`,
+      {
+        puntuacion,
+        ...(comentario ? { comentario } : {}),
+      },
+      { timeout: apiConfig.timeouts.postventa }
+    );
   },
 };

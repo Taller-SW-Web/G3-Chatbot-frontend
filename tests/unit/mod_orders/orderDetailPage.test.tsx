@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -7,7 +8,6 @@ import { OrderDetailPage } from "@/modules/mod-orders/ui/OrderDetailPage";
 const push = vi.hoisted(() => vi.fn());
 const params = vi.hoisted(() => ({ value: new URLSearchParams() }));
 const obtenerPedido = vi.hoisted(() => vi.fn());
-const calificarPedido = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
@@ -15,7 +15,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/shared/di/container", () => ({
-  container: { pedidos: { obtenerPedido, calificarPedido } },
+  container: { pedidos: { obtenerPedido } },
 }));
 
 const PEDIDO = {
@@ -48,11 +48,11 @@ const PEDIDO = {
   ],
 };
 
-function renderPage() {
+function renderPage(csatSlot?: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <OrderDetailPage />
+      <OrderDetailPage csatSlot={csatSlot} />
     </QueryClientProvider>
   );
 }
@@ -61,7 +61,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   params.value = new URLSearchParams("pedidoId=PED-2026-00002");
   obtenerPedido.mockResolvedValue(PEDIDO);
-  calificarPedido.mockResolvedValue(undefined);
 });
 
 afterEach(cleanup);
@@ -69,7 +68,7 @@ afterEach(cleanup);
 describe("OrderDetailPage", () => {
   it("pide elegir un pedido cuando no hay pedidoId", () => {
     params.value = new URLSearchParams();
-    renderPage();
+    renderPage(<p>Slot CSAT</p>);
 
     expect(screen.getByText("Detalle del pedido")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "IR A MIS PEDIDOS" }));
@@ -93,45 +92,14 @@ describe("OrderDetailPage", () => {
     expect(obtenerPedido).toHaveBeenCalledWith("PED-2026-00002");
   });
 
-  it("califica un pedido ENTREGADO con comentario desde el pie del detalle", async () => {
-    renderPage();
+  it("muestra el slot CSAT cuando el pedido está ENTREGADO y sin calificar", async () => {
+    renderPage(<p>Slot CSAT</p>);
 
-    expect(await screen.findByLabelText("Calificar entrega del pedido PED-2026-00002")).toBeDefined();
-    expect(screen.getByText("Califica tu entrega")).toBeDefined();
-    fireEvent.click(screen.getByRole("radio", { name: "Regular" }));
-    fireEvent.change(screen.getByLabelText(/Comentario/), { target: { value: "Llegó con retraso" } });
-    fireEvent.click(screen.getByRole("button", { name: "ENVIAR CALIFICACIÓN" }));
-
-    await waitFor(() =>
-      expect(calificarPedido).toHaveBeenCalledWith("PED-2026-00002", 3, "Llegó con retraso")
-    );
+    expect(await screen.findByText("Pedido PED-2026-00002")).toBeDefined();
+    expect(screen.getByText("Slot CSAT")).toBeDefined();
   });
 
-  it("si Ventas responde ORDER_NOT_DELIVERED refresca el detalle y oculta el CSAT", async () => {
-    obtenerPedido
-      .mockResolvedValueOnce(PEDIDO)
-      .mockResolvedValueOnce({
-        ...PEDIDO,
-        estado: "ANULADO",
-        estadoEtiqueta: "Anulado",
-      });
-    calificarPedido.mockRejectedValue({
-      response: { status: 422, data: { code: "ORDER_NOT_DELIVERED" } },
-    });
-    renderPage();
-
-    expect(await screen.findByLabelText("Calificar entrega del pedido PED-2026-00002")).toBeDefined();
-    fireEvent.click(screen.getByRole("radio", { name: "Bien" }));
-    fireEvent.click(screen.getByRole("button", { name: "ENVIAR CALIFICACIÓN" }));
-
-    await waitFor(() => expect(obtenerPedido).toHaveBeenCalledTimes(2));
-    await waitFor(() =>
-      expect(screen.queryByLabelText("Calificar entrega del pedido PED-2026-00002")).toBeNull()
-    );
-    expect(screen.getByText("Anulado")).toBeDefined();
-  });
-
-  it("no muestra el CSAT si el pedido no está ENTREGADO", async () => {
+  it("no muestra el slot CSAT si el pedido no está ENTREGADO", async () => {
     obtenerPedido.mockResolvedValue({
       ...PEDIDO,
       estado: "EN_PREPARACION",
@@ -140,15 +108,23 @@ describe("OrderDetailPage", () => {
         { estado: "PAGADO", etiqueta: "Pago confirmado", fecha: "2026-11-02T10:02:00Z", completado: true },
       ],
     });
-    renderPage();
+    renderPage(<p>Slot CSAT</p>);
 
     expect(await screen.findByText("Pedido PED-2026-00002")).toBeDefined();
-    expect(screen.queryByLabelText("Calificar entrega del pedido PED-2026-00002")).toBeNull();
+    expect(screen.queryByText("Slot CSAT")).toBeNull();
+  });
+
+  it("no muestra el slot CSAT cuando el cliente ya calificó la entrega", async () => {
+    obtenerPedido.mockResolvedValue({ ...PEDIDO, csatEnviado: true });
+    renderPage(<p>Slot CSAT</p>);
+
+    expect(await screen.findByText("Pedido PED-2026-00002")).toBeDefined();
+    expect(screen.queryByText("Slot CSAT")).toBeNull();
   });
 
   it("no inventa el bloque de envío cuando el pedido no lo trae", async () => {
     obtenerPedido.mockResolvedValue({ ...PEDIDO, envio: null });
-    renderPage();
+    renderPage(<p>Slot CSAT</p>);
 
     expect(await screen.findByText("Pedido PED-2026-00002")).toBeDefined();
     expect(screen.queryByText("Envío")).toBeNull();
