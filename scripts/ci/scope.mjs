@@ -24,6 +24,7 @@ export const FULL_PATTERNS = [
   "src/app/**",
   ".github/workflows/**",
   "scripts/ci/**",
+  "docs/openapi.json",
 ];
 
 export const DEPENDENCY_PATTERNS = ["pnpm-lock.yaml", "package.json"];
@@ -39,7 +40,7 @@ export const DOCS_PATTERNS = [
 ];
 export const CODE_PATTERNS = ["src/**", "tests/**", "scripts/**"];
 export const MODULE_PATH_RE =
-  /^(?:src\/modules\/|tests\/unit\/)(mod-[a-z0-9-]+)(?:\/|$)/;
+  /^(?:src\/modules\/|tests\/unit\/)(mod[-_][a-z0-9_-]+)(?:\/|$)/;
 
 export function globToRegExp(pattern) {
   let source = "^";
@@ -75,7 +76,7 @@ export function isCodePath(file) {
 
 export function moduleIdFromPath(file) {
   const match = MODULE_PATH_RE.exec(file);
-  return match ? match[1] : null;
+  return match ? match[1].replaceAll("_", "-") : null;
 }
 
 export function loadManifest(path = "modules.manifest.json") {
@@ -114,7 +115,17 @@ export function buildScope(
 ) {
   const changed = changedFiles.map((file) => file.replaceAll("\\", "/"));
   const reasons = [];
-  const docsOnly = changed.length > 0 && changed.every(isDocsPath);
+  const forcedByLabel = labels.includes("ci:full");
+  if (changed.length === 0 && ["pull_request", "push"].includes(event)) {
+    // An empty diff in a PR/push means the base resolution or the diff failed
+    // silently. Fail closed instead of skipping every gate.
+    full = true;
+    reasons.push("empty diff on PR/push");
+  }
+  const docsOnly =
+    changed.length > 0 &&
+    changed.every(isDocsPath) &&
+    !changed.some((file) => matches(file, FULL_PATTERNS));
   const hasDependencies = changed.some((file) =>
     matches(file, DEPENDENCY_PATTERNS),
   );
@@ -138,6 +149,7 @@ export function buildScope(
 
   const fullScope =
     full ||
+    forcedByLabel ||
     changed.length === 0 ||
     hasCi ||
     hasShared ||
@@ -146,13 +158,13 @@ export function buildScope(
     hasUnknown;
 
   let mode;
-  if (changed.length === 0 && full) {
+  if (changed.length === 0 && fullScope) {
     mode = "code";
     reasons.push("scheduled or dispatched full run");
   } else if (changed.length === 0) {
     mode = "none";
     reasons.push("no changed files");
-  } else if (docsOnly) {
+  } else if (docsOnly && !fullScope) {
     mode = "docs";
     reasons.push("docs only");
   } else if (hasDependencies) {
@@ -174,12 +186,14 @@ export function buildScope(
   }
 
   const isPullRequest = event === "pull_request";
-  const forceExpensive = !isPullRequest || labels.includes("ci:full");
+  const forceExpensive = !isPullRequest || forcedByLabel;
   const runValidate = ["code", "deps", "ci"].includes(mode);
   const runUnit = ["code", "deps", "ci"].includes(mode);
   const runBuild = ["code", "deps", "ci"].includes(mode);
   const runSecurity =
-    mode === "deps" || ["schedule", "workflow_dispatch"].includes(event);
+    forcedByLabel ||
+    mode === "deps" ||
+    ["schedule", "workflow_dispatch"].includes(event);
   const runE2E = forceExpensive && ["code", "deps", "ci"].includes(mode);
   const runSonar = ["code", "deps", "ci"].includes(mode);
 
@@ -235,10 +249,16 @@ function resolveBase(base, before, repoRoot) {
   return null;
 }
 
-function diffFiles(sha, repoRoot) {
+export function diffFiles(sha, repoRoot) {
   const output = execFileSync(
     "git",
-    ["diff", "--name-only", "--diff-filter=ACMRTUB", `${sha}...HEAD`],
+    [
+      "diff",
+      "--name-only",
+      "--no-renames",
+      "--diff-filter=ACDMRTUB",
+      `${sha}...HEAD`,
+    ],
     { cwd: repoRoot, encoding: "utf8" },
   );
   return output

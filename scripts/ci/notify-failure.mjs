@@ -145,7 +145,12 @@ async function findComment(repo, pr, token) {
       token,
     );
     if (status !== 200 || !Array.isArray(body)) return null;
-    const found = body.find((comment) => String(comment.body ?? "").includes(MARKER));
+    const found = body.find((comment) => {
+      const author = comment.user ?? {};
+      const isBot =
+        author.login === "github-actions[bot]" || author.type === "Bot";
+      return isBot && String(comment.body ?? "").includes(MARKER);
+    });
     if (found) return found.id;
     if (body.length < 100) return null;
   }
@@ -154,9 +159,31 @@ async function findComment(repo, pr, token) {
 
 async function upsertComment(repo, pr, token, body) {
   const existing = await findComment(repo, pr, token);
-  const { status } = existing
-    ? await requestJson("PATCH", `${apiBase()}/repos/${repo}/issues/comments/${existing}`, token, { body })
-    : await requestJson("POST", `${apiBase()}/repos/${repo}/issues/${pr}/comments`, token, { body });
+  let status;
+  if (existing) {
+    ({ status } = await requestJson(
+      "PATCH",
+      `${apiBase()}/repos/${repo}/issues/comments/${existing}`,
+      token,
+      { body },
+    ));
+    if (status !== 200 && status !== 201) {
+      // A stale marker owned by another actor must not silence the bot.
+      ({ status } = await requestJson(
+        "POST",
+        `${apiBase()}/repos/${repo}/issues/${pr}/comments`,
+        token,
+        { body },
+      ));
+    }
+  } else {
+    ({ status } = await requestJson(
+      "POST",
+      `${apiBase()}/repos/${repo}/issues/${pr}/comments`,
+      token,
+      { body },
+    ));
+  }
   if (status !== 200 && status !== 201) {
     console.log(`::warning::No se pudo publicar el comentario en el PR (${status}).`);
   }

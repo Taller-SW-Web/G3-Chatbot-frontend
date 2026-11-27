@@ -29,6 +29,12 @@ const VALIDATORS = [
     command: "pnpm",
     args: ["run", "modules:check"],
   },
+  {
+    name: "ci-tests",
+    description: "Scope, deletion and ci:full regression tests",
+    command: "node",
+    args: ["--test", "scripts/ci/scope.test.mjs"],
+  },
 ];
 
 function selected(names) {

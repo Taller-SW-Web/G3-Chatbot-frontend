@@ -5,24 +5,22 @@ on:
     branches: [development]
   pull_request:
     branches: [development]
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited]
   schedule:
     # Full weekly run, including the real-stack E2E suite.
     - cron: "0 9 * * 1"
   workflow_dispatch:
-    inputs:
-      full:
-        description: "Run the full pipeline regardless of the diff"
-        type: boolean
-        default: true
 
 # Least privilege: the workflow only reads the repository. The notify job
 # elevates pull-requests/actions permissions for its own scope.
 permissions:
   contents: read
 
+# A newer push on the same ref cancels the previous PR run. Push/schedule runs
+# are not cancelled: a weekly security run must finish even if a push arrives.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   scope:
@@ -43,11 +41,11 @@ jobs:
       run_dependency_review: ${{ steps.scope.outputs.run_dependency_review }}
       reason: ${{ steps.scope.outputs.reason }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
       - name: Compute scope
@@ -57,7 +55,6 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           EVENT_NAME: ${{ github.event_name }}
           LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
-          INPUT_FULL: ${{ inputs.full }}
         run: |
           args=(--event "$EVENT_NAME")
           if [ "$EVENT_NAME" = "pull_request" ]; then
@@ -68,10 +65,10 @@ jobs:
           else
             args+=(--full)
           fi
-          if [ "$INPUT_FULL" = "true" ] || printf '%s' ",$LABELS," | grep -q ',ci:full,'; then
+          if printf '%s' ",$LABELS," | grep -q ',ci:full,'; then
             args+=(--full)
           fi
-          node scripts/ci/scope.mjs "${args[@]}" --github-output "$GITHUB_OUTPUT"
+          node scripts/ci/scope.mjs "${args[@]}" --labels "$LABELS" --github-output "$GITHUB_OUTPUT"
 
   # Lint + types + module boundaries in one job: one install, one report and
   # every error visible at once.
@@ -82,11 +79,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: pnpm
@@ -100,7 +97,7 @@ jobs:
         run: node scripts/ci/run-validators.mjs --report validation-report.txt
       - name: Upload validation report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: validation-report
           path: validation-report.txt
@@ -116,11 +113,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: pnpm
@@ -129,10 +126,11 @@ jobs:
       - name: Unit tests with coverage
         run: pnpm run test:coverage
       - name: Upload coverage report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-frontend
           path: coverage/
+          retention-days: 7
           if-no-files-found: error
 
   build:
@@ -144,11 +142,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: pnpm
@@ -164,11 +162,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: pnpm
@@ -208,12 +206,12 @@ jobs:
       API_PROXY_TARGET: http://127.0.0.1:8000
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - name: Clone backend
         run: git clone --depth 1 --branch "$E2E_BACKEND_REF" https://github.com/Taller-SW-Web/G3-Chatbot-backend.git ../backend
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: '3.12'
       - name: Install backend dependencies
@@ -237,8 +235,8 @@ jobs:
           echo "::error::el backend no respondió en 120 s"
           cat /tmp/backend.log
           exit 1
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: pnpm
@@ -250,7 +248,7 @@ jobs:
         run: pnpm exec playwright test
       - name: Upload Playwright artifacts
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: playwright-artifacts
           path: |
@@ -269,11 +267,11 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - name: Review dependencies
-        uses: actions/dependency-review-action@v5.0.1
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
@@ -288,30 +286,63 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Detect SONAR_TOKEN
+      - name: Checkout base CI helpers
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - name: Select Sonar helper
+        id: helper
+        run: |
+          if [ -f base/scripts/ci/sonar-gate-report.mjs ]; then
+            echo "path=base/scripts/ci/sonar-gate-report.mjs" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=scripts/ci/sonar-gate-report.mjs" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Require SONAR_TOKEN
         id: token
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          if [ -n "$SONAR_TOKEN" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Sin SONAR_TOKEN (PR de Dependabot o fork): se omite SonarCloud."
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error::SONAR_TOKEN no está disponible para este PR."
+            echo "::error::Los PRs de fork/Dependabot no reciben secretos. Configura el Dependabot secret SONAR_TOKEN o ejecuta el análisis en una rama del repo base antes de mergear."
+            exit 1
+          fi
+          echo "available=true" >> "$GITHUB_OUTPUT"
+      - name: Reject unreviewed sonar-project.properties changes
+        if: |
+          github.event_name == 'pull_request' &&
+          !contains(github.event.pull_request.labels.*.name, 'ci:sonar-config')
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git diff --name-only --no-renames "$BASE_SHA...HEAD" | grep -qx 'sonar-project.properties'; then
+            echo "::error::sonar-project.properties no puede cambiar en este PR sin la etiqueta ci:sonar-config."
+            echo "::error::Un owner debe revisar el cambio y añadir la etiqueta, o moverlo a un PR separado."
+            exit 1
           fi
       - name: Download coverage
         if: steps.token.outputs.available == 'true'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: coverage-frontend
           path: coverage
       - name: SonarCloud scan
         if: steps.token.outputs.available == 'true'
-        uses: SonarSource/sonarqube-scan-action@v8.5.1
+        uses: SonarSource/sonarqube-scan-action@70bad232163b09d998ea0707ee80c0ec80798c16 # v8.5.1
+        with:
+          # Workflow-controlled: a PR cannot disable the wait by editing the
+          # project properties.
+          args: >-
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=600
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
@@ -331,7 +362,7 @@ jobs:
             args+=(--branch "${{ github.ref_name }}")
             threshold=CRITICAL
           fi
-          node scripts/ci/sonar-gate-report.mjs \
+          node "${{ steps.helper.outputs.path }}" \
             --project-key g3-chatbot-frontend "${args[@]}" \
             --fail-on-severity "$threshold" \
             --output sonar-strict-gate.md
@@ -347,12 +378,12 @@ jobs:
           else
             args+=(--branch "${{ github.ref_name }}")
           fi
-          node scripts/ci/sonar-gate-report.mjs \
+          node "${{ steps.helper.outputs.path }}" \
             --project-key g3-chatbot-frontend "${args[@]}" \
             --output sonar-gate-report.md
       - name: Upload Sonar gate reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: sonar-gate-reports
           path: sonar-*.md
@@ -366,11 +397,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
       - name: Validar spec enlazada
@@ -394,7 +425,10 @@ jobs:
       - dependency-review
       - sonar
       - specs
-    if: failure() && github.event_name == 'pull_request'
+      - check
+    if: |
+      failure() && github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -402,9 +436,23 @@ jobs:
       pull-requests: write
       actions: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - name: Checkout base CI helpers
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - name: Select notify helper
+        id: helper
+        run: |
+          if [ -f base/scripts/ci/notify-failure.mjs ]; then
+            echo "path=base/scripts/ci/notify-failure.mjs" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=scripts/ci/notify-failure.mjs" >> "$GITHUB_OUTPUT"
+          fi
       - name: Comment the failure on the pull request
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -412,10 +460,10 @@ jobs:
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           SCOPE_REASON: ${{ needs.scope.outputs.reason }}
           NEEDS_JSON: ${{ toJSON(needs) }}
-        run: node scripts/ci/notify-failure.mjs
+        run: node "${{ steps.helper.outputs.path }}"
       - name: Upload notification evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ci-failure-report
           path: ci-failure.md
@@ -478,6 +526,15 @@ jobs:
               "specs": os.environ.get("RUN_SPECS"),
               "dependency-review": os.environ.get("RUN_DEPENDENCY_REVIEW"),
           }
+          missing = [
+              name
+              for name, should_run in expected.items()
+              if should_run not in {"true", "false"}
+          ]
+          if missing:
+              print("Scope did not publish a boolean for: " + ", ".join(missing))
+              sys.exit(1)
+
           mismatched = [
               name
               for name, should_run in expected.items()
