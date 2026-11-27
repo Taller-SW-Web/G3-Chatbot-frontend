@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   devolucionSchema,
   DEVOLUCION_MOTIVOS,
+  DEVOLUCION_MOTIVO_VALUES,
   type DevolucionInput,
   type DevolucionLinea,
 } from "@/modules/mod-postventa/domain/schemas/devolucion.schema";
@@ -17,14 +18,23 @@ import { PhotoIcon, RefreshIcon, CheckIcon } from "@/shared/ui/icons";
  */
 export function DevolucionForm({
   lineas,
+  tipoInicial,
+  motivoInicial,
+  descripcionInicial,
+  lineaInicial,
   onOk,
   onCancelar,
 }: {
   lineas: DevolucionLinea[];
+  /** Valores que el chat puede precargar al abrir el formulario. */
+  tipoInicial?: "CAMBIO" | "DEVOLUCION_DINERO";
+  motivoInicial?: (typeof DEVOLUCION_MOTIVO_VALUES)[number];
+  descripcionInicial?: string;
+  lineaInicial?: string;
   onOk: (d: DevolucionInput & { evidenciaArchivo?: File; evidenciaNombre?: string }) => void | Promise<void>;
   onCancelar: () => void;
 }) {
-  const [tipo, setTipo] = useState<"CAMBIO" | "DEVOLUCION_DINERO">("CAMBIO");
+  const [tipo, setTipo] = useState<"CAMBIO" | "DEVOLUCION_DINERO">(tipoInicial ?? "CAMBIO");
   const [evidencia, setEvidencia] = useState<{
     file: File;
     nombre: string;
@@ -35,9 +45,10 @@ export function DevolucionForm({
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<DevolucionInput>({
     resolver: zodResolver(devolucionSchema),
     defaultValues: {
-      tipo: "CAMBIO",
-      linea: lineas[0]?.productoId ?? "",
-      motivo: "TALLA_INCORRECTA",
+      tipo: tipoInicial ?? "CAMBIO",
+      linea: lineaInicial ?? lineas[0]?.productoId ?? "",
+      motivo: motivoInicial ?? "TALLA_INCORRECTA",
+      descripcion: descripcionInicial ?? undefined,
     },
   });
   const descripcion = watch("descripcion") ?? "";
@@ -71,7 +82,7 @@ export function DevolucionForm({
       )}
       className="flex flex-col gap-3"
     >
-      <select {...register("linea")} aria-label="Línea a devolver" className="wf-input px-3 py-2.5 text-sm">
+      <select {...register("linea")} defaultValue={lineaInicial ?? lineas[0]?.productoId ?? ""} aria-label="Línea a devolver" className="wf-input px-3 py-2.5 text-sm">
         {lineas.map((l) => <option key={l.productoId} value={l.productoId}>{l.label}</option>)}
       </select>
       <div className="grid grid-cols-2 gap-2 rounded-md bg-white border border-border-default p-1">
@@ -84,7 +95,7 @@ export function DevolucionForm({
           <option>Talla 43 · Negro</option>
         </select>
       )}
-      <select {...register("motivo")} aria-label="Motivo" className="wf-input px-3 py-2.5 text-sm">
+      <select {...register("motivo")} defaultValue={motivoInicial ?? "TALLA_INCORRECTA"} aria-label="Motivo" className="wf-input px-3 py-2.5 text-sm">
         {DEVOLUCION_MOTIVOS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
       </select>
       <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" aria-label="Subir evidencia" onChange={(e) => handleFile(e.target.files?.[0])} />
