@@ -25,9 +25,9 @@ Configurados en [`lighthouserc.cjs`](../lighthouserc.cjs):
 
 | Métrica / Categoría | Objetivo Proyecto | Techo en CI (Excepción) | Nivel en CI | Criterio y Justificación Técnica |
 |---|:---:|:---:|:---:|---|
-| **Largest Contentful Paint (LCP)** | $\le 2500\text{ ms}$ | $\le 4800\text{ ms}$ | `error` (Bloqueante) | Rango **Good** de Google Core Web Vitals en condiciones móviles 4G. En CI virtualizado (CPU 4x), la mediana inicial es ~4.2s; se activa techo protector mientras se optimiza en [#164](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/issues/164). |
+| **Largest Contentful Paint (LCP)** | $\le 2500\text{ ms}$ | $\le 4800\text{ ms}$ | `error` (Bloqueante) | Rango **Good** de Google Core Web Vitals en condiciones móviles 4G. En CI virtualizado (CPU 4x), la peor mediana observada es 4522 ms (en `/pedidos`); se fija techo protector de 4800 ms mientras se optimiza en [#164](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/issues/164). |
 | **Cumulative Layout Shift (CLS)** | $\le 0.10$ | $\le 0.10$ | `error` (Bloqueante) | Rango **Good** de Google Core Web Vitals (estabilidad visual sin saltos). |
-| **Total Blocking Time (TBT)** | $\le 200\text{ ms}$ | $\le 750\text{ ms}$ | `error` (Bloqueante) | **Proxy de INP:** En entornos de laboratorio sintéticos (CI sin interacción humana directa), Lighthouse no puede calcular el Interaction to Next Paint (INP) de campo. Por ello, se utiliza el Total Blocking Time (TBT) como proxy directo de congestión del hilo principal. El objetivo es $\le 200\text{ ms}$, con techo protector de 750 ms en CI bajo emulación móvil (Issue [#164](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/issues/164)). |
+| **Total Blocking Time (TBT)** | $\le 200\text{ ms}$ | $\le 350\text{ ms}$ | `error` (Bloqueante) | **Proxy de INP:** En entornos de laboratorio sintéticos (CI sin interacción humana directa), Lighthouse no puede calcular el Interaction to Next Paint (INP) de campo. Por ello, se utiliza el Total Blocking Time (TBT) como proxy directo de congestión del hilo principal. El objetivo es $\le 200\text{ ms}$, con techo protector acotado a 350 ms en CI (peor mediana observada en CI: 291 ms, Issue [#164](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/issues/164)). |
 | **Tamaño de Scripts JS** | $\le 600\text{ KB}$ | $\le 600\text{ KB}$ | `error` (Bloqueante) | Presupuesto de peso estricto para evitar sobrecargar la descarga e hidratación de JavaScript. |
 | **Tamaño Total de Recursos** | $\le 1.8\text{ MB}$ | $\le 1.8\text{ MB}$ | `error` (Bloqueante) | Techo máximo de transferencia acumulada (imágenes optimizadas, fuentes, CSS y bundles). |
 | **Accesibilidad (a11y)** | Score $\ge 0.90$ | Score $\ge 0.90$ | `error` (Bloqueante) | **Proxy de accesibilidad:** La puntuación de Lighthouse evalúa reglas automatizadas de contraste, atributos ARIA, nombres accesibles y roles semánticos. Funciona como gate preventivo automático, pero no sustituye una auditoría funcional y manual completa de WCAG 2.1 AA. |
@@ -47,19 +47,26 @@ Lighthouse audita las 4 vistas más críticas del flujo del usuario:
 
 ---
 
-## 4. Línea Base Medida (Preset Móvil - Mediana)
+## 4. Línea Base Medida en CI (Preset Móvil - Mediana Real)
 
-Mediciones de referencia sobre la compilación de producción (`next build` + `next start`):
+Mediciones de referencia extraídas directamente de los artefactos oficiales de CI (Run 45933045893, 3 corridas con mediana por URL en runner Ubuntu con emulación móvil Moto G4):
 
-| Métrica | Mediana Observada | Presupuesto Máximo | Margen de Seguridad | Estado |
-|---|:---:|:---:|:---:|:---:|
-| **LCP** | $1362\text{ ms}$ | $2500\text{ ms}$ | $+1138\text{ ms}$ de holgura | ✅ Conforme |
-| **CLS** | $0.000$ | $0.100$ | $+0.100$ de holgura | ✅ Conforme |
-| **TBT** | $69\text{ ms}$ | $200\text{ ms}$ | $+131\text{ ms}$ de holgura | ✅ Conforme |
-| **Peso Scripts** | $371\text{ KB}$ | $600\text{ KB}$ | $+229\text{ KB}$ de holgura | ✅ Conforme |
-| **Peso Total** | $505\text{ KB}$ | $1800\text{ KB}$ | $+1295\text{ KB}$ de holgura | ✅ Conforme |
-| **Accesibilidad** | $0.96$ ($96\%$) | $\ge 0.90$ | $+6\%$ de holgura | ✅ Conforme |
-| **Rendimiento** | $0.96$ ($96\%$) | $\ge 0.70$ | $+26\%$ de holgura | ✅ Conforme |
+| URL Auditada | Rendimiento | Accesibilidad | LCP (Mediana) | CLS (Mediana) | TBT (Mediana) | Peso Scripts | Peso Total | Estado |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **`/` (Home)** | 80% | 96% | $4172\text{ ms}$ | $0.000$ | $291\text{ ms}$ | $371\text{ KB}$ | $505\text{ KB}$ | ✅ Conforme |
+| **`/carrito` (Carrito)** | 95% | 100% | $765\text{ ms}$ | $0.000$ | $263\text{ ms}$ | $371\text{ KB}$ | $505\text{ KB}$ | ✅ Conforme |
+| **`/pedidos` (Historial)** | 79% | 92% | $4522\text{ ms}$ | $0.000$ | $273\text{ ms}$ | $371\text{ KB}$ | $505\text{ KB}$ | ✅ Conforme |
+| **`/cuenta` (Mi Cuenta)** | 83% | 92% | $4085\text{ ms}$ | $0.000$ | $225\text{ ms}$ | $371\text{ KB}$ | $505\text{ KB}$ | ✅ Conforme |
+| **Peor Mediana Global** | **79%** | **92%** | **$4522\text{ ms}$** | **$0.000$** | **$291\text{ ms}$** | **$371\text{ KB}$** | **$505\text{ KB}$** | ✅ Conforme |
+
+### 4.1 Limitaciones y Condiciones de la Medición
+
+1. **Aislamiento de Backend (`API_PROXY_TARGET` no definido):**
+   * En el job `lighthouse` de CI, Next.js se compila y ejecuta de forma aislada sin levantar réplica de backend ni base de datos.
+   * Por consiguiente, las páginas con llamadas a la API (`/`, `/pedidos`, `/cuenta`) auditan el comportamiento ante fallos de conexión o respuestas no disponibles, impactando los ciclos de renderizado del cliente (mientras que `/carrito` muestra renderizado inmediato con LCP de 765 ms).
+2. **Emulación de Dispositivo Móvil en Entornos Virtualizados:**
+   * Lighthouse aplica simulación de dispositivo móvil (desaceleración de CPU 4x y red móvil 4G simulada).
+   * En máquinas virtuales compartidas de CI (2 vCPUs de Azure en GitHub Actions), la penalización sintética de CPU 4x incrementa el tiempo de parsing y evaluación de bundles JavaScript.
 
 ---
 
@@ -77,16 +84,17 @@ Si cualquier presupuesto marcado como `error` es superado, el job `lighthouse` f
 
 ---
 
-## 6. Excepciones Aprobadas y Procedimiento
+## 6. Excepciones Técnicas y Procedimiento
 
-### 6.1 Excepción Activa: Emulación Móvil en CI (Issue #164)
+### 6.1 Excepción Técnica en CI (Mobile Emulation) - En revisión con @Ankarmin
 
 * **Métrica afectada:** LCP y TBT en preset mobile en runners de CI.
-* **Valores observados:** Mediana de LCP $\approx 4200\text{ ms}$; mediana de TBT $\approx 600\text{ ms}$.
-* **Causa técnica:** Lighthouse aplica simulación de dispositivo móvil (desaceleración de CPU 4x y red móvil 4G). En runners de GitHub Actions (máquinas virtuales de 2 vCPUs compartidas en Azure), el tiempo sintético de parsing, compilación JIT e hidratación de componentes cliente de React/Next.js excede los 2500 ms de LCP y 200 ms de TBT.
-* **Acción de mitigación e issue asignada:** Se abrió la issue de optimización [[Perf] Optimizar tiempo de hidratación de React y LCP en carga inicial móvil #164](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/issues/164) para introducir dynamic imports (`next/dynamic`), code-splitting de widgets secundarios y diferimiento de scripts no críticos.
-* **Techo bloqueante en CI:** El techo de fallo en CI se establece en $\text{LCP} \le 4800\text{ ms}$ y $\text{TBT} \le 750\text{ ms}$ para proteger el pipeline de regresiones severas sin generar falsos positivos mientras se ejecuta la issue #164.
-* **Presupuestos estrictos sin excepción:** Accesibilidad ($\ge 0.90$), CLS ($\le 0.10$), scripts JS ($\le 600\text{ KB}$) y tamaño total ($\le 1.8\text{ MB}$) se mantienen estrictamente bloqueantes (`error`).
+* **Valores reales medidos en CI:** Peor mediana de LCP $= 4522\text{ ms}$ (en `/pedidos`); peor mediana de TBT $= 291\text{ ms}$ (en `/`).
+* **Causa técnica identificada:** Emulación móvil de Lighthouse (desaceleración de CPU 4x) en runners de 2 vCPUs sin backend activo, retrasando la hidratación cliente de React en páginas dinámicas.
+* **Presupuesto objetivo formal:** $\text{LCP} \le 2500\text{ ms}$ y $\text{TBT} \le 200\text{ ms}$ (se mantienen inalterados como meta del proyecto).
+* **Techo protector bloqueante en CI propuesto:** Se propone fijar en CI $\text{LCP} \le 4800\text{ ms}$ y $\text{TBT} \le 350\text{ ms}$ (acotado estrechamente sobre la peor mediana de 291 ms) para evitar falsos positivos en CI mientras se atiende la issue de optimización [#164](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/issues/164).
+* **Estado de aprobación:** Sometido a la aprobación explícita del líder técnico (`@Ankarmin`) en la revisión del PR #156 conforme al procedimiento de §6.2.
+* **Presupuestos estrictos sin excepción:** Accesibilidad ($\ge 0.90$), CLS ($\le 0.10$), scripts JS ($\le 600\text{ KB}$) y tamaño total ($\le 1.8\text{ MB}$) operan en nivel `error` estricto y bloqueante.
 
 ### 6.2 Procedimiento General para Nuevas Excepciones
 

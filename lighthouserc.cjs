@@ -30,14 +30,14 @@ module.exports = {
 
         // Presupuesto Core Web Vitals (H5-P4 - Mobile First)
         // Objetivo del proyecto: LCP <= 2500 ms y TBT <= 200 ms (ver docs/rendimiento-lighthouse.md).
-        // Excepción técnica aprobada (Issue #164): en runners virtualizados de CI bajo emulación móvil
-        // (CPU throttling 4x + red 4G simulada), la hidratación sintética sitúa LCP en ~4.2s y TBT en ~600ms.
-        // Se fija el techo bloqueante en CI para proteger contra regresiones severas.
+        // Excepción técnica en CI (propuesta a @Ankarmin / Issue #164): en runners virtualizados de CI
+        // bajo emulación móvil (CPU 4x + red 4G), la peor mediana observada es LCP 4522 ms y TBT 291 ms.
+        // Se fijan techos estrictos en CI (LCP <= 4800 ms, TBT <= 350 ms) para proteger contra regresiones.
         "largest-contentful-paint": ["error", { maxNumericValue: 4800 }],
         // CLS <= 0.10 (umbral estricto "Good" de Core Web Vitals)
         "cumulative-layout-shift": ["error", { maxNumericValue: 0.1 }],
-        // TBT (proxy en laboratorio de interactividad / INP, techo con excepción técnica #164)
-        "total-blocking-time": ["error", { maxNumericValue: 750 }],
+        // TBT (proxy en laboratorio de interactividad / INP, techo acotado a 350 ms en CI)
+        "total-blocking-time": ["error", { maxNumericValue: 350 }],
         "max-potential-fid": ["warn", { maxNumericValue: 500 }],
         "interactive": ["warn", { maxNumericValue: 4800 }],
 
