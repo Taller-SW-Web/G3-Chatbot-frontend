@@ -37,6 +37,7 @@ jobs:
       run_security: ${{ steps.scope.outputs.run_security }}
       run_e2e: ${{ steps.scope.outputs.run_e2e }}
       run_sonar: ${{ steps.scope.outputs.run_sonar }}
+      sonar_sources_changed: ${{ steps.scope.outputs.sonar_sources_changed }}
       run_specs: ${{ steps.scope.outputs.run_specs }}
       run_dependency_review: ${{ steps.scope.outputs.run_dependency_review }}
       reason: ${{ steps.scope.outputs.reason }}
@@ -370,6 +371,9 @@ jobs:
           else
             args+=(--branch "${{ github.ref_name }}")
             threshold=CRITICAL
+          fi
+          if [ "${{ needs.scope.outputs.sonar_sources_changed }}" = "true" ]; then
+            args+=(--require-new-code-metrics)
           fi
           node "${{ steps.helper.outputs.path }}" \
             --project-key g3-chatbot-frontend "${args[@]}" \

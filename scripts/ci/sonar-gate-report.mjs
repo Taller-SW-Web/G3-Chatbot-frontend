@@ -23,6 +23,7 @@ function parseArgs(argv) {
     failOnSeverity: "",
     minNewCoverage: 80,
     maxNewDuplication: 3,
+    requireNewCodeMetrics: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -34,6 +35,7 @@ function parseArgs(argv) {
     else if (arg === "--fail-on-severity") args.failOnSeverity = argv[++index];
     else if (arg === "--min-new-coverage") args.minNewCoverage = Number(argv[++index]);
     else if (arg === "--max-new-duplication") args.maxNewDuplication = Number(argv[++index]);
+    else if (arg === "--require-new-code-metrics") args.requireNewCodeMetrics = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
   }
   return args;
@@ -103,13 +105,24 @@ function asNumber(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function measureFailures(measures, minNewCoverage, maxNewDuplication) {
+export function measureFailures(
+  measures,
+  minNewCoverage,
+  maxNewDuplication,
+  requireMetrics = false,
+) {
   const failures = [];
   const newLines = asNumber(measures.new_lines);
   const linesToCover = asNumber(measures.new_lines_to_cover);
   const newCoverage = asNumber(measures.new_coverage);
   const newDuplication = asNumber(measures.new_duplicated_lines_density);
 
+  if (requireMetrics && newLines === null && linesToCover === null) {
+    failures.push(
+      "el PR toca src/ pero Sonar no publicó new_lines/new_lines_to_cover",
+    );
+    return failures;
+  }
   if (linesToCover !== null && linesToCover > 0) {
     if (newCoverage === null) {
       failures.push(
@@ -249,7 +262,12 @@ async function main() {
           `duplication=${measures.new_duplicated_lines_density || "n/a"}`,
       );
       const metricFailures = args.pullRequest
-        ? measureFailures(measures, args.minNewCoverage, args.maxNewDuplication)
+        ? measureFailures(
+            measures,
+            args.minNewCoverage,
+            args.maxNewDuplication,
+            args.requireNewCodeMetrics,
+          )
         : [];
       if (metricFailures.length > 0) {
         for (const failure of metricFailures) console.error(`::error::${failure}.`);

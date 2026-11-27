@@ -28,6 +28,13 @@ test("measureFailures fails closed when new_coverage is missing", () => {
   ]);
 });
 
+test("measureFailures fails closed when base metrics are missing and src changed", () => {
+  assert.deepEqual(measureFailures({}, 80, 3, true), [
+    "el PR toca src/ pero Sonar no publicó new_lines/new_lines_to_cover",
+  ]);
+  assert.deepEqual(measureFailures({}, 80, 3, false), []);
+});
+
 test("measureFailures rejects low coverage and high duplication", () => {
   assert.deepEqual(
     measureFailures(

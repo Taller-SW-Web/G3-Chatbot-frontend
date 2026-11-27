@@ -208,6 +208,7 @@ export function buildScope(
     run_security: runSecurity,
     run_e2e: runE2E,
     run_sonar: runSonar,
+    sonar_sources_changed: changed.some((file) => file.startsWith("src/")),
     run_specs: isPullRequest,
     run_dependency_review: isPullRequest,
     changed_count: changed.length,

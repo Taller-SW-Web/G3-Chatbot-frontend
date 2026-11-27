@@ -97,6 +97,24 @@ test("ci:full forces every job even on a docs-only diff", () => {
   assert.equal(scope.run_sonar, true);
 });
 
+test("sonarSourcesChanged only for src changes", () => {
+  const source = buildScope(["src/modules/mod-auth/ui/x.ts"], {
+    graph: GRAPH,
+    event: "pull_request",
+    labels: [],
+    full: false,
+  });
+  assert.equal(source.sonar_sources_changed, true);
+
+  const tooling = buildScope(["scripts/ci/scope.mjs"], {
+    graph: GRAPH,
+    event: "pull_request",
+    labels: [],
+    full: false,
+  });
+  assert.equal(tooling.sonar_sources_changed, false);
+});
+
 test("deleted files and renames are visible to the diff", () => {
   const repo = mkdtempSync(join(tmpdir(), "g3-scope-"));
   try {
