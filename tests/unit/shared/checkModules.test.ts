@@ -117,7 +117,9 @@ describe("check-modules.mjs", () => {
     const r = ejecutar(copiarRepo(), { OPENAPI_PATH: openapiReal });
     expect(r.status).toBe(0);
     expect(r.salida).toContain("OK: 8 módulos");
-    expect(r.salida).toContain("etiquetado [mod-postventa]");
+    // `contractTagExceptions` está vacío: todos los endpoints llevan el tag de
+    // su módulo, así que el check no emite avisos de "etiquetado".
+    expect(r.salida).not.toContain("etiquetado [");
   });
 
   it.skipIf(!hayBackend)("falla si un endpoint del manifiesto no está en el openapi", () => {

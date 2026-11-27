@@ -32,6 +32,7 @@ export function BrandLogo({ variant = "volt", className = "h-7 w-auto" }: BrandL
       width={SRC[variant].w}
       height={SRC[variant].h}
       priority={variant === "volt"}
+      sizes="224px"
       className={className}
       onError={() => setFailed(true)}
     />
