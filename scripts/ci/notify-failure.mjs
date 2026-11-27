@@ -3,7 +3,6 @@
  * Publish (or update) a pull request comment when the CI pipeline fails.
  * The marker makes the comment idempotent across retries and new failures.
  */
-import { appendFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const MARKER = "<!-- g3-ci-failure -->";
@@ -203,14 +202,7 @@ async function main() {
   const jobs = token && repo && runId ? await failedJobs(repo, runId, token) : [];
   const logs = token && repo && runId ? await jobLogs(repo, jobs, token) : [];
   const body = buildMarkdown({ runUrl, reason, jobs, logs, needsJson });
-  // CI evidence built from the GitHub API; fixed path, escaped and truncated.
-  // codeql[js/http-to-file-access]
-  writeFileSync("ci-failure.md", body, "utf8");
-  if (process.env.GITHUB_STEP_SUMMARY) {
-    // GitHub-provided summary file.
-    // codeql[js/http-to-file-access]
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, body, "utf8");
-  }
+  console.log(body);
 
   if (!token || !pr) {
     console.log("No hay token o PR: el reporte queda en el job summary.");

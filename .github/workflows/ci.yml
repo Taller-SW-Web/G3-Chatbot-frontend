@@ -375,10 +375,10 @@ jobs:
           if [ "${{ needs.scope.outputs.sonar_sources_changed }}" = "true" ]; then
             args+=(--require-new-code-metrics)
           fi
+          set -o pipefail
           node "${{ steps.helper.outputs.path }}" \
             --project-key g3-chatbot-frontend "${args[@]}" \
-            --fail-on-severity "$threshold" \
-            --output sonar-strict-gate.md
+            --fail-on-severity "$threshold" | tee sonar-strict-gate.md
       - name: Explain quality gate failure
         if: failure() && steps.token.outputs.available == 'true'
         env:
@@ -391,9 +391,9 @@ jobs:
           else
             args+=(--branch "${{ github.ref_name }}")
           fi
+          set -o pipefail
           node "${{ steps.helper.outputs.path }}" \
-            --project-key g3-chatbot-frontend "${args[@]}" \
-            --output sonar-gate-report.md
+            --project-key g3-chatbot-frontend "${args[@]}" | tee sonar-gate-report.md
       - name: Upload Sonar gate reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -473,7 +473,12 @@ jobs:
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           SCOPE_REASON: ${{ needs.scope.outputs.reason }}
           NEEDS_JSON: ${{ toJSON(needs) }}
-        run: node "${{ steps.helper.outputs.path }}"
+        run: |
+          set -o pipefail
+          node "${{ steps.helper.outputs.path }}" | tee ci-failure.md
+          if [ -f ci-failure.md ]; then
+            cat ci-failure.md >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Upload notification evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

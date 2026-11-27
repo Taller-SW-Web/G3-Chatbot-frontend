@@ -3,7 +3,6 @@
  * Explain a failed SonarCloud quality gate for the current PR or branch.
  * Reporting must never mask the real scan failure, so API errors exit 0.
  */
-import { appendFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const HOST = (process.env.SONAR_HOST_URL ?? "https://sonarcloud.io").replace(/\/$/, "");
@@ -18,7 +17,6 @@ function parseArgs(argv) {
     projectKey: "",
     pullRequest: "",
     branch: "",
-    output: "sonar-gate-report.md",
     maxIssues: 50,
     failOnSeverity: "",
     minNewCoverage: 80,
@@ -30,7 +28,6 @@ function parseArgs(argv) {
     if (arg === "--project-key") args.projectKey = argv[++index];
     else if (arg === "--pull-request") args.pullRequest = argv[++index];
     else if (arg === "--branch") args.branch = argv[++index];
-    else if (arg === "--output") args.output = argv[++index];
     else if (arg === "--max-issues") args.maxIssues = Number(argv[++index]);
     else if (arg === "--fail-on-severity") args.failOnSeverity = argv[++index];
     else if (arg === "--min-new-coverage") args.minNewCoverage = Number(argv[++index]);
@@ -249,15 +246,7 @@ async function main() {
       pullRequest: args.pullRequest,
       branch: args.branch,
     });
-    // CI report built from the Sonar API; fixed path, escaped table cells.
-    // codeql[js/http-to-file-access]
-    writeFileSync(args.output, report, "utf8");
     console.log(report);
-    if (process.env.GITHUB_STEP_SUMMARY) {
-      // GitHub-provided summary file.
-      // codeql[js/http-to-file-access]
-      appendFileSync(process.env.GITHUB_STEP_SUMMARY, report, "utf8");
-    }
     if (args.failOnSeverity) {
       console.log(
         `New code: lines=${measures.new_lines || "n/a"}, ` +
