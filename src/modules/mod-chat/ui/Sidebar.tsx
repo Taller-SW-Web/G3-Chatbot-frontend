@@ -17,6 +17,7 @@ import {
 } from "@/modules/mod-chat/application/buscarConversacionesUseCase";
 import { crearConversacionUseCase } from "@/modules/mod-chat/application/crearConversacionUseCase";
 import type { ConversacionResumen, SegmentoResaltado } from "@/modules/mod-chat/ports/chatApiPort";
+import { useDialogoModal } from "@/shared/ui/useDialogoModal";
 
 /** Espera tras la última tecla antes de consultar `/buscar`. */
 const BUSQUEDA_DEBOUNCE_MS = 300;
@@ -44,6 +45,8 @@ export function Sidebar({
   const queryClient = useQueryClient();
   // Las conversaciones dependen de quién llama (cliente o cookie anónima).
   const dueno = cliente?.correo ?? "anonimo";
+  // Drawer modal: foco atrapado, Escape cierra y el fondo queda inerte (frontend#190).
+  const drawerRef = useDialogoModal<HTMLElement>(onClose, buscando);
 
   useEffect(() => {
     const t = setTimeout(() => setTermino(normalizarBusqueda(q)), BUSQUEDA_DEBOUNCE_MS);
@@ -126,9 +129,10 @@ export function Sidebar({
     const consulta = termino ? resultados : recientes;
     const filas = consulta.data?.pages.flat() ?? [];
     return (
-      <div className="absolute inset-0 z-30 flex flex-row">
-        <aside data-testid="sidebar-drawer" {...swipeProps}
-          className="order-1 w-[85%] max-w-[340px] bg-surface-ink text-text-inverse h-full flex flex-col p-4 gap-3">
+      <div data-capa-modal className="absolute inset-0 z-30 flex flex-row">
+        <aside data-testid="sidebar-drawer" {...swipeProps} ref={drawerRef} tabIndex={-1}
+          role="dialog" aria-modal="true" aria-label="Búsqueda de conversaciones"
+          className="order-1 w-[85%] max-w-[340px] bg-surface-ink text-text-inverse h-full flex flex-col p-4 gap-3 outline-none">
           <div className="wf-chip px-4 py-3 flex items-center gap-2 bg-white text-text-primary">
             <SearchIcon size={20} />
             <input ref={busquedaRef} value={q} onChange={(e) => setQ(e.target.value)}
@@ -162,9 +166,10 @@ export function Sidebar({
 
   const filas = recientes.data?.pages.flat() ?? [];
   return (
-    <div className="absolute inset-0 z-30 flex flex-row">
-      <aside data-testid="sidebar-drawer" {...swipeProps}
-        className="order-1 w-[85%] max-w-[340px] bg-surface-ink text-text-inverse h-full flex flex-col side-in">
+    <div data-capa-modal className="absolute inset-0 z-30 flex flex-row">
+      <aside data-testid="sidebar-drawer" {...swipeProps} ref={drawerRef} tabIndex={-1}
+        role="dialog" aria-modal="true" aria-label="Menú"
+        className="order-1 w-[85%] max-w-[340px] bg-surface-ink text-text-inverse h-full flex flex-col side-in outline-none">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border-inverse">
           <span style={{ filter: "hue-rotate(-48deg) saturate(1.35)" }} className="inline-flex">
             <BrandLogo variant="volt" className="h-12 w-auto" />
