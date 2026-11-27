@@ -20,7 +20,7 @@ Antes de escribir código:
 1. **Lee la spec del módulo** (`SPEC-*`) y `src/modules/<id>/MODULE.md`. Si el
    cambio no está en la spec, abre una issue en `G3-Chatbot-specs` asignada a
    `@Ankarmin` y `@MathiasTL`. No abras ramas ni PRs en specs: solo
-   `@MathiasTL`, `@Ankarmin` y `@nikaaat` lo hacen. El PR de frontend espera a
+   `@MathiasTL` y `@Ankarmin` lo hacen. El PR de frontend espera a
    que la spec esté en `development`.
 2. **Revisa coherencia** con lo existente: nombres, errores por `code`, estados,
    textos y el `public.ts` de los módulos vecinos.
