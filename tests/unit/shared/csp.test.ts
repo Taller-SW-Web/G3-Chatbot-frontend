@@ -58,9 +58,9 @@ describe("resolveApiProxyTarget", () => {
     expect(resolveApiProxyTarget({})).toBeUndefined();
   });
 
-  it("devuelve el destino sin barras finales", () => {
-    expect(resolveApiProxyTarget({ VERCEL: "1", API_PROXY_TARGET: "https://be.up.railway.app/" })).toBe(
-      "https://be.up.railway.app",
+  it("devuelve el destino del gateway sin barras finales", () => {
+    expect(resolveApiProxyTarget({ VERCEL: "1", API_PROXY_TARGET: "https://gw.up.railway.app/" })).toBe(
+      "https://gw.up.railway.app",
     );
   });
 });
