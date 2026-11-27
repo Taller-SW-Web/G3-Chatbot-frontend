@@ -145,7 +145,25 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
     onError: (error) => setAvisoCupon(mensajeCupon(error)),
   });
 
+  const lineas = carrito?.lineas ?? [];
+  const puedePagar = Boolean(
+    carrito &&
+      lineas.length > 0 &&
+      carrito.promociones_ok !== false &&
+      lineas.every((l) => l.disponible)
+  );
+
+  let motivoBloqueo = "";
+  if (!carrito || lineas.length === 0) {
+    motivoBloqueo = "El carrito está vacío.";
+  } else if (carrito.promociones_ok === false) {
+    motivoBloqueo = "No pudimos calcular promociones en este momento.";
+  } else if (!lineas.every((l) => l.disponible)) {
+    motivoBloqueo = "Hay productos sin stock disponible en el carrito.";
+  }
+
   function irAPagar() {
+    if (!puedePagar) return;
     if (!cliente) {
       setAccionPendiente("/checkout");
       setAuthOpen(true);
@@ -225,7 +243,6 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
     );
   }
 
-  const lineas = carrito?.lineas ?? [];
   const pendientes = cambiarCantidad.isPending || quitar.isPending || vaciar.isPending || reagregar.isPending;
   const cuponAplicado = parseCartDiscounts(carrito?.descuentos).items.find((d) =>
     d.name.startsWith("Cupón ")
@@ -457,11 +474,19 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
         </div>
         <button
           onClick={irAPagar}
+          disabled={!puedePagar}
+          aria-disabled={!puedePagar}
+          aria-describedby={!puedePagar ? "motivo-bloqueo-pago" : undefined}
           data-testid="btn-ir-a-pagar"
-          className="wf-btn py-3.5 text-sm font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover"
+          className="wf-btn py-3.5 text-sm font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
         >
           IR A PAGAR
         </button>
+        {!puedePagar && motivoBloqueo && (
+          <p id="motivo-bloqueo-pago" role="status" className="text-[12px] text-text-secondary text-center">
+            {motivoBloqueo}
+          </p>
+        )}
       </div>
     </div>
   );

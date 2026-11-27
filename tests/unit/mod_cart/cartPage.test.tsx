@@ -379,4 +379,62 @@ describe("CartPage: ir a pagar sin celular verificado", () => {
     expect(useChatStore.getState().authOpen).toBe(true);
     expect(useChatStore.getState().accionPendiente).toBe("/checkout");
   });
+
+  it("con promociones_ok=false el CTA está deshabilitado y no navega", () => {
+    h.cartData = {
+      ...h.CARRITO,
+      promociones_ok: false,
+    };
+    renderCart();
+
+    const btn = screen.getByTestId("btn-ir-a-pagar") as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute("aria-describedby")).toBe("motivo-bloqueo-pago");
+    expect(screen.getByText("No pudimos calcular promociones en este momento.")).toBeDefined();
+
+    fireEvent.click(btn);
+    expect(h.push).not.toHaveBeenCalled();
+  });
+
+  it("con carrito vacío el CTA está deshabilitado y no navega", () => {
+    h.cartData = {
+      ...h.CARRITO,
+      lineas: [],
+      total: 0,
+    };
+    renderCart();
+
+    const btn = screen.getByTestId("btn-ir-a-pagar") as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute("aria-describedby")).toBe("motivo-bloqueo-pago");
+    expect(screen.getByText("El carrito está vacío.")).toBeDefined();
+
+    fireEvent.click(btn);
+    expect(h.push).not.toHaveBeenCalled();
+  });
+
+  it("con producto no disponible el CTA está deshabilitado y no navega", () => {
+    h.cartData = {
+      ...h.CARRITO,
+      lineas: [
+        {
+          item_id: "l1",
+          sku: "SKU-1",
+          nombre: "Zapatilla",
+          cantidad: 1,
+          precio: 100,
+          disponible: false,
+        },
+      ],
+    };
+    renderCart();
+
+    const btn = screen.getByTestId("btn-ir-a-pagar") as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute("aria-describedby")).toBe("motivo-bloqueo-pago");
+    expect(screen.getByText("Hay productos sin stock disponible en el carrito.")).toBeDefined();
+
+    fireEvent.click(btn);
+    expect(h.push).not.toHaveBeenCalled();
+  });
 });
