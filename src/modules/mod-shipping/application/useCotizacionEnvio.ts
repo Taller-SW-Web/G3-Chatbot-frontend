@@ -22,7 +22,7 @@ export type LineaCotizable = { sku: string; cantidad: number };
 export function firmaCarritoEnvio(lineas: readonly LineaCotizable[]): string {
   return lineas
     .map((l) => `${l.sku}:${l.cantidad}`)
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .join("|");
 }
 
