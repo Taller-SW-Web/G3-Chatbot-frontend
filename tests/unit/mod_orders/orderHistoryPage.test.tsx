@@ -191,4 +191,29 @@ describe("OrderHistoryPage", () => {
     fireEvent.click(retryBtn);
     await waitFor(() => expect(listarPedidos).toHaveBeenCalledTimes(2));
   });
+
+  it("con 25 pedidos muestra 20 y 'Ver más' trae la página 2 (frontend#187)", async () => {
+    const pedido = (n: number) => ({
+      pedidoId: `PED-2026-${String(n).padStart(5, "0")}`,
+      canal: "CHATBOT",
+      estado: "EN_PREPARACION",
+      estadoEtiqueta: "En preparación",
+      total: 10,
+      moneda: "PEN",
+      fechaCreacion: "2026-11-10T10:00:00Z",
+    });
+    listarPedidos.mockReset();
+    listarPedidos
+      .mockResolvedValueOnce({ items: Array.from({ length: 20 }, (_, i) => pedido(i + 1)), total: 25, page: 1, pageSize: 20 })
+      .mockResolvedValueOnce({ items: Array.from({ length: 5 }, (_, i) => pedido(i + 21)), total: 25, page: 2, pageSize: 20 });
+    renderPage();
+
+    expect(await screen.findByText("Pedido PED-2026-00020")).toBeDefined();
+    expect(screen.queryByText("Pedido PED-2026-00021")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "VER MÁS" }));
+
+    expect(await screen.findByText("Pedido PED-2026-00025")).toBeDefined();
+    expect(listarPedidos).toHaveBeenLastCalledWith({ page: 2, pageSize: 20 });
+    expect(screen.queryByRole("button", { name: "VER MÁS" })).toBeNull();
+  });
 });
