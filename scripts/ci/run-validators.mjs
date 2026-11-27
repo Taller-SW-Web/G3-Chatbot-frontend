@@ -31,9 +31,13 @@ const VALIDATORS = [
   },
   {
     name: "ci-tests",
-    description: "Scope, deletion and ci:full regression tests",
+    description: "Scope, deletion, ci:full and Sonar gate regression tests",
     command: "node",
-    args: ["--test", "scripts/ci/scope.test.mjs"],
+    args: [
+      "--test",
+      "scripts/ci/scope.test.mjs",
+      "scripts/ci/sonar-gate-report.test.mjs",
+    ],
   },
 ];
 

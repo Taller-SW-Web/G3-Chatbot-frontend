@@ -9,7 +9,8 @@ import { pathToFileURL } from "node:url";
 const HOST = (process.env.SONAR_HOST_URL ?? "https://sonarcloud.io").replace(/\/$/, "");
 const TOKEN = process.env.SONAR_TOKEN ?? "";
 const MAX_PAGES = 5;
-const MEASURE_KEYS = "new_lines,new_coverage,new_duplicated_lines_density,new_violations";
+const MEASURE_KEYS =
+  "new_lines,new_lines_to_cover,new_coverage,new_duplicated_lines_density,new_violations";
 const SEVERITY_ORDER = { INFO: 0, MINOR: 1, MAJOR: 2, CRITICAL: 3, BLOCKER: 4 };
 
 function parseArgs(argv) {
@@ -79,19 +80,57 @@ async function fetchIssues({ projectKey, pullRequest, branch, limit, fetchAll = 
   return fetchAll ? issues : issues.slice(0, limit);
 }
 
+function measureValue(measure) {
+  const periods = measure.periods ?? [];
+  if (periods.length > 0) return String(periods.at(-1)?.value ?? "");
+  return String(measure.value ?? "");
+}
+
 async function fetchMeasures({ projectKey, pullRequest, branch }) {
   const params = { component: projectKey, metricKeys: MEASURE_KEYS };
   if (pullRequest) params.pullRequest = pullRequest;
   else if (branch) params.branch = branch;
   const payload = await apiGet("/api/measures/component", params);
   const measures = payload.component?.measures ?? [];
-  return Object.fromEntries(measures.map((measure) => [measure.metric, measure.value]));
+  return Object.fromEntries(
+    measures.map((measure) => [measure.metric, measureValue(measure)]),
+  );
 }
 
 function asNumber(value) {
   if (value === undefined || value === null || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function measureFailures(measures, minNewCoverage, maxNewDuplication) {
+  const failures = [];
+  const newLines = asNumber(measures.new_lines);
+  const linesToCover = asNumber(measures.new_lines_to_cover);
+  const newCoverage = asNumber(measures.new_coverage);
+  const newDuplication = asNumber(measures.new_duplicated_lines_density);
+
+  if (linesToCover !== null && linesToCover > 0) {
+    if (newCoverage === null) {
+      failures.push(
+        "new code tiene líneas que cubrir pero Sonar no publicó new_coverage",
+      );
+    } else if (newCoverage < minNewCoverage) {
+      failures.push(`cobertura de new code ${newCoverage}% < ${minNewCoverage}%`);
+    }
+  }
+  if (newLines !== null && newLines > 0) {
+    if (newDuplication === null) {
+      failures.push(
+        "new code tiene líneas pero Sonar no publicó new_duplicated_lines_density",
+      );
+    } else if (newDuplication > maxNewDuplication) {
+      failures.push(
+        `duplicación de new code ${newDuplication}% > ${maxNewDuplication}%`,
+      );
+    }
+  }
+  return failures;
 }
 
 export function blockingIssues(issues, threshold) {
@@ -182,13 +221,14 @@ async function main() {
       limit: args.maxIssues,
       fetchAll: Boolean(args.failOnSeverity),
     });
-    const measures = args.failOnSeverity
-      ? await fetchMeasures({
-          projectKey: args.projectKey,
-          pullRequest: args.pullRequest,
-          branch: args.branch,
-        })
-      : {};
+    const measures =
+      args.failOnSeverity && args.pullRequest
+        ? await fetchMeasures({
+            projectKey: args.projectKey,
+            pullRequest: args.pullRequest,
+            branch: args.branch,
+          })
+        : {};
     const report = formatReport({
       projectKey: args.projectKey,
       gate: gatePayload.projectStatus ?? {},
@@ -202,26 +242,18 @@ async function main() {
       appendFileSync(process.env.GITHUB_STEP_SUMMARY, report, "utf8");
     }
     if (args.failOnSeverity) {
-      const newLines = asNumber(measures.new_lines);
-      const newCoverage = asNumber(measures.new_coverage);
-      const newDuplication = asNumber(measures.new_duplicated_lines_density);
       console.log(
-        `New code: lines=${newLines ?? "n/a"}, coverage=${newCoverage ?? "n/a"}, ` +
-          `duplication=${newDuplication ?? "n/a"}`,
+        `New code: lines=${measures.new_lines || "n/a"}, ` +
+          `lines_to_cover=${measures.new_lines_to_cover || "n/a"}, ` +
+          `coverage=${measures.new_coverage || "n/a"}, ` +
+          `duplication=${measures.new_duplicated_lines_density || "n/a"}`,
       );
-      if (newLines !== null && newLines > 0) {
-        if (newCoverage !== null && newCoverage < args.minNewCoverage) {
-          console.error(
-            `::error::Cobertura de new code ${newCoverage}% < ${args.minNewCoverage}%.`,
-          );
-          return 1;
-        }
-        if (newDuplication !== null && newDuplication > args.maxNewDuplication) {
-          console.error(
-            `::error::Duplicación de new code ${newDuplication}% > ${args.maxNewDuplication}%.`,
-          );
-          return 1;
-        }
+      const metricFailures = args.pullRequest
+        ? measureFailures(measures, args.minNewCoverage, args.maxNewDuplication)
+        : [];
+      if (metricFailures.length > 0) {
+        for (const failure of metricFailures) console.error(`::error::${failure}.`);
+        return 1;
       }
 
       const blocking = blockingIssues(issues, args.failOnSeverity);
