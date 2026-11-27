@@ -50,7 +50,7 @@ test.describe("Hito 3 — chat con LLM real", () => {
 
     // El detalle se abre desde la tarjeta y llega como bloque DETALLE_PRODUCTO.
     await grupo.getByRole("button", { name: /^Ver detalle de / }).first().click();
-    await expect(page.getByTestId("bloque-detalle-producto")).toBeVisible();
+    await expect(page.getByTestId("bloque-detalle-producto")).toBeVisible({ timeout: 30_000 });
   });
 
   // E2E-07 · CP-H3-09-08 y CP-H3-11-09 (SPEC-09 Req. 2, SPEC-11 Req. 3)
@@ -63,14 +63,15 @@ test.describe("Hito 3 — chat con LLM real", () => {
     const grupo = page.getByRole("group", { name: /Productos|Zapatillas/i });
     await expect(grupo).toBeVisible({ timeout: 30_000 });
     const agregar = grupo.getByRole("button", { name: /^Agregar / }).first();
+    const tieneVariantes = (await agregar.getAttribute("data-has-variants")) === "true";
     // Un producto con variantes se agrega desde el detalle (E2E-06). Este caso
     // cubre CP-H3-09-08: producto de SKU único, "Agregar" directo en la tarjeta.
-    test.skip((await agregar.count()) === 0, "El producto devuelto tiene variantes: se agrega desde el detalle");
+    test.skip(tieneVariantes || (await agregar.count()) === 0, "El producto devuelto tiene variantes: se agrega desde el detalle");
 
     await agregar.click();
     await page.getByLabel("Ver carrito").click();
     await expect(page).toHaveURL(/\/carrito$/);
-    await expect(page.getByText("Subtotal").first()).toBeVisible();
+    await expect(page.getByText("Subtotal").first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/S\/ \d+\.\d{2}/).first()).toBeVisible();
   });
 });

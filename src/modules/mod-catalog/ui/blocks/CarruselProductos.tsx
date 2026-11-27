@@ -56,6 +56,7 @@ export function CarruselProductos({
             <div className="flex items-center justify-between mt-1">
               <AvailabilityBadge state={p.availability} className="text-[11px] font-semibold" />
               <button aria-label={`Agregar ${sanitize(p.name)}`} onClick={() => onAdd(p)}
+                data-has-variants={p.hasVariants ? "true" : "false"}
                 disabled={!canAddCard(p)}
                 className="w-8 h-8 shrink-0 wf-btn flex items-center justify-center bg-action-primary text-surface-ink disabled:opacity-40 disabled:cursor-not-allowed"><PlusIcon size={16} /></button>
             </div>
