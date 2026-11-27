@@ -103,7 +103,7 @@ Si cualquier presupuesto marcado como `error` es superado, el job `lighthouse` f
 * **Causa técnica identificada:** Emulación móvil de Lighthouse (desaceleración de CPU 4x) en runners de 2 vCPUs sin backend activo, retrasando la hidratación cliente de React en páginas dinámicas.
 * **Presupuesto objetivo formal:** $\text{LCP} \le 2500\text{ ms}$ y $\text{TBT} \le 200\text{ ms}$ (se mantienen inalterados como meta del proyecto).
 * **Techo protector bloqueante en CI:** Fijado en CI en $\text{LCP} \le 4800\text{ ms}$ y $\text{TBT} \le 350\text{ ms}$ (acotado estrechamente sobre la peor mediana de 291 ms) para evitar falsos positivos en CI mientras se atiende la issue de optimización [#164](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/issues/164).
-* **Estado de aprobación:** Aprobada explícitamente por el líder técnico (`@Ankarmin`) el 2026-11-27, conforme al procedimiento de §6.2. La excepción se revisa cuando se cierre [#164](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/issues/164).
+* **Estado de aprobación:** Aprobada explícitamente por el líder técnico (`@Ankarmin`) el 2026-11-27 en la revisión del PR #180, conforme al procedimiento de §6.2. La excepción se revisa cuando se cierre [#164](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/issues/164).
 * **Presupuestos estrictos sin excepción:** Accesibilidad ($\ge 0.90$), CLS ($\le 0.10$), scripts JS ($\le 600\text{ KB}$) y tamaño total ($\le 1.8\text{ MB}$) operan en nivel `error` estricto y bloqueante.
 
 ### 6.2 Procedimiento General para Nuevas Excepciones
