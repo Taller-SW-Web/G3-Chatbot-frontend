@@ -322,4 +322,17 @@ describe("HomePage (catálogo + slots)", () => {
     await screen.findByText("Zapatilla Volta");
     expect(h.agregar).not.toHaveBeenCalled();
   });
+
+  it("muestra esqueleto de carga accesible mientras consulta el catálogo", () => {
+    h.buscar.mockImplementation(() => new Promise(() => {}));
+    montar();
+    expect(screen.getByRole("status", { name: "Cargando productos en oferta" })).toBeDefined();
+    expect(screen.getByText("Cargando productos…")).toBeDefined();
+  });
+
+  it("renderiza el enlace a la política de privacidad de forma navegable", async () => {
+    montar();
+    const link = await screen.findByRole("link", { name: "Política de privacidad" });
+    expect(link.getAttribute("href")).toBe("/privacidad");
+  });
 });
