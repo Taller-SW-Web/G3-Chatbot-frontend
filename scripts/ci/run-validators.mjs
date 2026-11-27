@@ -37,6 +37,7 @@ const VALIDATORS = [
       "--test",
       "scripts/ci/scope.test.mjs",
       "scripts/ci/sonar-gate-report.test.mjs",
+      "scripts/ci/notify-failure.test.mjs",
     ],
   },
 ];

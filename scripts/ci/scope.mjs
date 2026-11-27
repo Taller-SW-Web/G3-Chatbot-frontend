@@ -187,12 +187,13 @@ export function buildScope(
   }
 
   const isPullRequest = event === "pull_request";
-  const forceExpensive = !isPullRequest || forcedByLabel;
+  const forceExpensive = !isPullRequest || forcedByLabel || fullScope;
   const runValidate = ["code", "deps", "ci"].includes(mode);
   const runUnit = ["code", "deps", "ci"].includes(mode);
   const runBuild = ["code", "deps", "ci"].includes(mode);
   const runSecurity =
     forcedByLabel ||
+    fullScope ||
     mode === "deps" ||
     ["schedule", "workflow_dispatch"].includes(event);
   const runE2E = forceExpensive && ["code", "deps", "ci"].includes(mode);
@@ -308,19 +309,15 @@ export function main(argv = process.argv.slice(2)) {
     return 0;
   }
 
-  const full = args.full || ["schedule", "workflow_dispatch"].includes(args.event);
+  // Team decision: full pipeline on every run. The diff is still computed for
+  // sonar_sources_changed and reporting.
   let changed = [];
-  let fullScope = full;
-  if (!full) {
-    const base = resolveBase(args.base, args.before, args.repoRoot);
-    if (base === null) {
-      fullScope = true;
-    } else {
-      try {
-        changed = diffFiles(base, args.repoRoot);
-      } catch {
-        fullScope = true;
-      }
+  const base = resolveBase(args.base, args.before, args.repoRoot);
+  if (base !== null) {
+    try {
+      changed = diffFiles(base, args.repoRoot);
+    } catch {
+      changed = [];
     }
   }
 
@@ -328,7 +325,7 @@ export function main(argv = process.argv.slice(2)) {
     graph: loadManifest(args.manifest),
     event: args.event,
     labels: args.labels,
-    full: fullScope,
+    full: true,
   });
   if (args.githubOutput) writeGithubOutput(args.githubOutput, scope);
   if (args.json) {

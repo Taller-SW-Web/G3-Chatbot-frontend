@@ -68,6 +68,18 @@ function needsFailures(needsJson) {
   }
 }
 
+export function successMarkdown({ runUrl, reason }) {
+  return [
+    MARKER,
+    "## CI recuperado",
+    "",
+    `**Run:** ${runUrl}`,
+    `**Alcance:** ${reason || "no reportado"}`,
+    "",
+    "Todos los jobs terminaron en `success` o se omitieron a propósito.",
+  ].join("\n") + "\n";
+}
+
 export function buildMarkdown({ runUrl, reason, jobs, logs, needsJson = "" }) {
   const names = jobs.map((job) => String(job.name ?? ""));
   for (const name of needsFailures(needsJson)) {
@@ -198,6 +210,23 @@ async function main() {
   const token = process.env.GITHUB_TOKEN ?? "";
   const server = (process.env.GITHUB_SERVER_URL ?? "https://github.com").replace(/\/$/, "");
   const runUrl = `${server}/${repo}/actions/runs/${runId}`;
+
+  if (needsFailures(needsJson).length === 0) {
+    const body = successMarkdown({ runUrl, reason });
+    console.log(body);
+    if (token && pr && (!headRepo || headRepo === repo)) {
+      const existing = await findComment(repo, pr, token);
+      if (existing !== null) {
+        await requestJson(
+          "PATCH",
+          `${apiBase()}/repos/${repo}/issues/comments/${existing}`,
+          token,
+          { body },
+        );
+      }
+    }
+    return 0;
+  }
 
   const jobs = token && repo && runId ? await failedJobs(repo, runId, token) : [];
   const logs = token && repo && runId ? await jobLogs(repo, jobs, token) : [];
