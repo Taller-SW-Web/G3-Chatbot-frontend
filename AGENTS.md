@@ -32,19 +32,20 @@ Antes de escribir código:
 5. **Verifica antes de pedir review:** `pnpm lint`, `pnpm typecheck`,
    `pnpm test`, `pnpm test:coverage`, `pnpm build` y `pnpm modules:check`
    (estructura + fronteras + registry + contrato `openapi`).
-6. Si cambias un endpoint, actualiza el `openapi.json` del backend con el tag
+6. El CI agrupa lint, tipos, `modules:check` y tests de `scope.mjs` en el job `validate` y calcula el alcance por módulo: un PR de solo documentación no corre tests, build ni Sonar; la etiqueta `ci:full` fuerza también el E2E y la auditoría, y relanza el workflow. Reproduce `validate` con `node scripts/ci/run-validators.mjs` y consulta qué correrá con `node scripts/ci/scope.mjs --base origin/development --event pull_request --json`.
+7. Si cambias un endpoint, actualiza el `openapi.json` del backend con el tag
    `mod-<id>` y el `module.manifest.ts`; el gate de contrato lo exige.
-7. **No cierres un issue hasta que el PR esté mergeado en `development`** y
+8. **No cierres un issue hasta que el PR esté mergeado en `development`** y
    verificado. El cierre cita PR, commit y evidencia; duplicado u obsoleto se
    cierra con motivo, nunca como `completed` si el trabajo sigue pendiente.
-8. **Ramas:** los PR van a `development`, rama por defecto y de producción;
+9. **Ramas:** los PR van a `development`, rama por defecto y de producción;
    `main` es un placeholder de un commit con solo `README.md`. No promuevas ni
    despliegues desde `main`.
-9. **Incoherencia con la spec:** si una issue contradice la spec o pide algo no
+10. **Incoherencia con la spec:** si una issue contradice la spec o pide algo no
    definido, no la implementes; abre una issue en `G3-Chatbot-specs` asignada a
    `@Ankarmin` y `@MathiasTL`, enlaza la original y espera la decisión. Regla
    completa: `G3-Chatbot-specs/AGENTS.md` §8.
-10. **Higiene:** no reescribas la historia compartida de `development`, no borres
+11. **Higiene:** no reescribas la historia compartida de `development`, no borres
     tags o ramas sin coordinar y no pegues secretos en issues o PRs.
 
 Detalle operativo: `docs/flujo-de-trabajo.md`. Estructura: `arquitectura-frontend.md`.

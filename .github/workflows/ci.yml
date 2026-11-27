@@ -5,48 +5,128 @@ on:
     branches: [development]
   pull_request:
     branches: [development]
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited]
+  schedule:
+    # Full weekly run, including the real-stack E2E suite.
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
 
-# Least privilege: the workflow only reads the repository.
+# Least privilege: the workflow only reads the repository. The notify job
+# elevates pull-requests/actions permissions for its own scope.
 permissions:
   contents: read
 
-# A newer push on the same ref cancels the previous run.
+# A newer push on the same ref cancels the previous PR run. Push/schedule runs
+# are not cancelled: a weekly security run must finish even if a push arrives.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  lint:
-    name: Lint and type check
+  scope:
+    name: Scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.scope.outputs.mode }}
+      full: ${{ steps.scope.outputs.full }}
+      modules: ${{ steps.scope.outputs.modules }}
+      run_validate: ${{ steps.scope.outputs.run_validate }}
+      run_unit: ${{ steps.scope.outputs.run_unit }}
+      run_build: ${{ steps.scope.outputs.run_build }}
+      run_security: ${{ steps.scope.outputs.run_security }}
+      run_e2e: ${{ steps.scope.outputs.run_e2e }}
+      run_sonar: ${{ steps.scope.outputs.run_sonar }}
+      sonar_sources_changed: ${{ steps.scope.outputs.sonar_sources_changed }}
+      run_specs: ${{ steps.scope.outputs.run_specs }}
+      run_dependency_review: ${{ steps.scope.outputs.run_dependency_review }}
+      reason: ${{ steps.scope.outputs.reason }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+      - name: Compute scope
+        id: scope
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE_SHA: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$REF" != "refs/heads/development" ]; then
+            echo "::error::workflow_dispatch solo se permite en development para no ejecutar helpers con token desde una rama no revisada."
+            exit 1
+          fi
+          args=(--event "$EVENT_NAME")
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
+            args+=(--base "origin/$BASE_REF")
+          elif [ "$EVENT_NAME" = "push" ]; then
+            args+=(--before "$BEFORE_SHA")
+          else
+            args+=(--full)
+          fi
+          if printf '%s' ",$LABELS," | grep -q ',ci:full,'; then
+            args+=(--full)
+          fi
+          node scripts/ci/scope.mjs "${args[@]}" --labels "$LABELS" --github-output "$GITHUB_OUTPUT"
+
+  # Lint + types + module boundaries in one job: one install, one report and
+  # every error visible at once.
+  validate:
+    name: Validate
+    needs: scope
+    if: needs.scope.outputs.run_validate == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      # The pnpm version is read from the "packageManager" field in package.json.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Lint
-        run: pnpm run lint
-      - name: Type check
-        run: pnpm run typecheck
+      - name: Descargar contrato del backend
+        run: |
+          curl -fsS --retry 3 --retry-delay 5 --retry-all-errors --max-time 30 \
+            -o "$RUNNER_TEMP/openapi.json" \
+            https://raw.githubusercontent.com/Taller-SW-Web/G3-Chatbot-backend/development/docs/openapi.json
+      - name: Run validators
+        env:
+          OPENAPI_PATH: ${{ runner.temp }}/openapi.json
+        run: node scripts/ci/run-validators.mjs --report validation-report.txt
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: validation-report
+          path: validation-report.txt
+          retention-days: 90
+          if-no-files-found: warn
 
-  test:
+  unit-tests:
     name: Unit tests
+    needs: [scope, validate]
+    if: |
+      always() && needs.scope.outputs.run_unit == 'true' &&
+      needs.validate.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: pnpm
@@ -55,22 +135,27 @@ jobs:
       - name: Unit tests with coverage
         run: pnpm run test:coverage
       - name: Upload coverage report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-frontend
           path: coverage/
+          retention-days: 7
           if-no-files-found: error
 
   build:
     name: Build
+    needs: [scope, validate]
+    if: |
+      always() && needs.scope.outputs.run_build == 'true' &&
+      needs.validate.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: pnpm
@@ -79,46 +164,18 @@ jobs:
       - name: Build
         run: pnpm run build
 
-  # Fase 4 de ADR-0024: el checker es bloqueante. Si falla, hay imports
-  # cruzados entre módulos o falta la estructura obligatoria.
-  modules:
-    name: Module boundaries
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Descargar contrato del backend
-        # El checker valida paths y tags de cada módulo contra el OpenAPI real.
-        # El repo de backend es público: se lee su development sin token.
-        run: curl -fsS -o "$RUNNER_TEMP/openapi.json" https://raw.githubusercontent.com/Taller-SW-Web/G3-Chatbot-backend/development/docs/openapi.json
-      - name: Check module boundaries
-        env:
-          OPENAPI_PATH: ${{ runner.temp }}/openapi.json
-        run: pnpm modules:check
-
-  # Gate bloqueante (H5-C1): una vulnerabilidad high/critical en el lockfile
-  # tumba el job y, como `check` depende de él, también el check requerido.
-  # Las excepciones aceptadas se documentan y justifican en
-  # docs/seguridad/pnpm-audit-exceptions.md.
   security:
     name: Dependency audit
+    needs: scope
+    if: needs.scope.outputs.run_security == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: pnpm
@@ -127,32 +184,15 @@ jobs:
       - name: Audit dependencies
         run: pnpm audit --audit-level=high
 
-  # Revisa las dependencias que el PR agrega/cambia contra el Dependency Graph.
-  # El job corre siempre (aunque en `push` no revisa nada) para no romper el
-  # chequeo de `skipped` del gate.
-  dependency-review:
-    name: Dependency review
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: Review dependencies
-        if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@v5.0.1
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: on-failure
-
-  # E2E contra el stack real: Next + backend + PostgreSQL, con los módulos
-  # externos en modo `fake` (ADR-0022), que es el modo con el que se demuestra el
-  # producto. Sin LLM: los flujos del chat real viven en `e2e-real.yml` (nocturno).
+  # The most expensive job. It runs on development, the weekly schedule, or a
+  # pull request labelled `ci:full`; not on every PR.
   e2e:
     name: E2E
+    needs: [scope, validate, unit-tests]
+    if: |
+      always() && needs.scope.outputs.run_e2e == 'true' &&
+      needs.validate.result == 'success' &&
+      needs.unit-tests.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
@@ -175,13 +215,12 @@ jobs:
       API_PROXY_TARGET: http://127.0.0.1:8000
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      # El backend es público: se clona la rama acordada, sin token extra.
       - name: Clone backend
         run: git clone --depth 1 --branch "$E2E_BACKEND_REF" https://github.com/Taller-SW-Web/G3-Chatbot-backend.git ../backend
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: '3.12'
       - name: Install backend dependencies
@@ -205,8 +244,8 @@ jobs:
           echo "::error::el backend no respondió en 120 s"
           cat /tmp/backend.log
           exit 1
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           cache: pnpm
@@ -218,7 +257,7 @@ jobs:
         run: pnpm exec playwright test
       - name: Upload Playwright artifacts
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: playwright-artifacts
           path: |
@@ -227,65 +266,158 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # Análisis de SonarCloud con la cobertura del job de unitarias. El proyecto espera
-  # el Quality Gate (`sonar.qualitygate.wait`), así que un gate rojo tumba el job.
-  # Análisis de SonarCloud con la cobertura del job de unitarias. El proyecto espera
-  # el Quality Gate (`sonar.qualitygate.wait`), así que un gate rojo tumba el job.
-  #
-  # Los PRs de Dependabot se ejecutan como si vinieran de un fork: no reciben
-  # secretos. Sin token el escaneo no puede autenticarse, así que se omite y el job
-  # queda verde; la cobertura y el resto del gate siguen intactos.
+  dependency-review:
+    name: Dependency review
+    needs: scope
+    if: needs.scope.outputs.run_dependency_review == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Review dependencies
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
   sonar:
     name: SonarCloud
+    needs: [scope, validate, unit-tests]
+    if: |
+      always() && needs.scope.outputs.run_sonar == 'true' &&
+      needs.validate.result == 'success' &&
+      needs.unit-tests.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [test]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Detect SONAR_TOKEN
+      - name: Checkout base CI helpers
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - name: Select Sonar helper
+        id: helper
+        run: |
+          if [ -f base/scripts/ci/sonar-gate-report.mjs ]; then
+            echo "path=base/scripts/ci/sonar-gate-report.mjs" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=scripts/ci/sonar-gate-report.mjs" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Require SONAR_TOKEN
         id: token
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          if [ -n "$SONAR_TOKEN" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Sin SONAR_TOKEN (PR de Dependabot): se omite SonarCloud."
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error::SONAR_TOKEN no está disponible para este PR."
+            echo "::error::Los PRs de fork/Dependabot no reciben secretos. Configura el Dependabot secret SONAR_TOKEN o ejecuta el análisis en una rama del repo base antes de mergear."
+            exit 1
+          fi
+          echo "available=true" >> "$GITHUB_OUTPUT"
+      - name: Reject unreviewed sonar-project.properties changes
+        if: |
+          github.event_name == 'pull_request' &&
+          !contains(github.event.pull_request.labels.*.name, 'ci:sonar-config')
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          changed=$(git diff --name-only --no-renames "$BASE_SHA...HEAD")
+          if printf '%s\n' "$changed" | grep -qx 'sonar-project.properties'; then
+            echo "::error::sonar-project.properties no puede cambiar en este PR sin la etiqueta ci:sonar-config."
+            echo "::error::Un owner debe revisar el cambio y añadir la etiqueta, o moverlo a un PR separado."
+            exit 1
           fi
       - name: Download coverage
         if: steps.token.outputs.available == 'true'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: coverage-frontend
           path: coverage
       - name: SonarCloud scan
         if: steps.token.outputs.available == 'true'
-        uses: SonarSource/sonarqube-scan-action@v8.5.0
+        uses: SonarSource/sonarqube-scan-action@70bad232163b09d998ea0707ee80c0ec80798c16 # v8.5.1
+        with:
+          # Workflow-controlled: a PR cannot disable the wait by editing the
+          # project properties.
+          args: >-
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=600
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
+      - name: "Enforce zero new issues (PR: MINOR+, non-PR: CRITICAL+)"
+        if: steps.token.outputs.available == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        run: |
+          args=()
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # El PR bloquea todo lo nuevo relevante; non-PR solo bloquea
+            # CRITICAL/BLOCKER para no tumbar el deploy por deuda heredada.
+            args+=(--pull-request "${{ github.event.pull_request.number }}")
+            threshold=MINOR
+          else
+            args+=(--branch "${{ github.ref_name }}")
+            threshold=CRITICAL
+          fi
+          if [ "${{ needs.scope.outputs.sonar_sources_changed }}" = "true" ]; then
+            args+=(--require-new-code-metrics)
+          fi
+          set -o pipefail
+          node "${{ steps.helper.outputs.path }}" \
+            --project-key g3-chatbot-frontend "${args[@]}" \
+            --fail-on-severity "$threshold" | tee sonar-strict-gate.md
+      - name: Explain quality gate failure
+        if: failure() && steps.token.outputs.available == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        run: |
+          args=()
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            args+=(--pull-request "${{ github.event.pull_request.number }}")
+          else
+            args+=(--branch "${{ github.ref_name }}")
+          fi
+          set -o pipefail
+          node "${{ steps.helper.outputs.path }}" \
+            --project-key g3-chatbot-frontend "${args[@]}" | tee sonar-gate-report.md
+      - name: Upload Sonar gate reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: sonar-gate-reports
+          path: sonar-*.md
+          if-no-files-found: ignore
+          retention-days: 30
 
-  # `check` is the required status check of the protected branches, so it stays as the
-  # single gate. It runs even when a job fails, because a skipped required check counts as passed.
   specs:
     name: Specs del PR
+    needs: scope
+    if: needs.scope.outputs.run_specs == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v7
-        if: github.event_name == 'pull_request'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
       - name: Validar spec enlazada
-        if: github.event_name == 'pull_request'
         run: |
           git fetch --no-tags origin "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
           git clone --depth 1 --branch development https://github.com/Taller-SW-Web/G3-Chatbot-specs.git specs-repo
@@ -294,14 +426,140 @@ jobs:
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
 
-  check:
-    name: check
+  notify:
+    name: Notify failure
+    needs:
+      - scope
+      - validate
+      - unit-tests
+      - build
+      - security
+      - e2e
+      - dependency-review
+      - sonar
+      - specs
+      - check
+    if: |
+      failure() && github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [lint, test, build, security, dependency-review, sonar, e2e, modules, specs]
-    if: always()
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: read
     steps:
-      - name: Require every job to succeed
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
-        run: exit 1
-      - run: echo "All CI jobs passed."
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Checkout base CI helpers
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - name: Select notify helper
+        id: helper
+        run: |
+          if [ -f base/scripts/ci/notify-failure.mjs ]; then
+            echo "path=base/scripts/ci/notify-failure.mjs" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=scripts/ci/notify-failure.mjs" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Comment the failure on the pull request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          SCOPE_REASON: ${{ needs.scope.outputs.reason }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          set -o pipefail
+          node "${{ steps.helper.outputs.path }}" | tee ci-failure.md
+          if [ -f ci-failure.md ]; then
+            cat ci-failure.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload notification evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ci-failure-report
+          path: ci-failure.md
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # `check` is the required status check. It runs even when a job fails so a
+  # skipped required check cannot count as passed, and it verifies that every
+  # job the scope asked for actually succeeded.
+  check:
+    name: check
+    needs:
+      - scope
+      - validate
+      - unit-tests
+      - build
+      - security
+      - e2e
+      - dependency-review
+      - sonar
+      - specs
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every expected job to succeed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          RUN_VALIDATE: ${{ needs.scope.outputs.run_validate }}
+          RUN_UNIT: ${{ needs.scope.outputs.run_unit }}
+          RUN_BUILD: ${{ needs.scope.outputs.run_build }}
+          RUN_SECURITY: ${{ needs.scope.outputs.run_security }}
+          RUN_E2E: ${{ needs.scope.outputs.run_e2e }}
+          RUN_SONAR: ${{ needs.scope.outputs.run_sonar }}
+          RUN_SPECS: ${{ needs.scope.outputs.run_specs }}
+          RUN_DEPENDENCY_REVIEW: ${{ needs.scope.outputs.run_dependency_review }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+
+          needs = json.loads(os.environ["NEEDS"])
+          failed = [
+              name
+              for name, payload in needs.items()
+              if payload.get("result") in {"failure", "cancelled"}
+          ]
+          if failed:
+              print("Failed jobs: " + ", ".join(sorted(failed)))
+              sys.exit(1)
+
+          expected = {
+              "validate": os.environ.get("RUN_VALIDATE"),
+              "unit-tests": os.environ.get("RUN_UNIT"),
+              "build": os.environ.get("RUN_BUILD"),
+              "security": os.environ.get("RUN_SECURITY"),
+              "e2e": os.environ.get("RUN_E2E"),
+              "sonar": os.environ.get("RUN_SONAR"),
+              "specs": os.environ.get("RUN_SPECS"),
+              "dependency-review": os.environ.get("RUN_DEPENDENCY_REVIEW"),
+          }
+          missing = [
+              name
+              for name, should_run in expected.items()
+              if should_run not in {"true", "false"}
+          ]
+          if missing:
+              print("Scope did not publish a boolean for: " + ", ".join(missing))
+              sys.exit(1)
+
+          mismatched = [
+              name
+              for name, should_run in expected.items()
+              if should_run == "true" and needs.get(name, {}).get("result") != "success"
+          ]
+          if mismatched:
+              print("Jobs that should have run did not succeed: " + ", ".join(mismatched))
+              sys.exit(1)
+          print("All CI jobs passed or were intentionally skipped.")
+          PY

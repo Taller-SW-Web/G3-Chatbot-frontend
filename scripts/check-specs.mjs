@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = path.join(root, "modules.manifest.json");
-const moduleRe = /^src\/modules\/(mod-[a-z-]+)\//;
+const moduleRe = /^src\/modules\/(mod-[a-z0-9-]+)\//;
 
 function readArg(name) {
   const index = process.argv.indexOf(`--${name}`);
@@ -60,7 +60,10 @@ for (const moduleId of [...modules].sort()) {
     errors.push(`${moduleId}: no declara specs en modules.manifest.json`);
     continue;
   }
-  const linked = declared.filter((spec) => body.includes(`openspec/specs/${spec}`));
+  const linked = declared.filter((spec) => {
+    const escaped = spec.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`openspec/specs/${escaped}(?![a-z0-9-])`).test(body);
+  });
   if (linked.length === 0) {
     errors.push(`${moduleId}: el PR no enlaza ninguna de sus specs (${declared.join(", ")})`);
     continue;

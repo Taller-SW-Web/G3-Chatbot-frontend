@@ -10,3 +10,8 @@ test-results/
 # Coverage (CI uploads it as an artifact)
 coverage/
 playwright-report/
+
+# CI evidence generated locally (the workflow uploads it as an artifact)
+validation-report.txt
+sonar-gate-report.md
+ci-failure.md
