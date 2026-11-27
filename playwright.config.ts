@@ -1,8 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // E2E_BASE_URL apunta a un frontend ya desplegado (sin levantar Next en local).
-// Sin ella se levanta Next en local; con API_PROXY_TARGET reenvía /api/* al backend (ADR-0023),
-// por ejemplo al backend levantado en el mismo job de CI con MODULES_MODE=fake.
+// Sin ella se levanta Next en local; con API_PROXY_TARGET reenvía /api/* al API Gateway Kong OSS
+// en entornos desplegados (ADR-0023, ADR-0031) o al backend fake levantado en el mismo job de CI.
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const isCI = !!process.env.CI;
 
