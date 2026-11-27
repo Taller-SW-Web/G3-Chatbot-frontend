@@ -43,7 +43,7 @@ module.exports = {
         // Presupuesto Core Web Vitals (H5-P4 - Mobile First)
         // Objetivo del proyecto: LCP <= 2500 ms y TBT <= 200 ms (ver docs/rendimiento-lighthouse.md).
         // Excepción técnica en CI aprobada por @Ankarmin el 2026-11-27 (Issue #164): `/carrito`
-        // renderiza su estado vacío tras la hidratación y mide ~4071 ms con CPU 4x; el resto de
+        // renderiza su estado vacío tras la hidratación y mide ~3971 ms con CPU 4x; el resto de
         // URLs cumple 2500 ms (assertMatrix). El techo global de 4800 ms queda para esa excepción.
         "largest-contentful-paint": ["error", { maxNumericValue: 4800 }],
         // CLS <= 0.10 (umbral estricto "Good" de Core Web Vitals)
