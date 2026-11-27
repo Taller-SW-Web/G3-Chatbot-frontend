@@ -135,4 +135,41 @@ describe("Reenviar correo", () => {
     expect(boton.tagName).toBe("BUTTON");
     expect(boton.getAttribute("type")).toBe("button");
   });
+
+  it("muestra anulación por falta de stock y reembolso cuando el estado es ANULADO con motivo de stock", () => {
+    render(
+      <ConfirmacionPedido
+        pedidoId="PED-2026-00891"
+        correoEnmascarado="m***a@ejemplo.com"
+        estado="ANULADO"
+        motivo="STOCK_NO_DISPONIBLE"
+      />
+    );
+
+    expect(screen.getByText(/pedido ped-2026-00891 anulado/i)).toBeDefined();
+    expect(screen.getByText("Anulado por falta de stock")).toBeDefined();
+    expect(
+      screen.getByText(/Si corresponde un reembolso, se procesará al medio de pago original/i)
+    ).toBeDefined();
+    expect(screen.queryByText(/CONFIRMADO/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: /reenviar correo/i })).toBeNull();
+  });
+
+  it("muestra fallback neutro 'Pedido anulado' cuando el estado es ANULADO sin motivo", () => {
+    render(
+      <ConfirmacionPedido
+        pedidoId="PED-2026-00891"
+        correoEnmascarado="m***a@ejemplo.com"
+        estado="ANULADO"
+      />
+    );
+
+    expect(screen.getByText(/pedido ped-2026-00891 anulado/i)).toBeDefined();
+    expect(screen.getByText("Pedido anulado")).toBeDefined();
+    expect(screen.queryByText("Anulado por falta de stock")).toBeNull();
+    expect(
+      screen.getByText(/Si corresponde un reembolso, se procesará al medio de pago original/i)
+    ).toBeDefined();
+    expect(screen.queryByText(/CONFIRMADO/i)).toBeNull();
+  });
 });
