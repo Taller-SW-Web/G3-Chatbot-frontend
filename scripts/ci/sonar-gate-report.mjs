@@ -8,9 +8,18 @@ import { pathToFileURL } from "node:url";
 
 const HOST = (process.env.SONAR_HOST_URL ?? "https://sonarcloud.io").replace(/\/$/, "");
 const TOKEN = process.env.SONAR_TOKEN ?? "";
+const MAX_PAGES = 5;
+const SEVERITY_ORDER = { INFO: 0, MINOR: 1, MAJOR: 2, CRITICAL: 3, BLOCKER: 4 };
 
 function parseArgs(argv) {
-  const args = { projectKey: "", pullRequest: "", branch: "", output: "sonar-gate-report.md", maxIssues: 50 };
+  const args = {
+    projectKey: "",
+    pullRequest: "",
+    branch: "",
+    output: "sonar-gate-report.md",
+    maxIssues: 50,
+    failOnSeverity: "",
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--project-key") args.projectKey = argv[++index];
@@ -18,6 +27,7 @@ function parseArgs(argv) {
     else if (arg === "--branch") args.branch = argv[++index];
     else if (arg === "--output") args.output = argv[++index];
     else if (arg === "--max-issues") args.maxIssues = Number(argv[++index]);
+    else if (arg === "--fail-on-severity") args.failOnSeverity = argv[++index];
     else if (arg === "--help" || arg === "-h") args.help = true;
   }
   return args;
@@ -36,6 +46,39 @@ async function apiGet(path, params) {
 
 function escapeCell(value) {
   return String(value ?? "").replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+
+async function fetchIssues({ projectKey, pullRequest, branch, limit, fetchAll = false }) {
+  const issues = [];
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const params = {
+      componentKeys: projectKey,
+      resolved: "false",
+      p: String(page),
+      ps: "100",
+      s: "SEVERITY",
+      asc: "false",
+    };
+    if (pullRequest) params.pullRequest = pullRequest;
+    else if (branch) {
+      params.branch = branch;
+      params.inNewCodePeriod = "true";
+    }
+    const payload = await apiGet("/api/issues/search", params);
+    const batch = payload.issues ?? [];
+    issues.push(...batch);
+    const total = Number(payload.total ?? issues.length);
+    if (!fetchAll && issues.length >= limit) break;
+    if (batch.length === 0 || issues.length >= total) break;
+  }
+  return fetchAll ? issues : issues.slice(0, limit);
+}
+
+export function blockingIssues(issues, threshold) {
+  const minimum = SEVERITY_ORDER[String(threshold).toUpperCase()];
+  return issues.filter(
+    (issue) => (SEVERITY_ORDER[String(issue.severity ?? "").toUpperCase()] ?? -1) >= minimum,
+  );
 }
 
 export function formatReport({ projectKey, gate, issues, pullRequest, branch }) {
@@ -101,18 +144,17 @@ async function main() {
       projectKey: args.projectKey,
       ...scope,
     });
-    const issuePayload = await apiGet("/api/issues/search", {
-      componentKeys: args.projectKey,
-      resolved: "false",
-      ps: String(args.maxIssues),
-      s: "SEVERITY",
-      asc: "false",
-      ...scope,
+    const issues = await fetchIssues({
+      projectKey: args.projectKey,
+      pullRequest: args.pullRequest,
+      branch: args.branch,
+      limit: args.maxIssues,
+      fetchAll: Boolean(args.failOnSeverity),
     });
     const report = formatReport({
       projectKey: args.projectKey,
       gate: gatePayload.projectStatus ?? {},
-      issues: issuePayload.issues ?? [],
+      issues: issues.slice(0, args.maxIssues),
       pullRequest: args.pullRequest,
       branch: args.branch,
     });
@@ -121,8 +163,28 @@ async function main() {
     if (process.env.GITHUB_STEP_SUMMARY) {
       appendFileSync(process.env.GITHUB_STEP_SUMMARY, report, "utf8");
     }
+    if (args.failOnSeverity) {
+      const blocking = blockingIssues(issues, args.failOnSeverity);
+      if (blocking.length > 0) {
+        console.error(
+          `::error::SonarCloud reporta ${blocking.length} issue(s) nuevos ` +
+            `de severidad ${args.failOnSeverity} o superior.`,
+        );
+        for (const issue of blocking.slice(0, 20)) {
+          const file = String(issue.component ?? "").split(":").at(-1);
+          console.error(
+            `  ${file}:${issue.line ?? "—"} [${issue.severity}] ${issue.rule} — ${issue.message}`,
+          );
+        }
+        return 1;
+      }
+    }
   } catch (error) {
     console.log(`::warning::Could not read the SonarCloud gate: ${error.message}`);
+    if (args.failOnSeverity) {
+      console.log("::error::No se pudo verificar el gate estricto de SonarCloud.");
+      return 1;
+    }
   }
   return 0;
 }

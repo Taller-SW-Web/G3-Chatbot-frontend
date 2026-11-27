@@ -75,6 +75,16 @@ pnpm modules:check
 pnpm audit --audit-level=high
 ```
 
+El job `validate` del CI agrupa lint, tipos y `modules:check`. Para reproducirlo:
+
+```bash
+OPENAPI_PATH=../G3-Chatbot-backend/docs/openapi.json \
+  node scripts/ci/run-validators.mjs
+node scripts/ci/scope.mjs --base origin/development --json
+```
+
+Un PR de solo documentación no corre tests, build ni Sonar; la etiqueta `ci:full` fuerza también el E2E. Detalle en [docs/ci-pipeline.md](https://github.com/Taller-SW-Web/G3-Chatbot-specs/blob/development/docs/ci-pipeline.md).
+
 `pnpm audit --audit-level=high` es bloqueante en CI: un advisory `high` o
 `critical` tumba el PR. Las excepciones aceptadas se justifican en
 [`docs/seguridad/pnpm-audit-exceptions.md`](seguridad/pnpm-audit-exceptions.md).
