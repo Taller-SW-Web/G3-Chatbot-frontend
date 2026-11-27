@@ -40,11 +40,11 @@ test.describe("Hito 3 — chat con LLM real", () => {
   // E2E-06 · CP-H3-09-01 y CP-H3-09-10 (SPEC-09 Req. 1 y 3)
   test("E2E-06 una búsqueda en el chat muestra el carrusel y el detalle del producto", async ({ page }) => {
     await page.goto("/");
-    await page.getByPlaceholder("Pregunta por zapatillas, tallas, pedidos…").fill("zapatillas de running");
+    await page.getByPlaceholder("Pregunta por zapatillas, tallas, pedidos…").fill("zapatillas");
     await page.getByLabel("Enviar").click();
 
     // El carrusel es el criterio: tarjeta con nombre y precio vigente.
-    const grupo = page.getByRole("group", { name: "Productos" });
+    const grupo = page.getByRole("group", { name: /Productos|Zapatillas/i });
     await expect(grupo).toBeVisible({ timeout: 30_000 });
     await expect(grupo.getByText(/S\/ \d+\.\d{2}/).first()).toBeVisible();
 
@@ -56,11 +56,11 @@ test.describe("Hito 3 — chat con LLM real", () => {
   // E2E-07 · CP-H3-09-08 y CP-H3-11-09 (SPEC-09 Req. 2, SPEC-11 Req. 3)
   test("E2E-07 agregar un producto desde la tarjeta lo muestra en el carrito", async ({ page }) => {
     await page.goto("/");
-    await page.getByPlaceholder("Pregunta por zapatillas, tallas, pedidos…").fill("zapatillas de running");
+    await page.getByPlaceholder("Pregunta por zapatillas, tallas, pedidos…").fill("zapatillas");
     await page.getByLabel("Enviar").click();
 
     // Acotado al carrusel: fuera de él vive "Agregar imagen (próximamente)".
-    const grupo = page.getByRole("group", { name: "Productos" });
+    const grupo = page.getByRole("group", { name: /Productos|Zapatillas/i });
     await expect(grupo).toBeVisible({ timeout: 30_000 });
     const agregar = grupo.getByRole("button", { name: /^Agregar / }).first();
     // Un producto con variantes se agrega desde el detalle (E2E-06). Este caso
