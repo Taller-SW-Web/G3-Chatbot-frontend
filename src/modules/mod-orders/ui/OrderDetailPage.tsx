@@ -285,10 +285,9 @@ export function OrderDetailPage({ csatSlot }: { csatSlot?: ReactNode }) {
                     {index < data.historial.length - 1 ? <span className="w-[2px] flex-1 bg-border-default" /> : null}
                   </div>
                   <div className="pb-3 min-w-0">
-                    <p className={`text-[14px] font-bold ${esHitoAnulado ? "text-error-default" : "text-text-primary"}`}>
+                    <p className={`text-[14px] font-bold ${esHitoAnulado ? "text-error-default" : hito.completado ? "text-text-primary" : "text-text-secondary"}`}>
                       {etiquetaHito}
                     </p>
-                    <p className="text-[11px] uppercase tracking-wide text-text-secondary">{hito.estado}</p>
                     <p className="text-[12px] text-text-secondary">{formatDateTime(hito.fecha)}</p>
                     {hito.motivo ? (
                       <p className="text-[12px] text-error-default font-medium mt-0.5">

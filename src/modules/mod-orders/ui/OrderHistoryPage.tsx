@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon, XIcon } from "@/shared/ui/icons";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { container } from "@/shared/di/container";
@@ -29,6 +29,9 @@ const TAB_LABEL: Record<Tab, string> = {
   reclamos: "Reclamos",
 };
 
+/** Pedidos por página del historial; "Ver más" pide la siguiente (SPEC-17 · alcance). */
+export const PEDIDOS_POR_PAGINA = 20;
+
 const DATE = new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "short", year: "numeric" });
 
 function formatDate(value: string | null | undefined): string {
@@ -48,14 +51,18 @@ export function OrderHistoryPage({
   const [tab, setTab] = useState<Tab>(initialTab);
   const router = useRouter();
 
-  const pedidos = useQuery({
+  const pedidos = useInfiniteQuery({
     queryKey: ["pedidos", "historial"],
-    queryFn: () => container.pedidos.listarPedidos({ page: 1, pageSize: 20 }),
+    queryFn: ({ pageParam }) =>
+      container.pedidos.listarPedidos({ page: pageParam, pageSize: PEDIDOS_POR_PAGINA }),
+    initialPageParam: 1,
+    getNextPageParam: (ultima) =>
+      ultima.page * ultima.pageSize < ultima.total ? ultima.page + 1 : undefined,
     enabled: tab === "proceso" || tab === "entregados",
     retry: false,
   });
 
-  const allOrders = pedidos.data?.items ?? [];
+  const allOrders = pedidos.data?.pages.flatMap((p) => p.items) ?? [];
   const inProcess = allOrders.filter((o) => o.estado !== "ENTREGADO" && o.estado !== "ANULADO");
   // "Entregados" también muestra los anulados para que el cliente los encuentre;
   // las acciones de postventa solo aplican a ENTREGADO.
@@ -210,6 +217,25 @@ export function OrderHistoryPage({
             );
           })}
         </div>
+      )}
+
+      {(tab === "proceso" || tab === "entregados") && pedidos.hasNextPage && (
+        <button
+          type="button"
+          onClick={() => void pedidos.fetchNextPage()}
+          disabled={pedidos.isFetchingNextPage}
+          className="wf-btn py-2.5 text-[12px] font-bold bg-white border border-border-default text-text-primary disabled:opacity-60"
+        >
+          {pedidos.isFetchingNextPage ? "CARGANDO…" : "VER MÁS"}
+        </button>
+      )}
+      {pedidos.isFetchNextPageError && (
+        <p role="alert" className="text-[13px] text-error-default text-center">
+          No pudimos cargar más pedidos.{" "}
+          <button type="button" onClick={() => void pedidos.fetchNextPage()} className="font-bold underline">
+            Reintentar
+          </button>
+        </p>
       )}
 
       {tab === "reembolso" ? slots?.reembolso ?? null : null}

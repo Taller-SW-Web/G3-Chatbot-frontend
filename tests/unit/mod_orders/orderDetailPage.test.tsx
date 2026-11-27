@@ -88,7 +88,9 @@ describe("OrderDetailPage", () => {
     expect(screen.getByText("1 día")).toBeDefined();
     expect(screen.getByText("Pago confirmado")).toBeDefined();
     expect(screen.getByText("Pedido recibido")).toBeDefined();
-    expect(screen.getByText("PAGADO")).toBeDefined();
+    // Las etiquetas son para el cliente; el enum interno de Ventas no se muestra (frontend#187).
+    expect(screen.getByText("Pago confirmado")).toBeDefined();
+    expect(screen.queryByText("PAGADO")).toBeNull();
     expect(obtenerPedido).toHaveBeenCalledWith("PED-2026-00002");
   });
 
