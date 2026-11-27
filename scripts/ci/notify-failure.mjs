@@ -203,8 +203,11 @@ async function main() {
   const jobs = token && repo && runId ? await failedJobs(repo, runId, token) : [];
   const logs = token && repo && runId ? await jobLogs(repo, jobs, token) : [];
   const body = buildMarkdown({ runUrl, reason, jobs, logs, needsJson });
+  // codeql[js/http-to-file-access] -- CI evidence built from the GitHub API;
+  // fixed path, escaped fences and truncated content.
   writeFileSync("ci-failure.md", body, "utf8");
   if (process.env.GITHUB_STEP_SUMMARY) {
+    // codeql[js/http-to-file-access] -- GitHub-provided summary file.
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, body, "utf8");
   }
 

@@ -249,9 +249,12 @@ async function main() {
       pullRequest: args.pullRequest,
       branch: args.branch,
     });
+    // codeql[js/http-to-file-access] -- CI report built from the Sonar API;
+    // fixed output path and escaped table cells.
     writeFileSync(args.output, report, "utf8");
     console.log(report);
     if (process.env.GITHUB_STEP_SUMMARY) {
+      // codeql[js/http-to-file-access] -- GitHub-provided summary file.
       appendFileSync(process.env.GITHUB_STEP_SUMMARY, report, "utf8");
     }
     if (args.failOnSeverity) {
