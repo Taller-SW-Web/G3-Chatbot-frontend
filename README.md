@@ -16,7 +16,8 @@ Flujo de trabajo (spec primero, un PR por módulo, gates):
 
 ## Requisitos
 
-- Node 22
+- Node 22 (`engines.node` en `package.json`; Vercel lo respeta). `jsdom` es una
+  devDependency de los tests y exige Node `^22.22.2`.
 - pnpm 10.34.6 (versión fijada en el campo `packageManager` de `package.json`)
 
 ## Comandos
@@ -38,7 +39,7 @@ pnpm modules:check  # ids, registry, estructura, fronteras y contrato
 cp .env.example .env.local
 ```
 
-- **`API_PROXY_TARGET`**: a dónde reenvía Next las llamadas `/api/*` (por ejemplo `http://127.0.0.1:8000` en local o la URL del backend en Railway). No tiene valor por defecto: sin ella no hay proxy y la app no llega al backend. En Vercel (`VERCEL` definida) es obligatoria y el build falla si falta.
+- **`API_PROXY_TARGET`**: a dónde reenvía Next las llamadas `/api/*` (por ejemplo `http://127.0.0.1:8000` en local o la URL pública del API Gateway Kong OSS en Railway, ADR-0031). No tiene valor por defecto: sin ella no hay proxy y la app no llega al gateway. En Vercel (`VERCEL` definida) es obligatoria y el build falla si falta.
 - **`NEXT_PUBLIC_API_BASE_URL`**: opcional y comentada en la plantilla. Sin definir o vacía, el navegador usa el mismo origen (`/api/v1`) y Next reenvía. Solo se define si el frontend debe llamar a otro origen.
 
 No hay secretos en el frontend: todo lo que empieza por `NEXT_PUBLIC_` acaba en el bundle del navegador. Los secretos viven en el backend (ver su `docs/entorno.md`) y en las variables de Vercel. Nunca se commitea `.env.local`; la plantilla sí (`!.env.example`).

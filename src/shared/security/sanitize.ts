@@ -1,17 +1,29 @@
-import DOMPurify from "isomorphic-dompurify";
+import { parseDocument } from "htmlparser2";
 
 /**
  * Sanitiza todo texto del LLM / módulos antes de pintar (README §1.4, riesgo XSS R7).
  * Quita toda etiqueta y devuelve TEXTO PLANO, solo para renderizar como hijo de React
  * (React escapa al pintar). Nunca usar el resultado en `dangerouslySetInnerHTML`.
- * Sin React, sin fetch, sin window.
+ * Usa htmlparser2 para extraer solo nodos de texto: no carga `jsdom` ni depende
+ * de regex. El resultado es texto plano y funciona igual en SSR y en el navegador.
  */
+type Nodo = {
+  type: string;
+  data?: string;
+  name?: string;
+  children?: Nodo[];
+};
+
+/** Extrae solo nodos de texto; descarta por completo script/style y las etiquetas. */
+function extraerTexto(nodo: Nodo): string {
+  if (nodo.type === "text") return nodo.data ?? "";
+  if (nodo.type === "script" || nodo.type === "style") return "";
+  if (nodo.name === "script" || nodo.name === "style") return "";
+  return (nodo.children ?? []).map(extraerTexto).join("");
+}
+
 export function sanitize(input: string): string {
-  return DOMPurify.sanitize(input, {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: [],
-    RETURN_DOM_FRAGMENT: true,
-  }).textContent ?? "";
+  return extraerTexto(parseDocument(input, { decodeEntities: true }) as unknown as Nodo);
 }
 
 export function maskEmail(correo: string): string {

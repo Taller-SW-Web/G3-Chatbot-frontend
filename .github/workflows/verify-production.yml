@@ -1,9 +1,9 @@
 name: Verify production
 
-# Runs after Vercel reports a finished deployment for a commit on main, so it never blocks the deploy.
-# It lives outside the CI workflow on purpose: Vercel waits for the commit checks before deploying,
-# so a check that waits for Vercel would never finish.
-# GitHub runs `status` workflows from the default branch (main).
+# Runs after Vercel reports a finished deployment for a commit on development (production branch),
+# so it never blocks the deploy. It lives outside the CI workflow on purpose: Vercel waits for the
+# commit checks before deploying, so a check that waits for Vercel would never finish.
+# GitHub runs `status` workflows from the default branch (development).
 on:
   status:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.context == 'Vercel' &&
-       contains(github.event.branches.*.name, 'main') &&
+       contains(github.event.branches.*.name, 'development') &&
        contains(fromJSON('["success", "failure", "error"]'), github.event.state))
     steps:
       - name: Fail when the Vercel deployment failed
@@ -40,3 +40,18 @@ jobs:
           echo "GET /api/v1/catalogo/promociones -> $code"
           test "$code" = "200"
           jq -e '.items | type == "array"' promos.json
+
+      # Vercel Functions render every dynamic route at request time. A Node.js
+      # runtime without jsdom support (e.g. Node 20) returns 500 here while the
+      # static home page still answers 200, so both routes are part of the gate.
+      - name: Dynamic routes respond
+        run: |
+          for path in /verificar-correo /buscar; do
+            code=$(curl -sS -o page.html -w '%{http_code}' --retry 5 --retry-delay 10 --retry-all-errors --max-time 20 "$FRONTEND_URL$path")
+            echo "GET $path -> $code"
+            test "$code" = "200"
+            if grep -q '__next_error__' page.html; then
+              echo "::error::$path returned the Next.js error page"
+              exit 1
+            fi
+          done
