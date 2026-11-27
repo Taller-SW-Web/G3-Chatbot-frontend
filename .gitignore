@@ -15,3 +15,6 @@ playwright-report/
 validation-report.txt
 sonar-gate-report.md
 ci-failure.md
+
+# Lighthouse CI
+.lighthouseci/
