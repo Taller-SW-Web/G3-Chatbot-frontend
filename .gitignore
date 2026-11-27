@@ -10,3 +10,7 @@ test-results/
 # Coverage (CI uploads it as an artifact)
 coverage/
 playwright-report/
+
+# Lighthouse CI
+.lighthouseci/
+

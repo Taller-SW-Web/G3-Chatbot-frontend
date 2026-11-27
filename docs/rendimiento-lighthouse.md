@@ -3,66 +3,86 @@
 > **Tarea:** H5-P4 de [`odd/tasks/hito-5.md`](../../G3-Chatbot-specs/odd/tasks/hito-5.md).  
 > **Referencia:** [`docs/slo-performance.md`](../../G3-Chatbot-specs/docs/slo-performance.md).  
 > **Responsable:** Diego.  
-> **Workflow:** `.github/workflows/lighthouse.yml`.  
-> **Configuración:** `lighthouserc.cjs`.
+> **Configuración:** `lighthouserc.cjs`.  
+> **Gate en CI:** Job `lighthouse` integrado en el check bloqueante `check` de `.github/workflows/ci.yml`.
 
 ---
 
-## 1. Propósito y Alcance
+## 1. Propósito y Enfoque Mobile-First
 
-Este documento fija la línea base y los presupuestos de rendimiento, accesibilidad y Core Web Vitals para las principales páginas del canal conversacional en Next.js. El objetivo es prevenir regresiones en cada Pull Request mediante una auditoría automatizada en GitHub Actions.
+Este documento establece la línea base, la configuración operativa y los presupuestos de rendimiento, Core Web Vitals y accesibilidad para el cliente web en Next.js.
+
+El canal conversacional es **estrictamente mobile-first**:
+* La auditoría de Lighthouse se ejecuta con el **preset móvil por defecto** (emulación de dispositivo móvil, pantalla de 360×640 px, limitación de CPU 4x y emulación de red móvil 4G).
+* Se realizan **3 ejecuciones (`numberOfRuns: 3`)** por cada URL para calcular la mediana y descartar variaciones espurias o ruido de red/CPU en los runners de CI.
+* Un fallo en cualquier presupuesto con nivel `error` tumba el job `lighthouse` y, en consecuencia, el gate requerido `check` de `.github/workflows/ci.yml`, bloqueando el merge hacia `development`.
 
 ---
 
-## 2. Presupuestos de Rendimiento y Accesibilidad
+## 2. Presupuestos y Umbrales
 
-Los presupuestos están configurados en [`lighthouserc.cjs`](../lighthouserc.cjs) y se evalúan de forma automática con `@lhci/cli`:
+Configurados en [`lighthouserc.cjs`](../lighthouserc.cjs):
 
-| Categoría / Métrica | Presupuesto (Umbral) | Nivel de Bloqueo | Justificación / Estándar |
+| Métrica / Categoría | Umbral | Nivel en CI | Criterio y Justificación Técnica |
 |---|---|:---:|---|
-| **Accesibilidad (a11y)** | Score $\ge 0.90$ (90%) | `error` (Bloqueante) | Cumplimiento WCAG 2.1 AA en formularios, botones y contrastes. |
-| **Largest Contentful Paint (LCP)** | $\le 3000\text{ ms}$ | `error` (Bloqueante) | Core Web Vital: contenido principal visible en menos de 3 s. |
-| **Cumulative Layout Shift (CLS)** | $\le 0.10$ | `error` (Bloqueante) | Core Web Vital: estabilidad visual sin saltos molestos. |
-| **Total Blocking Time (TBT)** | $\le 500\text{ ms}$ | `error` (Bloqueante) | Proxy de interactividad (INP) durante la carga inicial. |
-| **Rendimiento General** | Score $\ge 0.70$ (70%) | `warn` (Alerta) | Techo mínimo en modo desarrollo/preview. |
-| **Max Potential FID** | $\le 250\text{ ms}$ | `warn` (Alerta) | Retardo de primera interacción. |
-| **Time to Interactive (TTI)** | $\le 3800\text{ ms}$ | `warn` (Alerta) | Página completamente interactiva. |
-| **Peso total de Scripts JS** | $\le 600\text{ KB}$ | `warn` (Alerta) | Control del tamaño de bundles generados por Next.js. |
-| **Peso total de Recursos** | $\le 1.8\text{ MB}$ | `warn` (Alerta) | Techo de carga inicial en redes móviles. |
+| **Largest Contentful Paint (LCP)** | $\le 2500\text{ ms}$ | `error` (Bloqueante) | Rango **Good** de Google Core Web Vitals en condiciones móviles 4G. |
+| **Cumulative Layout Shift (CLS)** | $\le 0.10$ | `error` (Bloqueante) | Rango **Good** de Google Core Web Vitals (estabilidad visual sin saltos). |
+| **Total Blocking Time (TBT)** | $\le 200\text{ ms}$ | `error` (Bloqueante) | **Proxy de INP:** En entornos de laboratorio sintéticos (CI sin interacción humana directa), Lighthouse no puede calcular el Interaction to Next Paint (INP) de campo. Por ello, se utiliza el Total Blocking Time (TBT) como proxy directo de la capacidad de respuesta y congestión del hilo principal, fijando el umbral estricto en $\le 200\text{ ms}$ (rango Good). |
+| **Tamaño de Scripts JS** | $\le 600\text{ KB}$ | `error` (Bloqueante) | Presupuesto de peso estricto para evitar sobrecargar la descarga e hidratación de JavaScript. |
+| **Tamaño Total de Recursos** | $\le 1.8\text{ MB}$ | `error` (Bloqueante) | Techo máximo de transferencia acumulada (imágenes optimizadas, fuentes, CSS y bundles). |
+| **Accesibilidad (a11y)** | Score $\ge 0.90$ | `error` (Bloqueante) | **Proxy de accesibilidad:** La puntuación de Lighthouse evalúa reglas automatizadas de contraste, atributos ARIA, nombres accesibles y roles semánticos. Funciona como gate preventivo automático, pero no sustituye una auditoría funcional y manual completa de WCAG 2.1 AA. |
+| **Rendimiento General** | Score $\ge 0.70$ | `warn` (Alerta) | Umbral de advertencia sobre la puntuación agregada del motor Lighthouse. |
+| **Mejores Prácticas** | Score $\ge 0.80$ | `warn` (Alerta) | Prácticas web modernas (HTTPS, doctype, librerías sin vulnerabilidades). |
+| **SEO** | Score $\ge 0.80$ | `warn` (Alerta) | Meta-etiquetas, viewports y rastreabilidad de páginas estáticas. |
 
 ---
 
 ## 3. URLs Auditadas
 
-Se auditan las 4 rutas clave que representan los flujos principales del usuario:
-
-1. **Catálogo / Home (`/`):** Vista de productos, ofertas y punto de entrada al chat.
-2. **Carrito (`/carrito`):** Resumen de compra, líneas de producto y cálculo de totales.
-3. **Historial de Pedidos (`/pedidos`):** Pestañas de seguimiento de pedidos en proceso y entregados.
-4. **Mi Cuenta (`/cuenta`):** Datos del cliente, sesión y formulario de autenticación.
+Lighthouse audita las 4 vistas más críticas del flujo del usuario:
+1. **`/` (Home / Catálogo):** Entrada principal, ofertas y búsqueda.
+2. **`/carrito` (Carrito):** Resumen de líneas, cupones y cálculo de subtotales.
+3. **`/pedidos` (Historial):** Listado y estado de pedidos del cliente.
+4. **`/cuenta` (Mi Cuenta):** Formulario de autenticación y gestión de perfil.
 
 ---
 
-## 4. Ejecución
+## 4. Línea Base Medida (Preset Móvil - Mediana)
 
-### Local
-Para correr Lighthouse CI en local (requiere `pnpm run build` previo):
-```bash
-pnpm run build
-pnpm run lhci
+Mediciones de referencia sobre la compilación de producción (`next build` + `next start`):
+
+| Métrica | Mediana Observada | Presupuesto Máximo | Margen de Seguridad | Estado |
+|---|:---:|:---:|:---:|:---:|
+| **LCP** | $1362\text{ ms}$ | $2500\text{ ms}$ | $+1138\text{ ms}$ de holgura | ✅ Conforme |
+| **CLS** | $0.000$ | $0.100$ | $+0.100$ de holgura | ✅ Conforme |
+| **TBT** | $69\text{ ms}$ | $200\text{ ms}$ | $+131\text{ ms}$ de holgura | ✅ Conforme |
+| **Peso Scripts** | $371\text{ KB}$ | $600\text{ KB}$ | $+229\text{ KB}$ de holgura | ✅ Conforme |
+| **Peso Total** | $505\text{ KB}$ | $1800\text{ KB}$ | $+1295\text{ KB}$ de holgura | ✅ Conforme |
+| **Accesibilidad** | $0.96$ ($96\%$) | $\ge 0.90$ | $+6\%$ de holgura | ✅ Conforme |
+| **Rendimiento** | $0.96$ ($96\%$) | $\ge 0.70$ | $+26\%$ de holgura | ✅ Conforme |
+
+---
+
+## 5. Integración con el Gate de Merge
+
+Lighthouse CI está formalmente incorporado como el job `lighthouse` dentro del pipeline principal `.github/workflows/ci.yml`.
+
+El job obligatorio de la rama protegida es **`check`**, el cual declara explícitamente:
+```yaml
+check:
+  name: check
+  needs: [lint, test, build, security, dependency-review, sonar, e2e, modules, specs, lighthouse]
 ```
-Los reportes HTML y JSON se guardan en `.lighthouseci/`.
-
-### En CI (GitHub Actions)
-* Se ejecuta automáticamente en cada **Pull Request** hacia `development`.
-* Publica un resumen tabular en el **Step Summary** del workflow.
-* Sube los reportes completos como artefacto descargable (`lighthouse-reports`) con retención de 7 días.
-* Si alguna aserción marcada con `error` se incumple, el job falla y bloquea el merge.
+Si cualquier presupuesto marcado como `error` es superado, el job `lighthouse` falla, el job `check` no se completa y GitHub bloquea el merge hacia `development`.
 
 ---
 
-## 5. Política de Excepciones
+## 6. Procedimiento para Excepciones Justificadas
 
-Si un cambio justificado (por ejemplo, incorporación de un visualizador complejo o integración de terceros) incumple temporalmente algún presupuesto:
-1. No se elimina el assert en `lighthouserc.cjs`.
-2. Se documenta la excepción en el PR y en este archivo bajo la sección «Excepciones Aprobadas», indicando el motivo, el score transitorio y el issue de optimización planificado.
+Si una funcionalidad crítica de producto requiere incorporar un elemento pesado o una librería que temporalmente vulnere un presupuesto:
+1. **No se afloja el assert** en `lighthouserc.cjs` de manera silenciosa.
+2. Se documenta la justificación en el PR y se añade una entrada a este documento con:
+   * Métrica afectada y valor observado.
+   * Causa técnica identificada.
+   * Issue de deuda técnica u optimización asignada.
+   * Aprobación explícita del líder técnico (`@Ankarmin`).
