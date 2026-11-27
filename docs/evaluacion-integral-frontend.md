@@ -53,6 +53,6 @@ Cada flujo fue evaluado en 5 dimensiones fundamentales:
 
 * **[Pedidos] Anulación por falta de stock y aviso de reembolso (Issue #143):**
   * **Causa:** El backend aún no expone `motivo` ni `reembolso` en el DTO `OrderDetailResponse` (Issue del backend [#182](https://github.com/Taller-SW-Web/G3-Chatbot-backend/issues/182) a cargo de Mathias).
-  * **Acción:** Queda registrado en la auditoría general de specs (`docs/auditoria-specs-2026-11.md`) como pendiente justificado hasta que el backend integre el PR correspondiente.
+  * **Acción:** Queda registrado en la auditoría general de specs ([`docs/auditoria-specs-2026-11.md`](../../G3-Chatbot-specs/docs/auditoria-specs-2026-11.md)) como pendiente justificado hasta que el backend integre el PR correspondiente.
 * **[Pedidos] Desacople de CSAT a `mod-postventa`:**
   * **Estado:** Integrado en `development` vía PR [#153](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/pull/153); el componente `DeliveryRating` reside canónicamente en `mod-postventa` (dueño de postventa y CSAT ratificado en specs).
