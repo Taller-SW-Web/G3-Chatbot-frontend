@@ -46,4 +46,10 @@ export const catalogoApi: CatalogoPort = {
     });
     return data as DisponibilidadPuntual[];
   },
+  async listarPromociones(): Promise<unknown> {
+    const { data } = await http.get(`/catalogo/promociones`, {
+      timeout: apiConfig.timeouts.catalogo,
+    });
+    return (data as { items?: unknown } | null)?.items;
+  },
 };

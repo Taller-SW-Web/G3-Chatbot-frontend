@@ -12,17 +12,21 @@ test("home banner keeps its content and scrolls the page on a short viewport", a
   await page.goto("/");
   const hero = page.getByRole("button", { name: "Ver ofertas Inka Athletics" });
 
-  for (let slide = 1; slide <= 4; slide++) {
-    await page.getByRole("button", { name: `Banner ${slide}` }).click();
-    await expect(hero.getByText(`${slide} / 4`, { exact: true })).toBeVisible();
+  // Una slide por promoción real (frontend#183): se recorren las que haya.
+  await expect(hero).toBeVisible();
+  const indicadores = page.getByRole("button", { name: /^Banner \d/ });
+  const slides = Math.max(1, await indicadores.count());
+  for (let slide = 1; slide <= slides; slide++) {
+    if (slides > 1) {
+      await indicadores.nth(slide - 1).click();
+      await expect(hero.getByText(`${slide} / ${slides}`, { exact: true })).toBeVisible();
+    }
     const layout = await hero.evaluate((element) => {
       const pill = Array.from(element.querySelectorAll("span")).find((span) =>
         span.textContent?.trim() === "OFERTAS DE LA SEMANA"
       );
       const title = element.querySelector(".font-heading");
-      const subtitle = Array.from(element.querySelectorAll("span")).find((span) =>
-        span.textContent?.startsWith("Equípate para")
-      );
+      const subtitle = element.querySelector("[data-testid='banner-promocion']");
       const cta = Array.from(element.querySelectorAll("span")).find((span) =>
         span.textContent?.startsWith("VER OFERTAS")
       );

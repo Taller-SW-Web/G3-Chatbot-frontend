@@ -46,6 +46,7 @@ export const moduleRegistry = [
       "/catalogo/productos",
       "/catalogo/productos/{productId}",
       "/catalogo/disponibilidad",
+      "/catalogo/promociones",
     ],
     dependsOn: [
 

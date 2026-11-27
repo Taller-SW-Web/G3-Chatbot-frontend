@@ -81,6 +81,12 @@ async function mockApi(page: Page, { historialVacio = true } = {}) {
     if (path === "/api/v1/sesion/refresh") {
       return route.fulfill({ status: 401, json: { code: "TOKEN_INVALIDO" } });
     }
+    if (path === "/api/v1/catalogo/promociones" && method === "GET") {
+      return route.fulfill({ json: { items: [
+        { promotion_id: "promo-1", name: "Cyber 10%", valid_from: "2026-11-01T05:00:00Z", valid_until: null },
+        { promotion_id: "promo-2", name: "Running week", valid_from: "2026-11-01T05:00:00Z", valid_until: null },
+      ] } });
+    }
     if (path === "/api/v1/catalogo/productos" && method === "GET") {
       return route.fulfill({ json: { items: [product], total: 1 } });
     }
@@ -182,11 +188,12 @@ for (const viewport of viewports) {
         await page.goto("/");
 
         // Carrusel del banner: el swipe cambia el indicador.
-        await expect(page.getByText("1 / 4")).toBeVisible();
+        await expect(page.getByText("1 / 2")).toBeVisible();
         await swipe(page, "[data-testid='banner-ofertas']", -180);
-        await expect(page.getByText("2 / 4")).toBeVisible();
+        await expect(page.getByText("2 / 2")).toBeVisible();
+        await expect(page.getByTestId("banner-promocion")).toHaveText("Running week");
         await swipe(page, "[data-testid='banner-ofertas']", 180);
-        await expect(page.getByText("1 / 4")).toBeVisible();
+        await expect(page.getByText("1 / 2")).toBeVisible();
 
         // Drawer: se abre con el botón y se cierra con swipe hacia la izquierda.
         await page.getByLabel("Abrir menú").click();
