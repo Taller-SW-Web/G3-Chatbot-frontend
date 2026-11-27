@@ -200,7 +200,6 @@ export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomeP
         {catalogo.isPending && (
           <div
             role="status"
-            aria-label="Cargando productos en oferta"
             className="grid grid-cols-2 gap-3 screen-enter"
           >
             <p className="sr-only">Cargando productos…</p>

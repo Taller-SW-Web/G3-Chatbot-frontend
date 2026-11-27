@@ -326,7 +326,7 @@ describe("HomePage (catálogo + slots)", () => {
   it("muestra esqueleto de carga accesible mientras consulta el catálogo", () => {
     h.buscar.mockImplementation(() => new Promise(() => {}));
     montar();
-    expect(screen.getByRole("status", { name: "Cargando productos en oferta" })).toBeDefined();
+    expect(screen.getByRole("status")).toBeDefined();
     expect(screen.getByText("Cargando productos…")).toBeDefined();
   });
 
