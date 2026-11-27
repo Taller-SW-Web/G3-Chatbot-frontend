@@ -198,7 +198,8 @@ contrato omitido.
 ## 10. Flujo de una feature
 
 1. Lee el `MODULE.md` y la spec del módulo antes de tocar código.
-2. Si el cambio no está en la spec, actualízala en el mismo PR.
+2. Si el cambio no está en la spec, abre una issue en `G3-Chatbot-specs`
+   asignada a `@Ankarmin` y `@MathiasTL`; no abras ramas ni PRs en specs.
 3. Revisa coherencia con lo existente (nombres, errores por `code`, estados).
 4. Un PR por módulo; `shared/` va aparte con label `cross-modulo`.
 5. Verifica los gates de la sección 9 y el contrato.
