@@ -1,0 +1,73 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    branches: [development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lhci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    name: Lighthouse CI (H5-P4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Next.js application
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: pnpm run build
+
+      - name: Run Lighthouse CI
+        run: pnpm run lhci
+
+      - name: Generate Lighthouse Step Summary
+        if: always()
+        run: |
+          if [ -d ".lighthouseci" ]; then
+            echo "### 📊 Reporte Lighthouse CI (H5-P4)" >> $GITHUB_STEP_SUMMARY
+            echo "| URL auditada | Performance | Accesibilidad | Best Practices | SEO |" >> $GITHUB_STEP_SUMMARY
+            echo "|---|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
+            
+            node -e '
+              const fs = require("fs");
+              const path = require("path");
+              const manifestPath = path.join(".lighthouseci", "manifest.json");
+              if (fs.existsSync(manifestPath)) {
+                const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+                for (const item of manifest) {
+                  const summary = item.summary;
+                  const format = (v) => v !== undefined ? `${Math.round(v * 100)}%` : "N/A";
+                  console.log(`| ${item.url} | ${format(summary.performance)} | ${format(summary.accessibility)} | ${format(summary["best-practices"])} | ${format(summary.seo)} |`);
+                }
+              }
+            ' >> $GITHUB_STEP_SUMMARY || true
+          fi
+
+      - name: Upload Lighthouse Reports Artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          retention-days: 7
+          if-no-files-found: ignore
