@@ -168,4 +168,58 @@ describe("OrderHistoryPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "CONSULTAR CON EL ASISTENTE" }));
     expect(push).toHaveBeenCalledWith("/");
   });
+
+  it("en 'Entregados' muestra fallback neutro 'Anulado' y reembolso para pedidos ANULADO sin motivo", async () => {
+    renderPage();
+    fireEvent.click(screen.getByText("Entregados"));
+
+    await waitFor(() => expect(screen.getByText("Pedido PED-2026-00003")).toBeDefined());
+    expect(screen.getAllByText("Anulado").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("Anulado por falta de stock")).toBeNull();
+    expect(
+      screen.getByText("Si corresponde un reembolso, se procesará al medio de pago original.")
+    ).toBeDefined();
+  });
+
+  it("en 'Entregados' muestra 'Anulado por falta de stock' cuando el pedido trae motivo de stock", async () => {
+    listarPedidos.mockResolvedValueOnce({
+      items: [
+        {
+          pedidoId: "PED-2026-00004",
+          canal: "CHATBOT",
+          estado: "ANULADO",
+          estadoEtiqueta: "Anulado",
+          motivo: "STOCK_NO_DISPONIBLE",
+          total: 120,
+          moneda: "PEN",
+          fechaCreacion: "2026-10-29T10:00:00Z",
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
+    renderPage();
+    fireEvent.click(screen.getByText("Entregados"));
+
+    await waitFor(() => expect(screen.getByText("Pedido PED-2026-00004")).toBeDefined());
+    expect(screen.getAllByText("Anulado por falta de stock").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByText("Si corresponde un reembolso, se procesará al medio de pago original.")
+    ).toBeDefined();
+  });
+
+  it("muestra estado de error y permite reintentar la consulta de pedidos", async () => {
+    listarPedidos.mockRejectedValueOnce(new Error("network failure"));
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText("No puedo consultar tus pedidos en este momento.")).toBeDefined()
+    );
+    const retryBtn = screen.getByRole("button", { name: "REINTENTAR" });
+    expect(retryBtn).toBeDefined();
+
+    fireEvent.click(retryBtn);
+    await waitFor(() => expect(listarPedidos).toHaveBeenCalledTimes(2));
+  });
 });
