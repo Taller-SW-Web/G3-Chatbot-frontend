@@ -153,4 +153,31 @@ describe("ReclamoPage", () => {
     expect(screen.getByDisplayValue("ana@example.com")).toBeDefined();
     expect(screen.getByDisplayValue("+51999888777")).toBeDefined();
   });
+
+  it("navega al historial de reclamos desde la confirmación", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    renderPage();
+
+    await screen.findByDisplayValue("+51999888777");
+    fireEvent.change(await screen.findByLabelText(/Descripci.n del reclamo/), {
+      target: { value: "El producto llegó defectuoso y no funciona correctamente." },
+    });
+    fireEvent.change(screen.getByLabelText("Documento"), {
+      target: { value: "12345678" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR RECLAMO/ }));
+
+    expect(await screen.findByText(/SE REGISTR.*TU RECLAMO/)).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "VER EN HISTORIAL" }));
+    expect(push).toHaveBeenCalledWith("/pedidos/reclamos");
+  });
+
+  it("cancela el formulario y regresa a pedidos", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    renderPage();
+
+    await screen.findByDisplayValue("+51999888777");
+    fireEvent.click(screen.getByRole("button", { name: "CANCELAR" }));
+    expect(push).toHaveBeenCalledWith("/pedidos");
+  });
 });

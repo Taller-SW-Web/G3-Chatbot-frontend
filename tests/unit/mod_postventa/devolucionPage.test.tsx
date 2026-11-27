@@ -115,12 +115,35 @@ describe("DevolucionPage", () => {
     expect(push).toHaveBeenCalledWith("/pedidos");
   });
 
-  it("bloquea la devolución si el pedido no está entregado", async () => {
+  it("bloquea la devolución si el pedido no está entregado y permite volver", async () => {
     params.value = new URLSearchParams("pedidoId=PED-2026-00003");
     obtenerPedido.mockResolvedValue({ ...pedidoEntregado, estado: "EN_PREPARACION" });
     renderPage();
 
     expect(await screen.findByText("Pedido no entregado")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "VOLVER A MIS PEDIDOS" }));
+    expect(push).toHaveBeenCalledWith("/pedidos");
+  });
+
+  it("navega al historial de reembolsos desde la pantalla de confirmación", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    renderPage();
+
+    await screen.findByText(/Solicitar devolución/);
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR SOLICITUD/ }));
+
+    expect(await screen.findByText(/SOLICITUD ENVIADA/)).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "VER EN HISTORIAL" }));
+    expect(push).toHaveBeenCalledWith("/pedidos/reembolso");
+  });
+
+  it("cancela el formulario y regresa a mis pedidos", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    renderPage();
+
+    await screen.findByText(/Solicitar devolución/);
+    fireEvent.click(screen.getByRole("button", { name: "CANCELAR" }));
+    expect(push).toHaveBeenCalledWith("/pedidos");
   });
 
   it("crea la devolución y muestra el código de seguimiento", async () => {

@@ -215,4 +215,25 @@ describe("DevolucionForm", () => {
       varianteDeseada: "SKU-42-AZUL",
     }));
   });
+
+  it("permite añadir evidencia adicional y valida límite", () => {
+    abrir();
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click");
+    fireEvent.click(screen.getByText(/Evidencia \(JPG\/PNG/));
+    expect(clickSpy).toHaveBeenCalled();
+
+    const file1 = new File(["1"], "ev1.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("Subir evidencia"), { target: { files: [file1] } });
+    expect(screen.getByText("ev1.png")).toBeDefined();
+
+    fireEvent.click(screen.getByText(/\+ Adjuntar otra evidencia/));
+    expect(clickSpy).toHaveBeenCalledTimes(2);
+
+    const fileGrande = new File(["x"], "grande.png", { type: "image/png" });
+    Object.defineProperty(fileGrande, "size", { value: 6 * 1024 * 1024 });
+    fireEvent.change(screen.getByLabelText("Subir evidencia"), { target: { files: [fileGrande] } });
+    expect(screen.getByText("Cada evidencia debe ser ≤ 5MB")).toBeDefined();
+
+    clickSpy.mockRestore();
+  });
 });

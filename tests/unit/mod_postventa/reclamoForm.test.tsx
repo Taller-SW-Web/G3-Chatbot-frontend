@@ -132,4 +132,15 @@ describe("ReclamoForm", () => {
     expect(onCancelar).toHaveBeenCalledTimes(1);
     expect(onOk).not.toHaveBeenCalled();
   });
+
+  it("muestra error cuando el teléfono está vacío", async () => {
+    abrir();
+    fireEvent.change(screen.getByLabelText(/Descripci.n del reclamo/), { target: { value: DESCRIPCION } });
+    fireEvent.change(screen.getByLabelText("Documento"), { target: { value: "12345678" } });
+    fireEvent.change(screen.getByLabelText(/Tel.fono/), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR RECLAMO/ }));
+
+    expect(await screen.findByText("Teléfono requerido")).toBeDefined();
+    expect(onOk).not.toHaveBeenCalled();
+  });
 });

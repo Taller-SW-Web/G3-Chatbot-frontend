@@ -150,7 +150,7 @@ describe("HistorialPostventa y bloques", () => {
     expect(screen.queryByRole("button", { name: "VER SOLICITUD" })).toBeNull();
   });
 
-  it("ListaDevoluciones renderiza botón cuando onSeleccionar está presente", () => {
+  it("ListaDevoluciones renderiza botón cuando onSeleccionar está presente y lo activa", () => {
     const devoluciones = [
       {
         devolucionId: "DEV-1",
@@ -166,7 +166,10 @@ describe("HistorialPostventa y bloques", () => {
 
     render(<ListaDevoluciones devoluciones={devoluciones} onSeleccionar={onSeleccionar} />);
 
-    expect(screen.getByRole("button", { name: "VER SOLICITUD" })).toBeDefined();
+    const btn = screen.getByRole("button", { name: "VER SOLICITUD" });
+    expect(btn).toBeDefined();
+    fireEvent.click(btn);
+    expect(onSeleccionar).toHaveBeenCalledWith("DEV-1");
   });
 
   it("ListaReclamos no renderiza botón cuando no hay onSeleccionar", () => {
@@ -186,5 +189,27 @@ describe("HistorialPostventa y bloques", () => {
 
     expect(screen.getByText(/REC-1/)).toBeDefined();
     expect(screen.queryByRole("button", { name: "VER RECLAMO" })).toBeNull();
+  });
+
+  it("ListaReclamos renderiza botón cuando onSeleccionar está presente y lo activa", () => {
+    const reclamos = [
+      {
+        reclamoId: "REC-1",
+        codigoSeguimiento: "REC-1",
+        tipo: "RECLAMO",
+        motivo: "ATENCION_INADECUADA",
+        estado: "REGISTRADO",
+        estadoEtiqueta: "Registrado",
+        fecha: "2026-11-20",
+      },
+    ];
+    const onSeleccionar = vi.fn();
+
+    render(<ListaReclamos reclamos={reclamos} onSeleccionar={onSeleccionar} />);
+
+    const btn = screen.getByRole("button", { name: "VER RECLAMO" });
+    expect(btn).toBeDefined();
+    fireEvent.click(btn);
+    expect(onSeleccionar).toHaveBeenCalledWith("REC-1");
   });
 });
