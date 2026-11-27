@@ -18,7 +18,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 Antes de escribir código:
 
 1. **Lee la spec del módulo** (`SPEC-*`) y `src/modules/<id>/MODULE.md`. Si el
-   cambio no está en la spec, actualízala en el mismo PR.
+   cambio no está en la spec, abre una issue en `G3-Chatbot-specs` asignada a
+   `@Ankarmin` y `@MathiasTL`. No abras ramas ni PRs en specs: solo
+   `@MathiasTL`, `@Ankarmin` y `@nikaaat` lo hacen. El PR de frontend espera a
+   que la spec esté en `development`.
 2. **Revisa coherencia** con lo existente: nombres, errores por `code`, estados,
    textos y el `public.ts` de los módulos vecinos.
 3. **Un PR/MR por módulo.** `shared/` o `app/` van aparte con label
@@ -39,8 +42,8 @@ Antes de escribir código:
    despliegues desde `main`.
 9. **Incoherencia con la spec:** si una issue contradice la spec o pide algo no
    definido, no la implementes; abre una issue en `G3-Chatbot-specs` asignada a
-   `@Ankarmin`, enlaza la original y espera la decisión. Regla completa:
-   `G3-Chatbot-specs/AGENTS.md` §8.
+   `@Ankarmin` y `@MathiasTL`, enlaza la original y espera la decisión. Regla
+   completa: `G3-Chatbot-specs/AGENTS.md` §8.
 10. **Higiene:** no reescribas la historia compartida de `development`, no borres
     tags o ramas sin coordinar y no pegues secretos en issues o PRs.
 
