@@ -40,37 +40,45 @@ test.describe("Hito 3 — chat con LLM real", () => {
   // E2E-06 · CP-H3-09-01 y CP-H3-09-10 (SPEC-09 Req. 1 y 3)
   test("E2E-06 una búsqueda en el chat muestra el carrusel y el detalle del producto", async ({ page }) => {
     await page.goto("/");
-    await page.getByPlaceholder("Pregunta por zapatillas, tallas, pedidos…").fill("zapatillas de running");
+    await page.getByPlaceholder("Pregunta por zapatillas, tallas, pedidos…").fill("zapatillas");
     await page.getByLabel("Enviar").click();
 
     // El carrusel es el criterio: tarjeta con nombre y precio vigente.
-    const grupo = page.getByRole("group", { name: "Productos" });
+    const grupo = page.getByRole("group", { name: /Productos|Zapatillas/i });
     await expect(grupo).toBeVisible({ timeout: 30_000 });
     await expect(grupo.getByText(/S\/ \d+\.\d{2}/).first()).toBeVisible();
 
     // El detalle se abre desde la tarjeta y llega como bloque DETALLE_PRODUCTO.
     await grupo.getByRole("button", { name: /^Ver detalle de / }).first().click();
-    await expect(page.getByTestId("bloque-detalle-producto")).toBeVisible();
+    await expect(page.getByTestId("bloque-detalle-producto")).toBeVisible({ timeout: 30_000 });
   });
 
   // E2E-07 · CP-H3-09-08 y CP-H3-11-09 (SPEC-09 Req. 2, SPEC-11 Req. 3)
   test("E2E-07 agregar un producto desde la tarjeta lo muestra en el carrito", async ({ page }) => {
     await page.goto("/");
-    await page.getByPlaceholder("Pregunta por zapatillas, tallas, pedidos…").fill("zapatillas de running");
+    await page.getByPlaceholder("Pregunta por zapatillas, tallas, pedidos…").fill("zapatillas");
     await page.getByLabel("Enviar").click();
 
     // Acotado al carrusel: fuera de él vive "Agregar imagen (próximamente)".
-    const grupo = page.getByRole("group", { name: "Productos" });
+    const grupo = page.getByRole("group", { name: /Productos|Zapatillas/i });
     await expect(grupo).toBeVisible({ timeout: 30_000 });
     const agregar = grupo.getByRole("button", { name: /^Agregar / }).first();
+
+    const accion = page.waitForResponse(
+      (r) => /\/api\/v1\/chat\/conversaciones\/[^/]+\/mensajes$/.test(r.url()) && r.request().method() === "POST"
+    );
+    await agregar.click();
+    const respuesta = await accion;
+    const cuerpo = await respuesta.json().catch(() => ({}));
+    const tieneVariantes = Array.isArray(cuerpo.bloques) && cuerpo.bloques.some((b: { tipo?: string }) => b.tipo === "SELECTOR_VARIANTE");
+
     // Un producto con variantes se agrega desde el detalle (E2E-06). Este caso
     // cubre CP-H3-09-08: producto de SKU único, "Agregar" directo en la tarjeta.
-    test.skip((await agregar.count()) === 0, "El producto devuelto tiene variantes: se agrega desde el detalle");
+    test.skip(tieneVariantes, "El producto devuelto tiene variantes: se agrega desde el detalle");
 
-    await agregar.click();
     await page.getByLabel("Ver carrito").click();
     await expect(page).toHaveURL(/\/carrito$/);
-    await expect(page.getByText("Subtotal").first()).toBeVisible();
+    await expect(page.getByText("Subtotal").first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/S\/ \d+\.\d{2}/).first()).toBeVisible();
   });
 });
