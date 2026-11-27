@@ -124,7 +124,7 @@ excepciones hardcodeadas.
 | `/exito` | `app/exito/page.tsx` | `AppShell` + `OrderSuccessPage` |
 | `/pedidos` | `app/pedidos/page.tsx` | `AppShell` + `AuthGuard` + `OrderHistoryPage` + slots de `mod-postventa` |
 | `/pedidos/[tab]` | `app/pedidos/[tab]/page.tsx` | igual, con pestaña inicial validada |
-| `/pedido` | `app/pedido/page.tsx` (client) | `AppShell` + `AuthGuard` + `Suspense` + `OrderDetailPage` + `DeliveryRating` de `mod-postventa` como `csatSlot` |
+| `/pedido` | `app/pedido/page.tsx` (Server Component) + `app/pedido/PedidoContent.tsx` (client) | `AppShell` + `AuthGuard` + `Suspense` + `OrderDetailPage` + `DeliveryRating` de `mod-postventa` como `csatSlot`; el composition root cliente refresca `["pedido", pedidoId]` ante `ORDER_NOT_DELIVERED` |
 | `/seguimiento` | `app/seguimiento/page.tsx` | `AppShell` + `AuthGuard` + `SeguimientoPage` |
 | `/devolucion` | `app/devolucion/page.tsx` | `AppShell` + `AuthGuard` + `Suspense` + `DevolucionPage` |
 | `/reclamo` | `app/reclamo/page.tsx` | `AppShell` + `AuthGuard` + `Suspense` + `ReclamoPage` |
