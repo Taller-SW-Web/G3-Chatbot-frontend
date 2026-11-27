@@ -74,9 +74,13 @@ export function AppShell({
       .then((opened) => {
         applySession(opened.accessToken, opened.expiresIn);
         setCliente(clienteDesdeUsuario(opened.usuario, ""));
-        return container.api.fetchProfile();
+        return container.api
+          .fetchProfile()
+          .then((perfil) => setCliente(clienteDesdePerfil(perfil, "")))
+          .catch(() => {
+            // Un fallo 503/red al consultar el perfil no cierra la sesión activa (SPEC-03).
+          });
       })
-      .then((perfil) => setCliente(clienteDesdePerfil(perfil, "")))
       .catch(() => {
         logout();
       });
