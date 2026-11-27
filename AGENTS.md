@@ -32,7 +32,7 @@ Antes de escribir código:
 5. **Verifica antes de pedir review:** `pnpm lint`, `pnpm typecheck`,
    `pnpm test`, `pnpm test:coverage`, `pnpm build` y `pnpm modules:check`
    (estructura + fronteras + registry + contrato `openapi`).
-6. El CI agrupa lint, tipos, `modules:check` y tests de `scope.mjs` en el job `validate` y calcula el alcance por módulo: un PR de solo documentación no corre tests, build ni Sonar; la etiqueta `ci:full` fuerza también el E2E y la auditoría, y relanza el workflow. Reproduce `validate` con `node scripts/ci/run-validators.mjs` y consulta qué correrá con `node scripts/ci/scope.mjs --base origin/development --event pull_request --json`.
+6. El CI agrupa lint, tipos, `modules:check` y tests de `scope.mjs` en el job `validate` y corre **full** en cada PR/push: un PR de documentación también ejecuta tests, build, Sonar, E2E y auditoría; `ci:full` se conserva por compatibilidad y ya no es necesario. Reproduce `validate` con `node scripts/ci/run-validators.mjs` y consulta el reporte con `node scripts/ci/scope.mjs --base origin/development --event pull_request --json`.
 7. Si cambias un endpoint, actualiza el `openapi.json` del backend con el tag
    `mod-<id>` y el `module.manifest.ts`; el gate de contrato lo exige.
 8. **No cierres un issue hasta que el PR esté mergeado en `development`** y
