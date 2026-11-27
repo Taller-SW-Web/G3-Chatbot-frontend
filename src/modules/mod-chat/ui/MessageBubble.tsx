@@ -40,6 +40,7 @@ import { AvisoDegradado } from "@/modules/mod-chat/ui/blocks/AvisoDegradado";
 import { BloqueError as BloqueErrorView } from "@/shared/ui/BloqueError";
 import { CarritoChat, FormularioRegistroChat, SelectorVarianteChat } from "@/modules/mod-chat/ui/blocks/BloquesContenedores";
 import { FormularioLoginChat, FormularioReenvioVerificacionChat } from "@/modules/mod-chat/ui/blocks/FormulariosAuthChat";
+import { FormularioDevolucionChat, FormularioReclamoChat } from "@/modules/mod-chat/ui/blocks/FormulariosPostventaChat";
 import { OtpCelularChatBlock } from "@/modules/mod-chat/ui/blocks/OtpCelularChatBlock";
 import { CarruselProductos } from "@/modules/mod-catalog/public";
 import { ConfirmacionPedido, EstadoPedido, ListaPedidos } from "@/modules/mod-orders/public";
@@ -220,6 +221,28 @@ export function renderBloque(
         return (
           <div key={clave} className="mt-2">
             <FormularioReenvioVerificacionChat />
+          </div>
+        );
+      }
+      if (formulario.formulario === "RECLAMO") {
+        return (
+          <div key={clave} className="mt-2" data-testid="bloque-formulario-reclamo">
+            <FormularioReclamoChat
+              datos={formulario.datos}
+              onAccion={onQuickAction}
+              busy={actionsBusy}
+            />
+          </div>
+        );
+      }
+      if (formulario.formulario === "DEVOLUCION") {
+        return (
+          <div key={clave} className="mt-2" data-testid="bloque-formulario-devolucion">
+            <FormularioDevolucionChat
+              datos={formulario.datos}
+              onAccion={onQuickAction}
+              busy={actionsBusy}
+            />
           </div>
         );
       }
