@@ -1,13 +1,12 @@
-/** Adapter de pedidos: detalle y CSAT contra el contrato del BFF (SPEC-17, SPEC-24). */
+/** Adapter de pedidos: detalle y listado contra el contrato del BFF (SPEC-17). */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const peticiones = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
+const peticiones = vi.hoisted(() => ({ get: vi.fn() }));
 
 vi.mock("axios", () => ({
   default: {
     create: () => ({
       get: peticiones.get,
-      post: peticiones.post,
       interceptors: {
         request: { use: () => {} },
         response: { use: () => {} },
@@ -21,7 +20,6 @@ import { pedidosApi } from "@/modules/mod-orders/adapters/pedidosApi";
 
 beforeEach(() => {
   peticiones.get.mockReset();
-  peticiones.post.mockReset();
 });
 
 describe("pedidosApi", () => {
@@ -42,27 +40,6 @@ describe("pedidosApi", () => {
     expect(peticiones.get).toHaveBeenCalledWith("/pedidos", {
       params: { page: 1, pageSize: 20 },
       timeout: 60000,
-    });
-  });
-
-  it("envía el CSAT con puntuación y comentario opcional", async () => {
-    peticiones.post.mockResolvedValueOnce({ data: undefined });
-
-    await pedidosApi.calificarPedido("PED/1", 5, "Excelente");
-
-    expect(peticiones.post).toHaveBeenCalledWith("/pedidos/PED%2F1/csat", {
-      puntuacion: 5,
-      comentario: "Excelente",
-    });
-  });
-
-  it("omite el comentario cuando no viene", async () => {
-    peticiones.post.mockResolvedValueOnce({ data: undefined });
-
-    await pedidosApi.calificarPedido("PED-2026-00002", 3);
-
-    expect(peticiones.post).toHaveBeenCalledWith("/pedidos/PED-2026-00002/csat", {
-      puntuacion: 3,
     });
   });
 });

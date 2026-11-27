@@ -5,9 +5,25 @@ import { MessageBubble } from "@/modules/mod-chat/ui/MessageBubble";
 import type { Bloque } from "@/modules/mod-chat/domain/entities/Bloque";
 import { useChatStore } from "@/shared/auth/chatStore";
 
-const h = vi.hoisted(() => ({ reenviar: vi.fn() }));
+const h = vi.hoisted(() => ({ reenviar: vi.fn(), subirEvidencia: vi.fn() }));
 vi.mock("@/shared/di/container", () => ({
-  container: { auth: { reenviarVerificacion: h.reenviar } },
+  container: {
+    auth: { reenviarVerificacion: h.reenviar },
+    postventa: { subirEvidencia: h.subirEvidencia },
+  },
+}));
+vi.mock("@/shared/auth/usePerfil", () => ({
+  usePerfil: () => ({
+    data: {
+      nombreCompleto: "Juan Pérez",
+      correo: "juan@example.com",
+      celular: "+51999888777",
+      celularVerificado: true,
+      ultimoDocumento: null,
+    },
+    isLoading: false,
+    isError: false,
+  }),
 }));
 
 const PEDIDO = {
@@ -290,5 +306,91 @@ describe("formularios de autenticación en el chat", () => {
     });
     await waitFor(() => expect(h.reenviar).toHaveBeenCalledWith("ana@ejemplo.pe"));
     expect(await screen.findByText(/Si hay una cuenta pendiente con ese correo/)).toBeTruthy();
+  });
+});
+
+describe("formularios de postventa en el chat", () => {
+  it("FORMULARIO/RECLAMO prellena y envía CONFIRMAR_RECLAMO", async () => {
+    const onAction = vi.fn().mockResolvedValue(undefined);
+    const descripcion = "La suela se despegó al primer uso y no puedo usarla";
+    bubble([
+      {
+        id: "freclamo",
+        tipo: "FORMULARIO",
+        formulario: "RECLAMO",
+        datos: {
+          pedidoId: "PED-2026-00891",
+          tipo: "QUEJA",
+          motivo: "ATENCION_INADECUADA",
+          descripcion,
+          pedidoCliente: "Juan Pérez",
+        },
+      },
+    ], onAction);
+
+    expect(screen.getByTestId("bloque-formulario-reclamo")).toBeTruthy();
+    expect((screen.getByLabelText("Queja") as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText("Motivo del reclamo") as HTMLSelectElement).value).toBe("ATENCION_INADECUADA");
+    expect((screen.getByLabelText(/Descripción del reclamo/) as HTMLTextAreaElement).value).toBe(descripcion);
+    fireEvent.change(screen.getByLabelText("Documento"), { target: { value: "72458912" } });
+    fireEvent.click(screen.getByRole("button", { name: "ENVIAR RECLAMO" }));
+
+    await waitFor(() => expect(onAction).toHaveBeenCalledTimes(1));
+    expect(onAction).toHaveBeenCalledWith({
+      id: "CONFIRMAR_RECLAMO",
+      etiqueta: "Enviar reclamo",
+      payload: expect.objectContaining({
+        pedidoId: "PED-2026-00891",
+        tipo: "QUEJA",
+        motivo: "ATENCION_INADECUADA",
+        descripcion,
+        consumidor: {
+          nombreCompleto: "Juan Pérez",
+          documento: "72458912",
+          email: "juan@example.com",
+          telefono: "+51999888777",
+        },
+      }),
+    });
+  });
+
+  it("FORMULARIO/DEVOLUCION prellena y envía CONFIRMAR_DEVOLUCION", async () => {
+    const onAction = vi.fn().mockResolvedValue(undefined);
+    const descripcion = "Compré la talla equivocada y necesito el cambio";
+    bubble([
+      {
+        id: "fdevolucion",
+        tipo: "FORMULARIO",
+        formulario: "DEVOLUCION",
+        datos: {
+          pedidoId: "PED-2026-00891",
+          tipo: "CAMBIO",
+          motivo: "TALLA_INCORRECTA",
+          descripcion,
+          items: [{ productoId: "P-100", descripcion: "Zapatilla X 42/Negro", cantidad: 1 }],
+        },
+      },
+    ], onAction);
+
+    expect(screen.getByTestId("bloque-formulario-devolucion")).toBeTruthy();
+    expect((screen.getByLabelText("Línea a devolver") as HTMLSelectElement).value).toBe("P-100");
+    expect((screen.getByLabelText("Motivo") as HTMLSelectElement).value).toBe("TALLA_INCORRECTA");
+    expect((screen.getByLabelText("Descripción") as HTMLTextAreaElement).value).toBe(descripcion);
+    fireEvent.click(screen.getByRole("button", { name: "ENVIAR SOLICITUD" }));
+
+    await waitFor(() => expect(onAction).toHaveBeenCalledTimes(1));
+    expect(onAction).toHaveBeenCalledWith({
+      id: "CONFIRMAR_DEVOLUCION",
+      etiqueta: "Enviar solicitud",
+      payload: expect.objectContaining({
+        pedidoId: "PED-2026-00891",
+        tipo: "CAMBIO",
+        motivo: "TALLA_INCORRECTA",
+        descripcion,
+        items: [{ productoId: "P-100", cantidad: 1 }],
+        evidencias: [],
+      }),
+    });
+    expect(h.subirEvidencia).not.toHaveBeenCalled();
   });
 });

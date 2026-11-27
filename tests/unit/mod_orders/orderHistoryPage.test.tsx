@@ -9,12 +9,11 @@ const push = vi.hoisted(() => vi.fn());
 const listarPedidos = vi.hoisted(() => vi.fn());
 const listarDevoluciones = vi.hoisted(() => vi.fn());
 const listarReclamos = vi.hoisted(() => vi.fn());
-const calificarPedido = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/shared/di/container", () => ({
   container: {
-    pedidos: { listarPedidos, calificarPedido },
+    pedidos: { listarPedidos },
     postventa: { listarDevoluciones, listarReclamos },
   },
 }));
@@ -129,7 +128,6 @@ describe("OrderHistoryPage", () => {
     expect(screen.queryByText("Califica tu entrega")).toBeNull();
     expect(screen.queryByLabelText("Calificar entrega del pedido PED-2026-00002")).toBeNull();
     expect(screen.queryByRole("radio", { name: "Bien" })).toBeNull();
-    expect(calificarPedido).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByText("REPORTAR PROBLEMA"));
     expect(push).toHaveBeenCalledWith("/reclamo?pedidoId=PED-2026-00002");

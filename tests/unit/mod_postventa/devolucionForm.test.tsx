@@ -43,6 +43,28 @@ describe("DevolucionForm", () => {
     expect(screen.queryByLabelText("Talla o color deseado")).toBeNull();
   });
 
+  it("prellena tipo, línea, motivo y descripción desde el chat", () => {
+    const descripcion = "Compré la talla equivocada y ya no la necesito";
+    render(
+      <DevolucionForm
+        lineas={LINEAS}
+        tipoInicial="DEVOLUCION_DINERO"
+        motivoInicial="YA_NO_LO_QUIERO"
+        descripcionInicial={descripcion}
+        lineaInicial="P-2"
+        onOk={onOk}
+        onCancelar={onCancelar}
+      />
+    );
+
+    expect((screen.getByLabelText("Línea a devolver") as HTMLSelectElement).value).toBe("P-2");
+    expect((screen.getByLabelText("Motivo") as HTMLSelectElement).value).toBe("YA_NO_LO_QUIERO");
+    expect((screen.getByLabelText("Descripción") as HTMLTextAreaElement).value).toBe(descripcion);
+    expect(screen.getByRole("button", { name: "DEVOLUCIÓN" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "CAMBIO" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByLabelText("Talla o color deseado")).toBeNull();
+  });
+
   it("envía la solicitud con línea, motivo y descripción", async () => {
     abrir();
 

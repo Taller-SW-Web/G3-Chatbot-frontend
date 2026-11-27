@@ -3,17 +3,17 @@
 - **Owner:** @Taller-SW-Web/chatbot
 - **Frontend:** carpeta `mod-postventa`, rutas `[/devolucion, /reclamo]`
 - **Depende de:** `mod-orders`
-- **Contrato:** `/devoluciones/*`, `/reclamos/*`, `/evidencias`
+- **Contrato:** `/devoluciones/*`, `/reclamos/*`, `/evidencias`, `POST /pedidos/{pedidoId}/csat`
 
 ## Responsabilidad
 
-Solicitudes de cambio/devolución con evidencias, Libro de Reclamaciones (reclamos y quejas), constancias y estados. No incluye el historial de pedidos: lo consume desde `mod-orders`.
+Solicitudes de cambio/devolución con evidencias, Libro de Reclamaciones (reclamos y quejas), constancias, estados y CSAT de la entrega. No incluye el historial de pedidos: lo consume desde `mod-orders`. El CSAT no tiene ruta propia: `app/pedido/page.tsx` inyecta `DeliveryRating` como `csatSlot` de `OrderDetailPage`, solo para pedidos `ENTREGADO` sin calificar.
 
 ## Superficie pública
 
 | Tipo | Archivo | Qué expone |
 |---|---|---|
-| Frontend | `public.ts` | `DevolucionPage`, `ReclamoPage`, `HistorialDevoluciones`, `HistorialReclamos`, `ListaDevoluciones`, `ListaReclamos`, formularios, constancias/estados y tipos del contrato |
+| Frontend | `public.ts` | `DevolucionPage`, `ReclamoPage`, `HistorialDevoluciones`, `HistorialReclamos`, `ListaDevoluciones`, `ListaReclamos`, `DeliveryRating` (+ `puntuacionDeMood`, `DeliveryMood`), formularios, constancias/estados y tipos del contrato |
 
 Los bloques de postventa se adaptan al `datos` del delta M5: `respuestaVisibleCliente` y
 `resolucion.fundamento` se muestran textualmente y el reembolso solo se pinta cuando
@@ -26,11 +26,14 @@ Los bloques de postventa se adaptan al `datos` del delta M5: `respuestaVisibleCl
 | GET | `/devolucion` | Registrar devolución/cambio con evidencia |
 | GET | `/reclamo` | Registrar reclamo o queja |
 
+El CSAT se muestra dentro de `/pedido` como slot inyectado; no registra una ruta propia.
+
 ## Endpoints
 
-`POST /evidencias`, `POST /devoluciones`, `GET /devoluciones`, `GET /devoluciones/{devolucionId}`, `POST /reclamos`, `GET /reclamos`, `GET /reclamos/{codigoSeguimiento}`.
+`POST /evidencias`, `POST /devoluciones`, `GET /devoluciones`, `GET /devoluciones/{devolucionId}`, `POST /reclamos`, `GET /reclamos`, `GET /reclamos/{codigoSeguimiento}`, `POST /pedidos/{pedidoId}/csat`.
 
 - `409 RECLAMO_DUPLICADO` y `409 DEVOLUCION_DUPLICADA`: la pantalla muestra el código existente y el botón "Registrar igual", que reenvía la misma solicitud con `forzar: true`. La evidencia ya subida se reutiliza (no se sube dos veces).
+- CSAT: `409 CSAT_ALREADY_SUBMITTED` muestra "Ya calificaste este pedido"; `422 ORDER_NOT_DELIVERED` avisa que solo se califican pedidos entregados y pide refrescar el detalle.
 
 ## Dependencias externas
 
@@ -40,7 +43,7 @@ Los bloques de postventa se adaptan al `datos` del delta M5: `respuestaVisibleCl
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_postventa/` (8 archivos)
+- Unitarias: `tests/unit/mod_postventa/` (9 archivos)
 
 ## Reglas
 

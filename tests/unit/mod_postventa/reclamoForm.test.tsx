@@ -93,6 +93,27 @@ describe("ReclamoForm", () => {
     await waitFor(() => expect(onOk).toHaveBeenCalledWith(expect.objectContaining({ tipo: "QUEJA" })));
   });
 
+  it("prellena tipo, motivo, descripción y solución desde el chat", () => {
+    const solucion = "Reembolso del monto cobrado";
+    render(
+      <ReclamoForm
+        pedidoId="PED-2026-00891"
+        tipoInicial="QUEJA"
+        motivoInicial="ATENCION_INADECUADA"
+        descripcionInicial={DESCRIPCION}
+        solucionInicial={solucion}
+        onOk={onOk}
+        onCancelar={onCancelar}
+      />
+    );
+
+    expect((screen.getByLabelText("Queja") as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText("Reclamo") as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByLabelText("Motivo del reclamo") as HTMLSelectElement).value).toBe("ATENCION_INADECUADA");
+    expect((screen.getByLabelText(/Descripci.n del reclamo/) as HTMLTextAreaElement).value).toBe(DESCRIPCION);
+    expect((screen.getByLabelText("Solución esperada") as HTMLInputElement).value).toBe(solucion);
+  });
+
   it("cancela sin enviar", () => {
     abrir();
     fireEvent.click(screen.getByRole("button", { name: "CANCELAR" }));

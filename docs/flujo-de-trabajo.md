@@ -21,9 +21,11 @@ nuevo antes de romper la frontera.
 
 ## 2. Si el cambio no está en la spec
 
-Actualiza la spec **en el mismo PR** (repo `G3-Chatbot-specs`) o, si el cambio
-es solo de implementación, deja la decisión en el `MODULE.md` del módulo. Un PR
-no puede introducir comportamiento que la spec no describe.
+Abre una issue en `G3-Chatbot-specs` asignada a `@Ankarmin` y `@MathiasTL`; no
+abras ramas ni PRs en specs. El PR de frontend espera a que la spec esté en
+`development`. Si el cambio es solo de implementación, deja la decisión en el
+`MODULE.md` del módulo. Un PR no puede introducir comportamiento que la spec no
+describe.
 
 - Cambio de contrato → spec + `module.manifest.ts` + `openapi.json` del backend.
 - Cambio de flujo/UX → spec + textos del módulo.

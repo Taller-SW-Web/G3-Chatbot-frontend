@@ -1,8 +1,13 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { reclamoSchema, RECLAMO_MOTIVOS, type ReclamoInput } from "@/modules/mod-postventa/domain/schemas/reclamo.schema";
+import {
+  reclamoSchema,
+  RECLAMO_MOTIVOS,
+  RECLAMO_MOTIVO_VALUES,
+  type ReclamoInput,
+} from "@/modules/mod-postventa/domain/schemas/reclamo.schema";
 import { FileAlertIcon } from "@/shared/ui/icons";
 
 /**
@@ -13,23 +18,34 @@ export function ReclamoForm({
   pedidoId,
   documentoInicial = "",
   telefonoInicial = "",
+  tipoInicial,
+  motivoInicial,
+  descripcionInicial,
+  solucionInicial,
   onOk,
   onCancelar,
 }: {
   pedidoId: string;
   documentoInicial?: string;
   telefonoInicial?: string;
+  /** Valores que el chat puede precargar al abrir el formulario. */
+  tipoInicial?: "RECLAMO" | "QUEJA";
+  motivoInicial?: (typeof RECLAMO_MOTIVO_VALUES)[number];
+  descripcionInicial?: string;
+  solucionInicial?: string;
   onOk: (d: ReclamoInput) => void | Promise<void>;
   onCancelar: () => void;
 }) {
-  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<ReclamoInput>({
+  const { register, control, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<ReclamoInput>({
     resolver: zodResolver(reclamoSchema),
     defaultValues: {
       pedidoId,
-      tipo: "RECLAMO",
-      motivo: "PRODUCTO_DEFECTUOSO_O_INCORRECTO",
+      tipo: tipoInicial ?? "RECLAMO",
+      motivo: motivoInicial ?? "PRODUCTO_DEFECTUOSO_O_INCORRECTO",
+      descripcion: descripcionInicial ?? undefined,
       documento: documentoInicial,
       telefono: telefonoInicial,
+      solucion: solucionInicial ?? undefined,
     },
   });
   const descripcion = watch("descripcion") ?? "";
@@ -46,9 +62,28 @@ export function ReclamoForm({
           <input type="radio" checked={tipo === "QUEJA"} onChange={() => setValue("tipo", "QUEJA")} /> Queja
         </label>
       </div>
-      <select {...register("motivo")} aria-label="Motivo del reclamo" className="wf-input px-3 py-2.5 text-sm">
-        {RECLAMO_MOTIVOS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-      </select>
+      <Controller
+        control={control}
+        name="motivo"
+        defaultValue={motivoInicial ?? "PRODUCTO_DEFECTUOSO_O_INCORRECTO"}
+        render={({ field }) => (
+          <select
+            {...field}
+            ref={(node) => {
+              field.ref(node);
+              // React fija el value antes de montar los <option>; se re-aplica
+              // en el ref (post-montaje) para que el prellenado sea visible.
+              if (node && node.value !== String(field.value ?? "")) {
+                node.value = String(field.value ?? "");
+              }
+            }}
+            aria-label="Motivo del reclamo"
+            className="wf-input px-3 py-2.5 text-sm"
+          >
+            {RECLAMO_MOTIVOS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        )}
+      />
       <p className="text-[11px] text-text-secondary">
         Elige el motivo más cercano y cuéntanos lo ocurrido en la descripción.
       </p>

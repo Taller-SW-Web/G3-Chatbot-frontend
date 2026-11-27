@@ -62,6 +62,8 @@ export type BloqueFormulario = BloqueBase & {
   tipo: "FORMULARIO";
   formulario: string;
   celularEnmascarado?: string;
+  /** Prefill for FORMULARIO/RECLAMO and FORMULARIO/DEVOLUCION. */
+  datos?: Record<string, unknown>;
 };
 
 export type BloqueAcciones = BloqueBase & {
