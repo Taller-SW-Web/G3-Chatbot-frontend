@@ -206,6 +206,7 @@ export function buildScope(
     run_validate: runValidate,
     run_unit: runUnit,
     run_build: runBuild,
+    run_lighthouse: runBuild,
     run_security: runSecurity,
     run_e2e: runE2E,
     run_sonar: runSonar,

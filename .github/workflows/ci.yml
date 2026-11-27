@@ -34,6 +34,7 @@ jobs:
       run_validate: ${{ steps.scope.outputs.run_validate }}
       run_unit: ${{ steps.scope.outputs.run_unit }}
       run_build: ${{ steps.scope.outputs.run_build }}
+      run_lighthouse: ${{ steps.scope.outputs.run_lighthouse }}
       run_security: ${{ steps.scope.outputs.run_security }}
       run_e2e: ${{ steps.scope.outputs.run_e2e }}
       run_sonar: ${{ steps.scope.outputs.run_sonar }}
@@ -163,6 +164,61 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build
         run: pnpm run build
+
+  # Mobile-first performance, Core Web Vitals and accessibility budgets (H5-P4).
+  lighthouse:
+    name: Lighthouse CI
+    needs: [scope, validate]
+    if: |
+      always() && needs.scope.outputs.run_lighthouse == 'true' &&
+      needs.validate.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: pnpm run build
+      - name: Run Lighthouse CI (mobile preset)
+        run: pnpm run lhci
+      - name: Add scores to the job summary
+        if: always()
+        run: |
+          if [ -f .lighthouseci/manifest.json ]; then
+            {
+              echo "### Lighthouse CI (mobile preset)"
+              echo "| URL | Performance | Accessibility | Best practices | SEO |"
+              echo "|---|---|---|---|---|"
+              node -e '
+                const fs = require("fs");
+                const manifest = JSON.parse(fs.readFileSync(".lighthouseci/manifest.json", "utf8"));
+                const pct = (value) => value === undefined ? "N/A" : `${Math.round(value * 100)}%`;
+                for (const item of manifest) {
+                  const s = item.summary;
+                  console.log(`| ${item.url} | ${pct(s.performance)} | ${pct(s.accessibility)} | ${pct(s["best-practices"])} | ${pct(s.seo)} |`);
+                }
+              '
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: ignore
 
   security:
     name: Dependency audit
@@ -441,6 +497,7 @@ jobs:
       - validate
       - unit-tests
       - build
+      - lighthouse
       - security
       - e2e
       - dependency-review
@@ -504,6 +561,7 @@ jobs:
       - validate
       - unit-tests
       - build
+      - lighthouse
       - security
       - e2e
       - dependency-review
@@ -519,6 +577,7 @@ jobs:
           RUN_VALIDATE: ${{ needs.scope.outputs.run_validate }}
           RUN_UNIT: ${{ needs.scope.outputs.run_unit }}
           RUN_BUILD: ${{ needs.scope.outputs.run_build }}
+          RUN_LIGHTHOUSE: ${{ needs.scope.outputs.run_lighthouse }}
           RUN_SECURITY: ${{ needs.scope.outputs.run_security }}
           RUN_E2E: ${{ needs.scope.outputs.run_e2e }}
           RUN_SONAR: ${{ needs.scope.outputs.run_sonar }}
@@ -544,6 +603,7 @@ jobs:
               "validate": os.environ.get("RUN_VALIDATE"),
               "unit-tests": os.environ.get("RUN_UNIT"),
               "build": os.environ.get("RUN_BUILD"),
+              "lighthouse": os.environ.get("RUN_LIGHTHOUSE"),
               "security": os.environ.get("RUN_SECURITY"),
               "e2e": os.environ.get("RUN_E2E"),
               "sonar": os.environ.get("RUN_SONAR"),
