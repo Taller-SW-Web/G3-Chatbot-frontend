@@ -1,9 +1,37 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ListaDevoluciones } from "@/modules/mod-postventa/ui/blocks/ListaDevoluciones";
 import { ListaReclamos } from "@/modules/mod-postventa/ui/blocks/ListaReclamos";
-import { humanizarEstado } from "@/modules/mod-postventa/ui/HistorialPostventa";
+import {
+  HistorialDevoluciones,
+  HistorialReclamos,
+  humanizarEstado,
+} from "@/modules/mod-postventa/ui/HistorialPostventa";
+
+const push = vi.hoisted(() => vi.fn());
+const listarDevoluciones = vi.hoisted(() => vi.fn());
+const listarReclamos = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+}));
+
+vi.mock("@/shared/di/container", () => ({
+  container: {
+    postventa: { listarDevoluciones, listarReclamos },
+  },
+}));
+
+function renderWithClient(ui: React.ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 afterEach(cleanup);
 
@@ -15,6 +43,92 @@ describe("HistorialPostventa y bloques", () => {
     expect(humanizarEstado("REGISTRADO")).toBe("Registrado");
     expect(humanizarEstado("EN_PROCESO")).toBe("En proceso");
     expect(humanizarEstado("RESUELTO")).toBe("Resuelto");
+    expect(humanizarEstado("")).toBe("—");
+    expect(humanizarEstado("OTRO_ESTADO")).toBe("Otro_estado");
+  });
+
+  it("HistorialDevoluciones muestra lista con estados humanizados", async () => {
+    listarDevoluciones.mockResolvedValueOnce({
+      items: [
+        {
+          devolucionId: "DEV-10",
+          pedidoId: "PED-10",
+          tipo: "CAMBIO",
+          estado: "SOLICITADA",
+          motivo: "TALLA_INCORRECTA",
+          fechaRegistro: "2026-11-20T10:00:00Z",
+          estadoReembolso: null,
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
+
+    renderWithClient(<HistorialDevoluciones />);
+
+    expect(await screen.findByText(/DEV-10/)).toBeDefined();
+    expect(screen.getByText("Solicitada")).toBeDefined();
+  });
+
+  it("HistorialDevoluciones muestra estado vacío y navega", async () => {
+    listarDevoluciones.mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 });
+
+    renderWithClient(<HistorialDevoluciones />);
+
+    expect(await screen.findByRole("heading", { name: /SIN SOLICITUDES/i })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: /CONSULTAR CON EL ASISTENTE/i }));
+    expect(push).toHaveBeenCalledWith("/");
+  });
+
+  it("HistorialDevoluciones muestra error cuando falla la consulta", async () => {
+    listarDevoluciones.mockRejectedValueOnce(new Error("Network"));
+
+    renderWithClient(<HistorialDevoluciones />);
+
+    expect(await screen.findByText(/No puedo consultar tus devoluciones/i)).toBeDefined();
+  });
+
+  it("HistorialReclamos muestra lista con estados humanizados", async () => {
+    listarReclamos.mockResolvedValueOnce({
+      items: [
+        {
+          reclamoId: "REC-20",
+          codigoSeguimiento: "REC-20",
+          tipo: "RECLAMO",
+          estado: "EN_PROCESO",
+          motivo: "ATENCION_INADECUADA",
+          fechaRegistro: "2026-11-20T10:00:00Z",
+          fechaLimiteSLA: "2026-12-10",
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
+
+    renderWithClient(<HistorialReclamos />);
+
+    expect(await screen.findByText(/REC-20/)).toBeDefined();
+    expect(screen.getByText("En proceso")).toBeDefined();
+  });
+
+  it("HistorialReclamos muestra estado vacío y navega", async () => {
+    listarReclamos.mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 });
+
+    renderWithClient(<HistorialReclamos />);
+
+    expect(await screen.findByRole("heading", { name: "NO TIENES RECLAMOS REGISTRADOS" })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: /CONSULTAR CON EL ASISTENTE/i }));
+    expect(push).toHaveBeenCalledWith("/");
+  });
+
+  it("HistorialReclamos muestra error cuando falla la consulta", async () => {
+    listarReclamos.mockRejectedValueOnce(new Error("Network"));
+
+    renderWithClient(<HistorialReclamos />);
+
+    expect(await screen.findByText(/No puedo consultar tus reclamos/i)).toBeDefined();
   });
 
   it("ListaDevoluciones no renderiza botón cuando no hay onSeleccionar", () => {
