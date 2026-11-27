@@ -16,7 +16,8 @@ Flujo de trabajo (spec primero, un PR por módulo, gates):
 
 ## Requisitos
 
-- Node 22
+- Node 22 (`engines.node` en `package.json`; Vercel lo respeta). `jsdom` es una
+  devDependency de los tests y exige Node `^22.22.2`.
 - pnpm 10.34.6 (versión fijada en el campo `packageManager` de `package.json`)
 
 ## Comandos
