@@ -7,8 +7,21 @@ const onOk = vi.fn();
 const onCancelar = vi.fn();
 
 const LINEAS = [
-  { productoId: "P-1", label: "Zapatilla Volta · 42" },
-  { productoId: "P-2", label: "Zapatilla Volta · 43" },
+  {
+    productoId: "P-1",
+    label: "Zapatilla Volta · 42",
+    variantes: [
+      { sku: "SKU-42-NEGRO", label: "Talla 42 · Negro", disponible: true },
+      { sku: "SKU-42-AZUL", label: "Talla 42 · Azul", disponible: true },
+    ],
+  },
+  {
+    productoId: "P-2",
+    label: "Zapatilla Volta · 43",
+    variantes: [
+      { sku: "SKU-43-NEGRO", label: "Talla 43 · Negro", disponible: true },
+    ],
+  },
 ];
 
 beforeEach(() => {
@@ -62,6 +75,12 @@ describe("DevolucionForm", () => {
     expect((screen.getByLabelText("Descripción") as HTMLTextAreaElement).value).toBe(descripcion);
     expect(screen.getByRole("button", { name: "DEVOLUCIÓN" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("button", { name: "CAMBIO" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByLabelText("Talla o color deseado")).toBeNull();
+  });
+
+  it("sin variantes reales no inventa el selector de cambio", () => {
+    abrir([{ productoId: "P-3", label: "Producto sin variantes" }]);
+
     expect(screen.queryByLabelText("Talla o color deseado")).toBeNull();
   });
 

@@ -21,10 +21,7 @@ export type DevolucionFormPayload = DevolucionInput & {
   varianteDeseada?: string;
 };
 
-const DEFAULT_VARIANTES: DevolucionVariante[] = [
-  { sku: "42-negro", label: "Talla 42 · Negro", disponible: true },
-  { sku: "43-negro", label: "Talla 43 · Negro", disponible: true },
-];
+const MAX_EVIDENCIAS = 3;
 
 /**
  * SPEC-21: líneas múltiples, tipo cambio/devolución, 6 motivos, descripción,
@@ -104,10 +101,7 @@ export function DevolucionForm({
     normalizedLineas.find((l) => l.productoId === (itemsParaEnviar[0]?.productoId ?? lineaActualId)) ??
     normalizedLineas[0];
 
-  const variantesDisponibles: DevolucionVariante[] =
-    primeraLinea?.variantes && primeraLinea.variantes.length > 0
-      ? primeraLinea.variantes
-      : DEFAULT_VARIANTES;
+  const variantesDisponibles: DevolucionVariante[] = primeraLinea?.variantes ?? [];
 
   const [varianteSeleccionadaSku, setVarianteSeleccionadaSku] = useState<string>(
     () => variantesDisponibles[0]?.sku ?? ""
@@ -283,7 +277,7 @@ export function DevolucionForm({
         </button>
       </div>
 
-      {tipo === "CAMBIO" && (
+      {tipo === "CAMBIO" && variantesDisponibles.length > 0 && (
         <div className="flex flex-col gap-1">
           <select
             aria-label="Talla o color deseado"
