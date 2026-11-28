@@ -112,7 +112,11 @@ export function CheckoutPage() {
   const total = carritoQuery.data?.total ?? 0;
   const totalDisponible = resumenActualizado?.total != null || carritoQuery.data?.total != null;
   // El envío sale de Despacho (SPEC-12); sin cotización no se puede confirmar.
-  const { cotizacion, cotizando, error: errorCotizacion, reintentar } = useCotizacionEnvio(dir);
+  // Se recotiza si cambia el contenido del carrito (SPEC-12 Req. 5 · Scenario: El carrito cambia después de cotizar).
+  const { cotizacion, cotizando, error: errorCotizacion, reintentar } = useCotizacionEnvio(
+    dir,
+    carritoQuery.data?.lineas,
+  );
   const envio = cotizacion?.costoEnvio ?? 0;
   const totalEstimado = resumenActualizado?.total ?? total + envio;
 
