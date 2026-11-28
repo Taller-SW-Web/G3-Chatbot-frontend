@@ -87,6 +87,9 @@ export function Sidebar({
     if (cliente) onNavigate(href);
     else {
       setAccionPendiente(href);
+      // Cierra el drawer antes de montar AuthModal: dos diálogos apilados
+      // comparten `document` y rompen Tab/Escape (frontend#190).
+      onClose();
       setAuthOpen(true);
     }
   }
