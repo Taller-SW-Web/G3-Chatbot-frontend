@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useDialogoModal } from "@/shared/ui/useDialogoModal";
 import { CameraIcon, PhotoIcon } from "@/shared/ui/icons";
 
 /**
@@ -17,22 +17,13 @@ export function AttachmentSourceSheet({
   onCamara: () => void;
   onCerrar: () => void;
 }) {
-  const primeraOpcion = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    primeraOpcion.current?.focus();
-    const alPresionar = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCerrar();
-    };
-    window.addEventListener("keydown", alPresionar);
-    return () => window.removeEventListener("keydown", alPresionar);
-  }, [onCerrar]);
+  const dialogoRef = useDialogoModal<HTMLDivElement>(onCerrar);
 
   const opcion =
     "wf-btn w-full py-3 px-4 flex items-center gap-3 text-[13px] font-bold bg-white text-text-primary border border-border-default hover:border-accent-signal";
 
   return (
-    <div className="absolute inset-0 z-40 flex items-end justify-center bg-surface-ink/60 fade-in">
+    <div data-capa-modal className="absolute inset-0 z-40 flex items-end justify-center bg-surface-ink/60 fade-in">
       <button
         type="button"
         tabIndex={-1}
@@ -41,6 +32,8 @@ export function AttachmentSourceSheet({
         onClick={onCerrar}
       />
       <div
+        ref={dialogoRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="adjunto-origen-titulo"
@@ -53,7 +46,7 @@ export function AttachmentSourceSheet({
         <p id="adjunto-origen-formatos" className="text-[12px] text-text-secondary">
           JPG, PNG o WEBP de hasta 5 MB. Hasta 3 imágenes por mensaje.
         </p>
-        <button ref={primeraOpcion} type="button" onClick={onGaleria} className={opcion}>
+        <button type="button" onClick={onGaleria} className={opcion}>
           <PhotoIcon size={20} />
           Galería
         </button>

@@ -96,6 +96,15 @@ it("ofrece Galería y Tomar foto con el recordatorio de formatos (SPEC-23 · Sce
   expect(hoja.textContent).toContain("JPG, PNG o WEBP de hasta 5 MB");
   expect(screen.getByRole("button", { name: "Galería" })).toBeDefined();
   expect(screen.getByRole("button", { name: "Tomar foto" })).toBeDefined();
+  const galeria = screen.getByRole("button", { name: "Galería" });
+  const cancelar = screen.getByRole("button", { name: "Cancelar" });
+  expect(document.activeElement).toBe(galeria);
+  cancelar.focus();
+  fireEvent.keyDown(document, { key: "Tab" });
+  expect(document.activeElement).toBe(galeria);
+  galeria.focus();
+  fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+  expect(document.activeElement).toBe(cancelar);
 
   const camara = screen.getByLabelText("Tomar foto con la cámara", { selector: "input" });
   expect(camara.getAttribute("capture")).toBe("environment");
@@ -122,9 +131,12 @@ it("Escape cierra la hoja de origen sin adjuntar", () => {
   window.localStorage.setItem("chat-adjunto-privacidad", "1");
   montar();
 
-  fireEvent.click(screen.getByRole("button", { name: "Adjuntar imagen" }));
-  fireEvent.keyDown(window, { key: "Escape" });
+  const trigger = screen.getByRole("button", { name: "Adjuntar imagen" });
+  trigger.focus();
+  fireEvent.click(trigger);
+  fireEvent.keyDown(document, { key: "Escape" });
   expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Adjuntar imagen" }));
   expect(h.subir).not.toHaveBeenCalled();
 });
 
