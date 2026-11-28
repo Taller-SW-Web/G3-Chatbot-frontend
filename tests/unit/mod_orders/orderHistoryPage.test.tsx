@@ -119,9 +119,9 @@ describe("OrderHistoryPage", () => {
     expect(push).toHaveBeenCalledWith("/pedido?pedidoId=PED-2026-00001");
   });
 
-  it("en 'Entregados' no muestra el CSAT en la lista y permite abrir reclamo o devolución", async () => {
+  it("en 'Finalizados' no muestra el CSAT en la lista y permite abrir reclamo o devolución", async () => {
     renderPage();
-    fireEvent.click(screen.getByText("Entregados"));
+    fireEvent.click(screen.getByText("Finalizados"));
 
     await waitFor(() => expect(screen.getByText("Pedido PED-2026-00002")).toBeDefined());
     expect(screen.getByText("Pedido PED-2026-00003")).toBeDefined();
@@ -169,9 +169,9 @@ describe("OrderHistoryPage", () => {
     expect(push).toHaveBeenCalledWith("/");
   });
 
-  it("en 'Entregados' muestra pedidos con estado ANULADO con su etiqueta sin inventar reembolso (SPEC-17 :121)", async () => {
+  it("en 'Finalizados' muestra pedidos con estado ANULADO con su etiqueta sin inventar reembolso (SPEC-17 :121)", async () => {
     renderPage();
-    fireEvent.click(screen.getByText("Entregados"));
+    fireEvent.click(screen.getByText("Finalizados"));
 
     await waitFor(() => expect(screen.getByText("Pedido PED-2026-00003")).toBeDefined());
     expect(screen.getAllByText("Anulado").length).toBeGreaterThanOrEqual(1);
@@ -190,5 +190,31 @@ describe("OrderHistoryPage", () => {
 
     fireEvent.click(retryBtn);
     await waitFor(() => expect(listarPedidos).toHaveBeenCalledTimes(2));
+  });
+
+  it("con 25 pedidos muestra 20 y 'Ver más' trae la página 2 (frontend#187)", async () => {
+    const pedido = (n: number) => ({
+      pedidoId: `PED-2026-${String(n).padStart(5, "0")}`,
+      canal: "CHATBOT",
+      estado: "EN_PREPARACION",
+      estadoEtiqueta: "En preparación",
+      total: 10,
+      moneda: "PEN",
+      fechaCreacion: "2026-11-10T10:00:00Z",
+    });
+    listarPedidos.mockReset();
+    listarPedidos
+      .mockResolvedValueOnce({ items: Array.from({ length: 20 }, (_, i) => pedido(i + 1)), total: 25, page: 1, pageSize: 20 })
+      .mockResolvedValueOnce({ items: Array.from({ length: 5 }, (_, i) => pedido(i + 21)), total: 25, page: 2, pageSize: 20 });
+    renderPage();
+
+    expect(await screen.findByText("Pedido PED-2026-00020")).toBeDefined();
+    expect(screen.queryByText("Pedido PED-2026-00021")).toBeNull();
+    expect(screen.queryByText("NO TIENES PEDIDOS EN PROCESO")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "VER MÁS" }));
+
+    expect(await screen.findByText("Pedido PED-2026-00025")).toBeDefined();
+    expect(listarPedidos).toHaveBeenLastCalledWith({ page: 2, pageSize: 20 });
+    expect(screen.queryByRole("button", { name: "VER MÁS" })).toBeNull();
   });
 });

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon, XIcon } from "@/shared/ui/icons";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { container } from "@/shared/di/container";
@@ -23,10 +23,13 @@ export type OrderHistorySlots = {
 const TABS: Tab[] = ["proceso", "entregados", "reembolso", "reclamos"];
 const TAB_LABEL: Record<Tab, string> = {
   proceso: "En proceso",
-  entregados: "Entregados",
+  entregados: "Finalizados",
   reembolso: "Reembolso/Cambio",
   reclamos: "Reclamos",
 };
+
+/** Pedidos por página del historial; "Ver más" pide la siguiente (SPEC-17 · alcance). */
+export const PEDIDOS_POR_PAGINA = 20;
 
 const DATE = new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "short", year: "numeric" });
 
@@ -36,7 +39,7 @@ function formatDate(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? value : DATE.format(date);
 }
 
-/** `/pedidos` pestañas En proceso/Entregados/Reembolsos/Reclamos. SPEC-17,18,21,22 */
+/** `/pedidos` pestañas En proceso/Finalizados/Reembolsos/Reclamos. SPEC-17,18,21,22 */
 export function OrderHistoryPage({
   initialTab = "proceso",
   slots,
@@ -47,16 +50,20 @@ export function OrderHistoryPage({
   const [tab, setTab] = useState<Tab>(initialTab);
   const router = useRouter();
 
-  const pedidos = useQuery({
+  const pedidos = useInfiniteQuery({
     queryKey: ["pedidos", "historial"],
-    queryFn: () => container.pedidos.listarPedidos({ page: 1, pageSize: 20 }),
+    queryFn: ({ pageParam }) =>
+      container.pedidos.listarPedidos({ page: pageParam, pageSize: PEDIDOS_POR_PAGINA }),
+    initialPageParam: 1,
+    getNextPageParam: (ultima) =>
+      ultima.page * ultima.pageSize < ultima.total ? ultima.page + 1 : undefined,
     enabled: tab === "proceso" || tab === "entregados",
     retry: false,
   });
 
-  const allOrders = pedidos.data?.items ?? [];
+  const allOrders = pedidos.data?.pages.flatMap((p) => p.items) ?? [];
   const inProcess = allOrders.filter((o) => o.estado !== "ENTREGADO" && o.estado !== "ANULADO");
-  // "Entregados" también muestra los anulados para que el cliente los encuentre;
+  // "Finalizados" también muestra los anulados para que el cliente los encuentre;
   // las acciones de postventa solo aplican a ENTREGADO.
   const delivered = allOrders.filter((o) => o.estado === "ENTREGADO" || o.estado === "ANULADO");
   const visibleOrders = tab === "proceso" ? inProcess : delivered;
@@ -117,19 +124,19 @@ export function OrderHistoryPage({
               </button>
             </div>
           )}
-          {!pedidos.isLoading && !pedidos.isError && visibleOrders.length === 0 && (
+          {!pedidos.isLoading && !pedidos.isError && visibleOrders.length === 0 && !pedidos.hasNextPage && (
             <div className="py-10 px-4 flex flex-col items-center justify-center text-center gap-3.5 bg-white rounded-md border border-border-default screen-enter my-1">
               <div className="w-14 h-14 rounded-full bg-surface-cloud flex items-center justify-center text-text-secondary border border-border-default">
                 {tab === "proceso" ? <TruckIcon size={24} /> : <CheckIcon size={24} />}
               </div>
               <div className="flex flex-col gap-1 items-center max-w-[280px]">
                 <h3 className="font-heading text-[16px] tracking-wide text-text-primary uppercase">
-                  {tab === "proceso" ? "NO TIENES PEDIDOS EN PROCESO" : "NO TIENES PEDIDOS ENTREGADOS"}
+                  {tab === "proceso" ? "NO TIENES PEDIDOS EN PROCESO" : "NO TIENES PEDIDOS FINALIZADOS"}
                 </h3>
                 <p className="text-[13px] text-text-secondary leading-relaxed">
                   {tab === "proceso"
                     ? "Aún no tienes pedidos en esta pestaña. ¿Buscas tu próxima compra o necesitas ayuda con un pedido?"
-                    : "Aún no tienes pedidos entregados registrados en tu cuenta."}
+                    : "Aún no tienes pedidos finalizados registrados en tu cuenta."}
                 </p>
               </div>
               <button
@@ -192,6 +199,25 @@ export function OrderHistoryPage({
             );
           })}
         </div>
+      )}
+
+      {(tab === "proceso" || tab === "entregados") && pedidos.hasNextPage && (
+        <button
+          type="button"
+          onClick={() => void pedidos.fetchNextPage()}
+          disabled={pedidos.isFetchingNextPage}
+          className="wf-btn py-2.5 text-[12px] font-bold bg-white border border-border-default text-text-primary disabled:opacity-60"
+        >
+          {pedidos.isFetchingNextPage ? "CARGANDO…" : "VER MÁS"}
+        </button>
+      )}
+      {pedidos.isFetchNextPageError && (
+        <p role="alert" className="text-[13px] text-error-default text-center">
+          No pudimos cargar más pedidos.{" "}
+          <button type="button" onClick={() => void pedidos.fetchNextPage()} className="font-bold underline">
+            Reintentar
+          </button>
+        </p>
       )}
 
       {tab === "reembolso" ? slots?.reembolso ?? null : null}
