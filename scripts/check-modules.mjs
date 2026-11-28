@@ -33,6 +33,28 @@ const idsJson = JSON.parse(fs.readFileSync(path.join(root, "modules.manifest.jso
   .map((m) => m.id)
   .sort();
 
+/** Rutas servidas por cada `page.tsx` bajo `src/app` (ignora grupos, slots y privadas). */
+function collectAppRoutes(appDir) {
+  const routes = [];
+  if (!fs.existsSync(appDir)) return routes;
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!entry.name.startsWith("@") && !entry.name.startsWith("_")) walk(full);
+      } else if (/^page\.(tsx|ts|jsx|js)$/.test(entry.name)) {
+        const rel = path.relative(appDir, full).replace(/\\/g, "/").replace(/\/?page\.(tsx|ts|jsx|js)$/, "");
+        const segments = rel
+          ? rel.split("/").filter((segment) => !/^\(.+\)$/.test(segment))
+          : [];
+        routes.push(segments.length ? `/${segments.join("/")}` : "/");
+      }
+    }
+  };
+  walk(appDir);
+  return routes;
+}
+
 // 1) Paridad de ids entre modules.manifest.json y carpetas.
 const dirs = fs
   .readdirSync(modulesDir, { withFileTypes: true })
@@ -80,7 +102,30 @@ for (const id of ids) {
   }
 }
 
-// 3) Registry al día.
+// 3) Rutas: cada `routes` del manifiesto debe existir como page.tsx y cada
+//    página debe tener un módulo dueño. Evita que MODULE.md/manifiesto deriven.
+const appRoutes = new Set(collectAppRoutes(path.join(root, "src/app")));
+const claimedRoutes = new Map();
+for (const manifest of manifests) {
+  for (const route of manifest.routes ?? []) {
+    if (!appRoutes.has(route.path)) {
+      fail(`${manifest.id}: la ruta ${route.path} no tiene page.tsx en src/app`);
+    }
+    const previo = claimedRoutes.get(route.path);
+    if (previo) {
+      fail(`ruta ${route.path} declarada por ${previo} y ${manifest.id}`);
+    } else {
+      claimedRoutes.set(route.path, manifest.id);
+    }
+  }
+}
+for (const route of appRoutes) {
+  if (!claimedRoutes.has(route)) {
+    fail(`src/app: la ruta ${route} no está declarada en ningún module.manifest.ts`);
+  }
+}
+
+// 4) Registry al día.
 if (fs.existsSync(registryPath)) {
   const current = fs.readFileSync(registryPath, "utf8").replace(/\r\n/g, "\n").trim();
   const expected = renderRegistry(manifests).replace(/\r\n/g, "\n").trim();
@@ -91,7 +136,7 @@ if (fs.existsSync(registryPath)) {
   fail("falta src/modules/registry.generated.ts");
 }
 
-// 4) Fronteras de importación.
+// 5) Fronteras de importación.
 const manifestsById = new Map(manifests.map((m) => [m.id, m]));
 function walk(dir, acc = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -259,7 +304,7 @@ for (const file of sourceFiles) {
   }
 }
 
-// 5) Contrato backend↔frontend: cada endpoint del manifiesto debe existir en
+// 6) Contrato backend↔frontend: cada endpoint del manifiesto debe existir en
 //    el openapi.json del backend y llevar el tag del mismo id de módulo.
 const openapiPath = process.env.OPENAPI_PATH
   ? path.resolve(process.env.OPENAPI_PATH)
@@ -327,7 +372,7 @@ if (!fs.existsSync(openapiPath)) {
   }
 }
 
-// 6) Reporte.
+// 7) Reporte.
 if (warnings.size) {
   console.warn(`Avisos (${warnings.size}):`);
   for (const w of warnings) console.warn(`  - ${w}`);

@@ -1,7 +1,7 @@
 # `mod-chat` — Chat
 
 - **Owner:** @Taller-SW-Web/chatbot
-- **Frontend:** carpeta `mod-chat`, rutas `[/chat/[id], /sugerencias]`
+- **Frontend:** carpeta `mod-chat`, rutas `[/chat/[id], /buscar, /sugerencias]`
 - **Depende de:** todos los módulos de negocio (orquestador)
 - **Contrato:** `/chat/conversaciones*` (REST + SSE)
 
@@ -55,7 +55,7 @@ rehidratar el historial. `/buscar` recibe el término en `payload.q`.
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_chat/` (19 archivos)
+- Unitarias: `tests/unit/mod_chat/` (31 archivos)
 
 ## Reglas
 

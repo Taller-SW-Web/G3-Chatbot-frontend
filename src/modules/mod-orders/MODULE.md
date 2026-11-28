@@ -40,7 +40,7 @@ tipos se publican para que `mod-chat` los use sin importar el interior del módu
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_orders/` (7 archivos)
+- Unitarias: `tests/unit/mod_orders/` (8 archivos)
 
 ## Reglas
 
