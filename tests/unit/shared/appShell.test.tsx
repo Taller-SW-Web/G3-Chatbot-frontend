@@ -26,6 +26,7 @@ function resetStore() {
     cliente: null,
     carrito: { lineas: [], subtotal: 0, count: 0 },
     accionPendiente: null,
+    avisoCarrito: null,
     authOpen: false,
     authVista: "login",
     ultimoPedido: null,
@@ -68,6 +69,16 @@ beforeAll(async () => {
 });
 
 describe("AppShell", () => {
+  it("muestra y cierra el aviso de carrito fusionado", () => {
+    useChatStore.setState({ avisoCarrito: "Unimos los productos que agregaste con los de tu cuenta" });
+    montar(shell("home"));
+
+    expect(screen.getByText("Unimos los productos que agregaste con los de tu cuenta")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar aviso de carrito" }));
+
+    expect(useChatStore.getState().avisoCarrito).toBeNull();
+  });
+
   it("en el inicio muestra el menú, el logo y el badge del carrito", () => {
     useChatStore.setState({ carrito: { lineas: [], subtotal: 0, count: 3 } });
     montar(shell("home"));
