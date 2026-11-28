@@ -32,14 +32,15 @@ export function ListaDevoluciones({
           <div className="flex justify-between gap-3 text-[14px]"><span className="text-text-secondary">Solicitud</span><span>{d.fecha}</span></div>
           <div className="flex justify-between gap-3 text-[14px]"><span className="text-text-secondary">Motivo</span><span className="text-right">{d.motivo}</span></div>
           {d.estadoReembolso && <div className="flex justify-between gap-3 text-[14px]"><span className="text-text-secondary">Reembolso</span><span>{d.estadoReembolso}</span></div>}
-          <button
-            type="button"
-            disabled={!onSeleccionar}
-            onClick={() => onSeleccionar?.(d.devolucionId)}
-            className="wf-btn mt-1 py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink disabled:opacity-45 disabled:cursor-not-allowed"
-          >
-            VER SOLICITUD
-          </button>
+          {onSeleccionar && (
+            <button
+              type="button"
+              onClick={() => onSeleccionar(d.devolucionId)}
+              className="wf-btn mt-1 py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink"
+            >
+              VER SOLICITUD
+            </button>
+          )}
         </div>
       ))}
     </div>

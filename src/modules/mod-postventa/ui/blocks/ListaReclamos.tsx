@@ -30,14 +30,15 @@ export function ListaReclamos({
           {r.pedidoId && <div className="flex justify-between gap-3 text-[14px]"><span className="text-text-secondary">Pedido</span><span>{r.pedidoId}</span></div>}
           <div className="flex justify-between gap-3 text-[14px]"><span className="text-text-secondary">Motivo</span><span className="text-right">{r.motivo}</span></div>
           {r.fechaLimiteSLA && <div className="flex justify-between gap-3 text-[14px]"><span className="text-text-secondary">Plazo</span><span>{r.fechaLimiteSLA}</span></div>}
-          <button
-            type="button"
-            disabled={!onSeleccionar}
-            onClick={() => onSeleccionar?.(r.codigoSeguimiento)}
-            className="wf-btn mt-1 py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink disabled:opacity-45 disabled:cursor-not-allowed"
-          >
-            VER RECLAMO
-          </button>
+          {onSeleccionar && (
+            <button
+              type="button"
+              onClick={() => onSeleccionar(r.codigoSeguimiento)}
+              className="wf-btn mt-1 py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink"
+            >
+              VER RECLAMO
+            </button>
+          )}
         </div>
       ))}
     </div>
