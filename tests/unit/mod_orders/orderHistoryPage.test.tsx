@@ -169,44 +169,13 @@ describe("OrderHistoryPage", () => {
     expect(push).toHaveBeenCalledWith("/");
   });
 
-  it("en 'Entregados' muestra fallback neutro 'Anulado' y reembolso para pedidos ANULADO sin motivo", async () => {
+  it("en 'Entregados' muestra pedidos con estado ANULADO con su etiqueta sin inventar reembolso (SPEC-17 :121)", async () => {
     renderPage();
     fireEvent.click(screen.getByText("Entregados"));
 
     await waitFor(() => expect(screen.getByText("Pedido PED-2026-00003")).toBeDefined());
     expect(screen.getAllByText("Anulado").length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByText("Anulado por falta de stock")).toBeNull();
-    expect(
-      screen.getByText("Si corresponde un reembolso, se procesará al medio de pago original.")
-    ).toBeDefined();
-  });
-
-  it("en 'Entregados' muestra 'Anulado por falta de stock' cuando el pedido trae motivo de stock", async () => {
-    listarPedidos.mockResolvedValueOnce({
-      items: [
-        {
-          pedidoId: "PED-2026-00004",
-          canal: "CHATBOT",
-          estado: "ANULADO",
-          estadoEtiqueta: "Anulado",
-          motivo: "STOCK_NO_DISPONIBLE",
-          total: 120,
-          moneda: "PEN",
-          fechaCreacion: "2026-10-29T10:00:00Z",
-        },
-      ],
-      total: 1,
-      page: 1,
-      pageSize: 20,
-    });
-    renderPage();
-    fireEvent.click(screen.getByText("Entregados"));
-
-    await waitFor(() => expect(screen.getByText("Pedido PED-2026-00004")).toBeDefined());
-    expect(screen.getAllByText("Anulado por falta de stock").length).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getByText("Si corresponde un reembolso, se procesará al medio de pago original.")
-    ).toBeDefined();
+    expect(screen.queryByText(/Si corresponde un reembolso/)).toBeNull();
   });
 
   it("muestra estado de error y permite reintentar la consulta de pedidos", async () => {

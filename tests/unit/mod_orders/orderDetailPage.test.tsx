@@ -154,6 +154,7 @@ describe("OrderDetailPage", () => {
     renderPage();
 
     expect(await screen.findByText("Pedido PED-2026-00002")).toBeDefined();
+    expect(screen.getByText(/Anulado el/)).toBeDefined();
     expect(screen.getAllByText("Anulado por falta de stock").length).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText(/El pedido fue anulado debido a que no hay stock disponible/i)
@@ -166,7 +167,7 @@ describe("OrderDetailPage", () => {
     expect(screen.queryByText(/Slot CSAT/)).toBeNull();
   });
 
-  it("muestra fallback neutro 'Anulado' cuando el pedido está ANULADO sin motivo", async () => {
+  it("muestra fallback neutro 'Anulado' cuando el pedido está ANULADO sin motivo ni reembolso", async () => {
     obtenerPedido.mockResolvedValue({
       ...PEDIDO,
       estado: "ANULADO",
@@ -181,9 +182,7 @@ describe("OrderDetailPage", () => {
     expect(await screen.findByText("Pedido PED-2026-00002")).toBeDefined();
     expect(screen.getByText("El pedido fue anulado.")).toBeDefined();
     expect(screen.queryByText("Anulado por falta de stock")).toBeNull();
-    expect(
-      screen.getByText("Si corresponde un reembolso, se procesará al medio de pago original.")
-    ).toBeDefined();
+    expect(screen.queryByText("Reembolso")).toBeNull();
   });
 
   it("renderiza esqueleto accesible de carga mientras consulta el pedido", () => {

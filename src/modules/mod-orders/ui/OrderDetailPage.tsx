@@ -7,7 +7,7 @@ import { CheckIcon, TruckIcon, XIcon } from "@/shared/ui/icons";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { container } from "@/shared/di/container";
 import { httpStatus, problemCode } from "@/shared/api/httpError";
-import { resolverInfoAnulacion } from "@/modules/mod-orders/domain/utils/anulacionUtils";
+import { resolverInfoAnulacion, sanitizarMotivoHito } from "@/modules/mod-orders/domain/utils/anulacionUtils";
 
 const DATE_TIME = new Intl.DateTimeFormat("es-PE", {
   day: "2-digit",
@@ -185,10 +185,12 @@ export function OrderDetailPage({ csatSlot }: { csatSlot?: ReactNode }) {
           <p className="text-[13px] text-text-primary">
             {infoAnulacion.descripcionMotivo}
           </p>
-          <div className="pt-2 border-t border-error-default/20 flex flex-col gap-0.5 text-[12px]">
-            <span className="font-bold text-text-primary">Reembolso</span>
-            <span className="text-text-secondary">{infoAnulacion.reembolsoTexto}</span>
-          </div>
+          {infoAnulacion.reembolsoTexto ? (
+            <div className="pt-2 border-t border-error-default/20 flex flex-col gap-0.5 text-[12px]">
+              <span className="font-bold text-text-primary">Reembolso</span>
+              <span className="text-text-secondary">{infoAnulacion.reembolsoTexto}</span>
+            </div>
+          ) : null}
         </section>
       )}
 
@@ -290,9 +292,9 @@ export function OrderDetailPage({ csatSlot }: { csatSlot?: ReactNode }) {
                     </p>
                     <p className="text-[11px] uppercase tracking-wide text-text-secondary">{hito.estado}</p>
                     <p className="text-[12px] text-text-secondary">{formatDateTime(hito.fecha)}</p>
-                    {hito.motivo ? (
+                    {sanitizarMotivoHito(hito.motivo) ? (
                       <p className="text-[12px] text-error-default font-medium mt-0.5">
-                        Motivo: {hito.motivo === "STOCK_NO_DISPONIBLE" ? "Falta de stock" : hito.motivo}
+                        Motivo: {sanitizarMotivoHito(hito.motivo)}
                       </p>
                     ) : null}
                   </div>

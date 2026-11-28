@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon, XIcon } from "@/shared/ui/icons";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { container } from "@/shared/di/container";
-import { resolverInfoAnulacion } from "@/modules/mod-orders/domain/utils/anulacionUtils";
 
 type Tab = "proceso" | "entregados" | "reembolso" | "reclamos";
 
@@ -143,7 +142,6 @@ export function OrderHistoryPage({
             </div>
           )}
           {visibleOrders.map((order) => {
-            const infoAnulacion = resolverInfoAnulacion(order);
             const esAnulado = order.estado === "ANULADO";
 
             return (
@@ -154,7 +152,7 @@ export function OrderHistoryPage({
                     variant={order.estado === "ENTREGADO" ? "success" : esAnulado ? "error" : "warning"}
                     icon={order.estado === "ENTREGADO" ? <CheckIcon size={16} /> : esAnulado ? <XIcon size={16} /> : <TruckIcon size={16} />}
                   >
-                    {esAnulado && infoAnulacion.esFaltaStock ? "Anulado por falta de stock" : order.estadoEtiqueta}
+                    {order.estadoEtiqueta}
                   </StatusBadge>
                 </div>
                 <div className="flex justify-between text-[14px]">
@@ -165,22 +163,6 @@ export function OrderHistoryPage({
                   <span className="text-text-secondary">Creado</span>
                   <span>{formatDate(order.fechaCreacion)}</span>
                 </div>
-
-                {esAnulado && (
-                  <div
-                    role="region"
-                    aria-label={`Información de anulación y reembolso del pedido ${order.pedidoId}`}
-                    className="rounded bg-error-background/15 border border-error-default/20 p-2.5 flex flex-col gap-1 text-[12px]"
-                  >
-                    <div className="flex items-center gap-1.5 text-error-default font-bold">
-                      <XIcon size={16} className="shrink-0" />
-                      <span>{infoAnulacion.tituloMotivo}</span>
-                    </div>
-                    <p className="text-text-secondary">
-                      <strong className="text-text-primary font-semibold">Reembolso:</strong> {infoAnulacion.reembolsoTexto}
-                    </p>
-                  </div>
-                )}
 
                 <button onClick={() => router.push(`/pedido?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
                   className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary">

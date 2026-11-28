@@ -2,42 +2,86 @@
  * Utilidades para resolver motivo de anulación y aviso de reembolso (SPEC-17, RN-SGT-07).
  */
 
-export type ReembolsoInfo = {
-  estado?: string | null;
-  monto?: number | null;
-  moneda?: string | null;
-  fecha?: string | null;
-  mensaje?: string | null;
-};
-
 export type InfoAnulacion = {
   esAnulado: boolean;
   esFaltaStock: boolean;
   tituloMotivo: string;
   descripcionMotivo: string;
-  reembolsoTexto: string;
+  reembolsoTexto: string | null;
 };
 
-export function esMotivoFaltaStock(motivoRaw?: string | null, etiqueta?: string | null): boolean {
-  if (!motivoRaw && !etiqueta) return false;
-  const texto = `${motivoRaw ?? ""} ${etiqueta ?? ""}`.toUpperCase();
+export const MOTIVOS_CONOCIDOS: Record<
+  string,
+  { esStock: boolean; descripcion: string; etiquetaHito: string }
+> = {
+  STOCK_NO_DISPONIBLE: {
+    esStock: true,
+    descripcion:
+      "El pedido fue anulado debido a que no hay stock disponible para completar tu compra.",
+    etiquetaHito: "Falta de stock",
+  },
+  FALTA_DE_STOCK: {
+    esStock: true,
+    descripcion:
+      "El pedido fue anulado debido a que no hay stock disponible para completar tu compra.",
+    etiquetaHito: "Falta de stock",
+  },
+  PAGO_NO_COMPLETADO: {
+    esStock: false,
+    descripcion: "El pedido fue anulado porque el pago no fue completado.",
+    etiquetaHito: "Pago no completado",
+  },
+  SOLICITUD_CLIENTE: {
+    esStock: false,
+    descripcion: "El pedido fue anulado a solicitud del cliente.",
+    etiquetaHito: "Solicitud del cliente",
+  },
+};
+
+export function esMotivoFaltaStock(motivoRaw?: string | null): boolean {
+  if (!motivoRaw) return false;
+  const normalizado = motivoRaw.trim().toUpperCase();
   return (
-    texto.includes("STOCK_NO_DISPONIBLE") ||
-    texto.includes("FALTA DE STOCK") ||
-    texto.includes("FALTA_DE_STOCK") ||
-    texto.includes("STOCK_INSUFICIENTE") ||
-    texto.includes("AGOTADO") ||
-    texto.includes("STOCK")
+    normalizado === "STOCK_NO_DISPONIBLE" ||
+    normalizado === "FALTA_DE_STOCK" ||
+    normalizado.includes("STOCK")
   );
+}
+
+/** Sanitiza motivos de historial para no exponer detalles internos arbitrarios (SPEC-17 :123-126). */
+export function sanitizarMotivoHito(motivoRaw?: string | null): string | null {
+  if (!motivoRaw) return null;
+  const normalizado = motivoRaw.trim().toUpperCase();
+  if (MOTIVOS_CONOCIDOS[normalizado]) {
+    return MOTIVOS_CONOCIDOS[normalizado].etiquetaHito;
+  }
+  return null;
+}
+
+function formatFechaAnulado(fechaIso?: string | null): string {
+  if (!fechaIso) return "";
+  try {
+    const d = new Date(fechaIso);
+    if (Number.isNaN(d.getTime())) return fechaIso;
+    return new Intl.DateTimeFormat("es-PE", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(d);
+  } catch {
+    return fechaIso;
+  }
 }
 
 export function resolverInfoAnulacion(pedido?: {
   estado?: string | null;
   estadoEtiqueta?: string | null;
+  fechaCreacion?: string | null;
   motivoAnulacion?: string | null;
-  motivo?: string | null;
-  reembolso?: string | ReembolsoInfo | null;
-  historial?: { estado: string; motivo?: string | null; etiqueta?: string | null }[];
+  reembolso?: string | null;
+  historial?: { estado: string; fecha?: string | null; motivo?: string | null }[];
 }): InfoAnulacion {
   const estado = (pedido?.estado ?? "").trim().toUpperCase();
   const esAnulado = estado === "ANULADO";
@@ -48,56 +92,31 @@ export function resolverInfoAnulacion(pedido?: {
       esFaltaStock: false,
       tituloMotivo: "",
       descripcionMotivo: "",
-      reembolsoTexto: "",
+      reembolsoTexto: null,
     };
   }
 
   const hitoAnulado = pedido?.historial?.find((h) => h.estado === "ANULADO");
-  const motivoRaw = (
-    pedido?.motivoAnulacion ??
-    pedido?.motivo ??
-    hitoAnulado?.motivo ??
-    ""
-  ).trim();
+  const fechaAnulacion = hitoAnulado?.fecha ?? pedido?.fechaCreacion;
+  const fechaTexto = formatFechaAnulado(fechaAnulacion);
+  const tituloMotivo = fechaTexto ? `Anulado el ${fechaTexto}` : "Anulado";
 
-  // Solo se clasifica como falta de stock si existe un motivo explícito que lo indique.
-  // Si el campo falta, el fallback es neutro ("Anulado") sin asumir falta de stock.
-  const tieneMotivoStock =
-    (motivoRaw && esMotivoFaltaStock(motivoRaw, pedido?.estadoEtiqueta)) ||
-    (hitoAnulado?.etiqueta && esMotivoFaltaStock(hitoAnulado.etiqueta));
+  // SPEC-17 :123-126: consume solo motivoAnulacion del BFF; motivo desconocido produce mensaje genérico
+  const motivoClave = (pedido?.motivoAnulacion ?? "").trim().toUpperCase();
+  const conocido = MOTIVOS_CONOCIDOS[motivoClave];
 
-  const esFaltaStock = Boolean(tieneMotivoStock);
-
-  let tituloMotivo = "Anulado";
+  let esFaltaStock = false;
   let descripcionMotivo = "El pedido fue anulado.";
 
-  if (esFaltaStock) {
-    tituloMotivo = "Anulado por falta de stock";
-    descripcionMotivo =
-      "El pedido fue anulado debido a que no hay stock disponible para completar tu compra.";
-  } else if (motivoRaw) {
-    tituloMotivo =
-      motivoRaw === "PAGO_NO_COMPLETADO"
-        ? "Pago no completado"
-        : motivoRaw;
-    descripcionMotivo = `El pedido fue anulado (${tituloMotivo}).`;
-  } else if (pedido?.estadoEtiqueta && pedido.estadoEtiqueta !== "Anulado") {
-    tituloMotivo = pedido.estadoEtiqueta;
-    descripcionMotivo = `El pedido fue anulado (${tituloMotivo}).`;
+  if (conocido) {
+    esFaltaStock = conocido.esStock;
+    descripcionMotivo = conocido.descripcion;
   }
 
-  let reembolsoTexto = "Si corresponde un reembolso, se procesará al medio de pago original.";
+  // SPEC-17 :119-121: sin promesa de reembolso si no hay reembolso / evidencia de pago
+  let reembolsoTexto: string | null = null;
   if (typeof pedido?.reembolso === "string" && pedido.reembolso.trim()) {
     reembolsoTexto = pedido.reembolso.trim();
-  } else if (pedido?.reembolso && typeof pedido.reembolso === "object") {
-    const r = pedido.reembolso as ReembolsoInfo;
-    if (r.mensaje) {
-      reembolsoTexto = r.mensaje;
-    } else if (typeof r.monto === "number") {
-      const prefijo = r.moneda === "USD" ? "$" : "S/";
-      const estadoReb = r.estado ? ` (${r.estado.toLowerCase()})` : "";
-      reembolsoTexto = `Reembolso de ${prefijo} ${r.monto.toFixed(2)}${estadoReb} al medio de pago original.`;
-    }
   }
 
   return {
