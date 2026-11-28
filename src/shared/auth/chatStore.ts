@@ -14,6 +14,8 @@ type ChatState = {
   expiraEn: number | null;
   chatSid: string | null;
   cliente: Cliente | null;
+  /** Error al consultar el perfil (503 / red) manteniendo la sesión activa (SPEC-03 :199-202). */
+  errorPerfil: string | null;
   carrito: CarritoUI;
   accionPendiente: string | null;
   /** Abre el modal de login/registro global (AppShell). */
@@ -32,6 +34,7 @@ type ChatState = {
   setUltimaConversacionId: (id: string | null) => void;
   setToken: (t: string | null) => void;
   setCliente: (c: Cliente | null) => void;
+  setErrorPerfil: (err: string | null) => void;
   setExpiraEn: (v: number | null) => void;
   /** Stores a freshly opened session (SPEC-03 Req. 1/2/5). */
   applySession: (token: string, expiresIn: number, cliente?: Cliente | null) => void;
@@ -72,6 +75,7 @@ export const useChatStore = create<ChatState>()(
       expiraEn: null,
       chatSid: null,
       cliente: null,
+      errorPerfil: null,
       carrito: carritoVacio,
       accionPendiente: null,
       authOpen: false,
@@ -88,6 +92,7 @@ export const useChatStore = create<ChatState>()(
         });
       },
       setCliente: (cliente) => set({ cliente }),
+      setErrorPerfil: (errorPerfil) => set({ errorPerfil }),
       setExpiraEn: (expiraEn) => set({ expiraEn }),
       applySession: (accessToken, expiresIn, cliente) => {
         sincronizarCookieSesion(true);
@@ -118,6 +123,7 @@ export const useChatStore = create<ChatState>()(
           accessToken: null,
           expiraEn: null,
           cliente: null,
+          errorPerfil: null,
           carrito: carritoVacio,
           accionPendiente: null,
           ultimoPedido: null,

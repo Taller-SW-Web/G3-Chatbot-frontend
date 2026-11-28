@@ -251,6 +251,35 @@ describe("AppShell", () => {
     expect(api.refreshSession).toHaveBeenCalledTimes(1);
   });
 
+  it("tolera fallo 503 en fetchProfile conservando la sesión activa y exponiendo errorPerfil (SPEC-03)", async () => {
+    api.refreshSession.mockResolvedValue({
+      accessToken: "jwt-sesion-activa",
+      expiresIn: 900,
+      usuario: { id: "u1", nombreCompleto: "Ana", correo: "ana@ejemplo.pe" },
+    });
+    api.fetchProfile.mockRejectedValue({ status: 503 });
+
+    montar(shell("home"));
+
+    await waitFor(() => expect(useChatStore.getState().accessToken).toBe("jwt-sesion-activa"));
+    expect(useChatStore.getState().errorPerfil).toBe("No pudimos cargar tus datos en este momento");
+  });
+
+  it("propaga 401 en fetchProfile y limpia la sesión activa (SPEC-03 :141)", async () => {
+    api.refreshSession.mockResolvedValue({
+      accessToken: "jwt-invalido",
+      expiresIn: 900,
+      usuario: { id: "u1", nombreCompleto: "Ana", correo: "ana@ejemplo.pe" },
+    });
+    api.fetchProfile.mockRejectedValue({ status: 401 });
+
+    montar(shell("home"));
+
+    await waitFor(() => expect(api.fetchProfile).toHaveBeenCalled());
+    await waitFor(() => expect(useChatStore.getState().accessToken).toBeNull());
+    expect(useChatStore.getState().cliente).toBeNull();
+  });
+
   it("recuerda la conversación abierta para ubicar el carrito anónimo", async () => {
     montar(shell("chat", "11111111-1111-4111-8111-111111111111"));
     await waitFor(() =>
