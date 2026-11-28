@@ -146,20 +146,31 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   });
 
   const lineas = carrito?.lineas ?? [];
+  const lineasDisponibles = lineas.filter((l) => l.disponible);
+  const tieneLineasDisponibles = lineasDisponibles.length > 0;
+  const promocionesOk = carrito?.promociones_ok !== false;
+
+  // SPEC-11 / SPEC-14: el checkout solo se bloquea si no hay NINGUNA línea disponible,
+  // si el carrito está vacío o si las promociones fallan. Las líneas no disponibles se excluyen.
   const puedePagar = Boolean(
     carrito &&
       lineas.length > 0 &&
-      carrito.promociones_ok !== false &&
-      lineas.every((l) => l.disponible)
+      promocionesOk &&
+      tieneLineasDisponibles
   );
 
   let motivoBloqueo = "";
-  if (!carrito || lineas.length === 0) {
-    motivoBloqueo = "El carrito está vacío.";
-  } else if (carrito.promociones_ok === false) {
+  if (!carrito || carritoQuery.isLoading) {
+    motivoBloqueo = "";
+  } else if (lineas.length === 0) {
+    motivoBloqueo = "Tu carrito está vacío.";
+  } else if (!promocionesOk) {
     motivoBloqueo = "No pudimos calcular promociones en este momento.";
-  } else if (!lineas.every((l) => l.disponible)) {
-    motivoBloqueo = "Hay productos sin stock disponible en el carrito.";
+  } else if (!tieneLineasDisponibles) {
+    const todosAgotados = lineas.every((l) => l.nota?.toLowerCase().includes("agotad"));
+    motivoBloqueo = todosAgotados
+      ? "Los productos de tu carrito están agotados."
+      : "Los productos de tu carrito ya no están disponibles.";
   }
 
   function irAPagar() {
@@ -276,7 +287,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
                   <div className="text-[13px] text-text-secondary mt-1"><PriceTag price={parseAmount(it.precio)} /></div>
                   {!it.disponible && (
                     <p data-testid="linea-no-disponible" className="text-[12px] font-bold text-error-default">
-                      Ya no disponible
+                      {it.nota?.toLowerCase().includes("agotad") ? "Agotado" : "Ya no disponible"}
                     </p>
                   )}
                   {it.nota && <p className="text-[12px] text-text-secondary">{sanitize(it.nota)}</p>}
@@ -475,8 +486,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
         <button
           onClick={irAPagar}
           disabled={!puedePagar}
-          aria-disabled={!puedePagar}
-          aria-describedby={!puedePagar ? "motivo-bloqueo-pago" : undefined}
+          aria-describedby={!puedePagar && motivoBloqueo ? "motivo-bloqueo-pago" : undefined}
           data-testid="btn-ir-a-pagar"
           className="wf-btn py-3.5 text-sm font-bold tracking-wide bg-action-primary text-surface-ink hover:bg-action-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -485,6 +495,11 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
         {!puedePagar && motivoBloqueo && (
           <p id="motivo-bloqueo-pago" role="status" className="text-[12px] text-text-secondary text-center">
             {motivoBloqueo}
+          </p>
+        )}
+        {puedePagar && lineas.some((l) => !l.disponible) && (
+          <p role="status" className="text-[12px] text-text-secondary text-center">
+            Las líneas no disponibles quedan excluidas del pago.
           </p>
         )}
       </div>

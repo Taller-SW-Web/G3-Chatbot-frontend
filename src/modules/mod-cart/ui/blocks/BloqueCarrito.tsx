@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { CartDiscounts } from "@/modules/mod-cart/ui/CartDiscounts";
 import { PriceTag } from "@/modules/mod-catalog/public";
 import { parseAmount } from "@/modules/mod-catalog/public";
@@ -19,20 +20,29 @@ export function BloqueCarrito({
   onVerCarrito: () => void;
   onPagar: () => void;
 }) {
+  const motivoId = useId();
   const lineas = datos.lineas ?? [];
+  const lineasDisponibles = lineas.filter((l) => l.disponible);
+  const tieneLineasDisponibles = lineasDisponibles.length > 0;
+  const promocionesOk = datos.promociones_ok !== false;
+
+  // SPEC-11 / SPEC-14: El checkout solo se bloquea si el carrito queda sin ninguna línea disponible
   const puedePagar = Boolean(
     lineas.length > 0 &&
-      datos.promociones_ok !== false &&
-      lineas.every((l) => l.disponible)
+      promocionesOk &&
+      tieneLineasDisponibles
   );
 
   let motivoBloqueo = "";
   if (lineas.length === 0) {
-    motivoBloqueo = "El carrito está vacío.";
-  } else if (datos.promociones_ok === false) {
+    motivoBloqueo = "Tu carrito está vacío.";
+  } else if (!promocionesOk) {
     motivoBloqueo = "No pudimos calcular promociones en este momento.";
-  } else if (!lineas.every((l) => l.disponible)) {
-    motivoBloqueo = "Hay productos sin stock disponible en el carrito.";
+  } else if (!tieneLineasDisponibles) {
+    const todosAgotados = lineas.every((l) => l.nota?.toLowerCase().includes("agotad"));
+    motivoBloqueo = todosAgotados
+      ? "Los productos de tu carrito están agotados."
+      : "Los productos de tu carrito ya no están disponibles.";
   }
 
   const total = datos.total ?? datos.subtotal;
@@ -50,7 +60,7 @@ export function BloqueCarrito({
             {sanitize(l.nombre)} · {l.cantidad}
             {!l.disponible && (
               <span data-testid="linea-no-disponible" className="ml-1 text-error-default">
-                — Ya no disponible
+                — {l.nota?.toLowerCase().includes("agotad") ? "Agotado" : "Ya no disponible"}
               </span>
             )}
           </span>
@@ -82,8 +92,7 @@ export function BloqueCarrito({
         <button
           onClick={puedePagar ? onPagar : undefined}
           disabled={!puedePagar}
-          aria-disabled={!puedePagar}
-          aria-describedby={!puedePagar ? "motivo-bloqueo-pago-chat" : undefined}
+          aria-describedby={!puedePagar && motivoBloqueo ? motivoId : undefined}
           data-testid="btn-pagar"
           className="wf-btn py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -91,7 +100,7 @@ export function BloqueCarrito({
         </button>
       </div>
       {!puedePagar && motivoBloqueo && (
-        <p id="motivo-bloqueo-pago-chat" role="status" className="text-[11px] text-text-secondary">
+        <p id={motivoId} role="status" className="text-[11px] text-text-secondary">
           {motivoBloqueo}
         </p>
       )}
