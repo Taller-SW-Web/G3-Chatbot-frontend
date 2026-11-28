@@ -18,7 +18,7 @@ El canal conversacional es **estrictamente mobile-first**:
 * El job levanta un **mock mínimo del backend** (`scripts/lighthouse/mock-api.mjs`) que responde catálogo y carrito vacíos. Así el LCP mide el render del UI y no el retry del catálogo cuando el backend no existe; el mock corre junto a `next start` mediante `scripts/lighthouse/serve.mjs`.
 * El sidebar del chat y el modal de auth se cargan bajo demanda (`React.lazy`); el logo usa `sizes` para no descargar una imagen de 3840 px. El detalle de producto no se puede separar del chunk del catálogo sin cambiar la superficie pública de `mod-catalog` (también la usa el chat): queda como follow-up.
 * La home ya no importa el grafo de UI del chat (markdown, bloques, SSE) en el render inicial: el límite del compositor vive en `shared/config/chatContract.ts` y la conversación se crea con `import()` al enviar el primer mensaje.
-* `/carrito` renderiza su shell (totales, CTA y mensaje de carga) en el servidor; el estado vacío deja de ser el LCP porque ya no espera a la hidratación ni a `GET /carrito` (fix de [#164](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/issues/164)).
+* `/carrito` se decide en el servidor con la cookie `chat_cart_present`: sin carrito pinta el estado vacío en el primer HTML y con carrito pinta el shell (totales, CTA y mensaje de carga). El LCP ya no espera a la hidratación ni a `GET /carrito` (fix de [#164](https://github.com/Taller-SW-Web/G3-Chatbot-frontend/issues/164)).
 * `/privacidad` y `/terminos` son Server Components: solo el botón "volver" hidrata.
 * Un fallo en cualquier presupuesto con nivel `error` tumba el job `lighthouse` y, en consecuencia, el gate requerido `check` de `.github/workflows/ci.yml`, bloqueando el merge hacia `development`.
 
@@ -88,7 +88,7 @@ Corrida local con el mismo preset móvil (`throttlingMethod: "devtools"`, CPU 4x
 
 Qué cambió:
 
-1. **`/carrito`:** el shell con totales, CTA y el mensaje "Preparando tu carrito" se renderiza en servidor. El elemento LCP pasó de ser el párrafo del estado vacío (pintado tras hidratar y resolver el GET, ~3.6 s de `elementRenderDelay`) al shell del primer render.
+1. **`/carrito`:** la página se renderiza en el servidor según la cookie `chat_cart_present`. Sin cookie, el estado vacío forma parte del primer HTML; con cookie, el shell (totales, CTA y "Preparando tu carrito") es el primer HTML y las líneas llegan al resolver el GET. El elemento LCP ya no es un párrafo insertado tras hidratar (~3.6 s de `elementRenderDelay`): es el contenido del primer render. Además, `screen-enter` ya no anima `opacity` para que el contenido sea visible aunque la hidratación bloquee el hilo principal.
 2. **`/`:** la home dejó de importar `mod-chat/public` en el grafo inicial. Eso eliminó del primer render los chunks de markdown/micromark (~209 KB raw) y los schemas Zod que arrastraba el chat (~147 KB raw). El JS transferido bajó 26% y el TBT pasó de 318–944 ms a 108–118 ms en las 3 corridas.
 3. **Páginas estáticas:** `/privacidad` y `/terminos` dejaron de hidratar su contenido (solo hidrata el botón "volver"). El sidebar y el modal de auth ya eran `React.lazy`; separar el detalle de producto exige cambiar la superficie pública de `mod-catalog` (el chat también consume `DetalleProducto`), así que se documenta como follow-up en lugar de forzar un split que el barrel volvería a incluir.
 
@@ -126,7 +126,7 @@ Si cualquier presupuesto marcado como `error` es superado, el job `lighthouse` f
 
 * **Estado:** **retirada**. El techo temporal de $\text{LCP} \le 4800\text{ ms}$ para `/carrito` ya no aplica: las 4 URLs auditadas exigen $\text{LCP} \le 2500\text{ ms}$.
 * **Historia:** la excepción se aprobó el 2026-11-27 en la revisión del PR #180 porque el estado vacío de `/carrito` aparecía después de la hidratación y de `GET /carrito`. Con throttling DevTools y 3 corridas, CI midió $3971\text{ ms}$ en `/carrito`, frente a $1762\text{ ms}$ en `/`, $1668\text{ ms}$ en `/buscar` y $1559\text{ ms}$ en `/privacidad`.
-* **Causa y fix:** el LCP era el párrafo del estado vacío insertado tras hidratar. Ahora el shell de `/carrito` (totales, CTA y mensaje de carga) se pinta en el servidor y el estado vacío llega después sin superar el área ya pintada. El detalle está en §4.2.
+* **Causa y fix:** el LCP era el párrafo del estado vacío insertado tras hidratar. Ahora el servidor decide entre estado vacío y shell con la cookie `chat_cart_present`, y la animación de entrada no oculta el contenido con `opacity: 0`. El detalle está en §4.2.
 * **Evidencia:** medición local del 2026-11-28 en §4.2: LCP de `/carrito` $1758\text{ ms}$ y TBT $111\text{ ms}$ (medianas de 3 corridas). La confirmación en el runner compartido es el job `lighthouse` del PR que integra el fix; si ese run no cumple, el merge queda bloqueado por el gate.
 * **TBT:** el techo de CI se mantiene en $\le 350\text{ ms}$ como margen de varianza del runner de 2 vCPUs; el objetivo de producto sigue en $\le 200\text{ ms}$ y la mediana local bajó a 103–113 ms en las 4 URLs.
 * **Presupuestos estrictos sin excepción:** Accesibilidad ($\ge 0.90$), CLS ($\le 0.10$), scripts JS ($\le 600\text{ KB}$) y tamaño total ($\le 1.8\text{ MB}$) operan en nivel `error` estricto y bloqueante.
