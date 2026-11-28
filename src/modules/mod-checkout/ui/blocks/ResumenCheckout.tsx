@@ -14,7 +14,7 @@ export function ResumenCheckout({
       <div className="flex justify-between text-[14px]"><span className="text-text-secondary">Entrega</span><span className="font-semibold text-right">{direccion}</span></div>
       <div className="flex justify-between text-[14px]"><span className="text-text-secondary">Tarjeta</span><span className="font-semibold">•••• {tarjetaLast4}</span></div>
       <div className="flex justify-between text-[14px] border-t border-dashed border-border-default pt-2 mt-1">
-        <span className="text-text-secondary">Total</span><span className="font-heading text-[20px]">S/ {total}.00</span>
+        <span className="text-text-secondary">Total</span><span className="font-heading text-[20px]">S/ {Number(total).toFixed(2)}</span>
       </div>
     </div>
   );

@@ -126,6 +126,21 @@ function llenarDireccionValida() {
   });
 }
 
+function llenarTarjetaValida() {
+  fireEvent.change(screen.getByPlaceholderText("Nombre del titular de la tarjeta"), {
+    target: { value: "Diego Comprador" },
+  });
+  fireEvent.change(screen.getByPlaceholderText(/Número de tarjeta/i), {
+    target: { value: "4111 1111 1111 1111" },
+  });
+  fireEvent.change(screen.getByPlaceholderText("MM/AA"), {
+    target: { value: "12/28" },
+  });
+  fireEvent.change(screen.getByPlaceholderText(/CVV/i), {
+    target: { value: "123" },
+  });
+}
+
 /** El checkout cotiza el envío con React Query (SPEC-12): necesita su provider. */
 function renderCheckout() {
   const queryClient = new QueryClient({
@@ -265,6 +280,7 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
     mockApi.pagarCheckout.mockResolvedValueOnce({
       id: "att-uuid-1",
       checkoutId: "chk-uuid-1",
+      orderId: "PED-REAL-1",
       resultado: "APROBADO",
       marca: "VISA",
       ultimos4: "1111",
@@ -626,5 +642,107 @@ describe("CheckoutPage (SPEC-14, H4-F3)", () => {
 
     await waitFor(() => expect(mockApi.iniciarCheckout).toHaveBeenCalled());
     expect(mockApi.iniciarCheckout.mock.calls[0][0]).toMatchObject({ guardarDireccion: true });
+  });
+
+  it("pago sin orderId muestra error y no navega a /exito", async () => {
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-sin-order-id",
+      total: 132.5,
+      intentosRestantes: 3,
+      summary: {},
+    });
+    mockApi.pagarCheckout.mockResolvedValueOnce({
+      id: "pay-1",
+      checkoutId: "chk-sin-order-id",
+      resultado: "APROBADO",
+      monto: 132.5,
+      marca: "Visa",
+      ultimos4: "4242",
+      // sin orderId
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    await screen.findByText("Paso 2 de 2");
+    llenarTarjetaValida();
+
+    const btnPagar = screen.getByRole("button", { name: /PAGAR/i });
+    await waitFor(() => expect(btnPagar.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btnPagar);
+
+    expect(
+      await screen.findByText("No se pudo obtener el identificador del pedido confirmado.")
+    ).toBeDefined();
+    expect(navMock.push).not.toHaveBeenCalledWith("/exito");
+  });
+
+  it("timer agotado o 410: 'Volver a intentar' crea nuevo checkout y reinicia", async () => {
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-vencido",
+      total: 132.5,
+      intentosRestantes: 3,
+      summary: {},
+    });
+    mockApi.pagarCheckout.mockRejectedValueOnce({
+      response: { status: 410, data: { code: "CHECKOUT_EXPIRADO" } },
+    });
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-nuevo",
+      total: 132.5,
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    await screen.findByText("Paso 2 de 2");
+    llenarTarjetaValida();
+
+    const btnPagar = screen.getByRole("button", { name: /PAGAR/i });
+    await waitFor(() => expect(btnPagar.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btnPagar);
+
+    expect(
+      await screen.findByText("El checkout ha vencido hace más de 15 minutos. Tu carrito sigue guardado.")
+    ).toBeDefined();
+
+    const btnReintentar = screen.getByTestId("btn-reintentar-checkout");
+    fireEvent.click(btnReintentar);
+
+    await waitFor(() => expect(mockApi.iniciarCheckout).toHaveBeenCalledTimes(2));
+    expect(screen.queryByTestId("btn-reintentar-checkout")).toBeNull();
+  });
+
+  it("permite modificar dirección desde el paso 2 y volver al paso 1", async () => {
+    mockApi.iniciarCheckout.mockResolvedValueOnce({
+      id: "chk-uuid-mod",
+      cartId: "cart-uuid-1",
+      status: "PENDING_PAYMENT",
+      total: 132.5,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      intentosRestantes: 3,
+      summary: {},
+    });
+
+    renderCheckout();
+    llenarDireccionValida();
+    const btn = screen.getByRole("button", { name: /Continuar al pago/i });
+    await waitFor(() => expect(btn.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(btn);
+
+    await screen.findByText("Paso 2 de 2");
+    const volverBtn = screen.getByRole("button", { name: "VOLVER" });
+    fireEvent.click(volverBtn);
+
+    expect(await screen.findByRole("button", { name: /Continuar al pago/i })).toBeDefined();
+    expect(screen.getByText("Paso 1 de 2")).toBeDefined();
   });
 });

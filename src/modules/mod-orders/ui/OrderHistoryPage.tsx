@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon } from "@/shared/ui/icons";
+import { TruckIcon, CheckIcon, RefreshIcon, FileAlertIcon, XIcon } from "@/shared/ui/icons";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { container } from "@/shared/di/container";
 
@@ -101,9 +101,21 @@ export function OrderHistoryPage({
             </div>
           )}
           {pedidos.isError && (
-            <p className="text-[14px] text-error-default bg-white p-4 rounded-md border border-border-default text-center">
-              No puedo consultar tus pedidos en este momento.
-            </p>
+            <div role="alert" className="flex flex-col items-center gap-3 bg-white p-5 rounded-md border border-border-default text-center">
+              <p className="text-[14px] text-error-default font-medium">
+                No puedo consultar tus pedidos en este momento.
+              </p>
+              <p className="text-[13px] text-text-secondary">
+                Revisa tu conexión o intenta nuevamente.
+              </p>
+              <button
+                type="button"
+                onClick={() => void pedidos.refetch()}
+                className="wf-btn px-6 py-2.5 text-[12px] font-bold bg-action-primary text-surface-ink rounded-sm"
+              >
+                REINTENTAR
+              </button>
+            </div>
           )}
           {!pedidos.isLoading && !pedidos.isError && visibleOrders.length === 0 && (
             <div className="py-10 px-4 flex flex-col items-center justify-center text-center gap-3.5 bg-white rounded-md border border-border-default screen-enter my-1">
@@ -129,51 +141,56 @@ export function OrderHistoryPage({
               </button>
             </div>
           )}
-          {visibleOrders.map((order) => (
-            <div key={order.pedidoId} className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2 wf-card">
-              <div className="flex justify-between items-center">
-                <span className="text-[13px] text-text-secondary">Pedido {order.pedidoId}</span>
-                <StatusBadge
-                  variant={order.estado === "ENTREGADO" ? "success" : order.estado === "ANULADO" ? "error" : "warning"}
-                  icon={order.estado === "ENTREGADO" ? <CheckIcon size={16} /> : <TruckIcon size={16} />}
-                >
-                  {order.estadoEtiqueta}
-                </StatusBadge>
-              </div>
-              <div className="flex justify-between text-[14px]">
-                <span className="text-text-secondary">Total</span>
-                <span>S/ {order.total.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-[14px]">
-                <span className="text-text-secondary">Creado</span>
-                <span>{formatDate(order.fechaCreacion)}</span>
-              </div>
-              <button onClick={() => router.push(`/pedido?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
-                className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary">
-                VER DETALLE
-              </button>
-              <div className="grid grid-cols-2 gap-2 mt-1">
-                <button onClick={() => router.push(`/seguimiento?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
-                  className="wf-btn py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink inline-flex items-center justify-center gap-1">
-                  <TruckIcon size={16} />VER SEGUIMIENTO
+          {visibleOrders.map((order) => {
+            const esAnulado = order.estado === "ANULADO";
+
+            return (
+              <div key={order.pedidoId} className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2 wf-card">
+                <div className="flex justify-between items-center">
+                  <span className="text-[13px] text-text-secondary">Pedido {order.pedidoId}</span>
+                  <StatusBadge
+                    variant={order.estado === "ENTREGADO" ? "success" : esAnulado ? "error" : "warning"}
+                    icon={order.estado === "ENTREGADO" ? <CheckIcon size={16} /> : esAnulado ? <XIcon size={16} /> : <TruckIcon size={16} />}
+                  >
+                    {order.estadoEtiqueta}
+                  </StatusBadge>
+                </div>
+                <div className="flex justify-between text-[14px]">
+                  <span className="text-text-secondary">Total</span>
+                  <span>S/ {order.total.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-[14px]">
+                  <span className="text-text-secondary">Creado</span>
+                  <span>{formatDate(order.fechaCreacion)}</span>
+                </div>
+
+                <button onClick={() => router.push(`/pedido?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
+                  className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary">
+                  VER DETALLE
                 </button>
-                {tab === "entregados" && order.estado === "ENTREGADO" ? (
-                  <button onClick={() => router.push(`/reclamo?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
-                    className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-1">
-                    <FileAlertIcon size={16} />REPORTAR PROBLEMA
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button onClick={() => router.push(`/seguimiento?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
+                    className="wf-btn py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink inline-flex items-center justify-center gap-1">
+                    <TruckIcon size={16} />VER SEGUIMIENTO
                   </button>
-                ) : (
-                  <span />
-                )}
+                  {tab === "entregados" && order.estado === "ENTREGADO" ? (
+                    <button onClick={() => router.push(`/reclamo?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
+                      className="wf-btn py-2.5 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-1">
+                      <FileAlertIcon size={16} />REPORTAR PROBLEMA
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                </div>
+                {tab === "entregados" && order.estado === "ENTREGADO" ? (
+                  <button onClick={() => router.push(`/devolucion?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
+                    className="wf-btn py-2.5 px-3 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-2 text-center">
+                    <RefreshIcon size={16} className="shrink-0 ml-1" />SOLICITAR CAMBIO O DEVOLUCIÓN
+                  </button>
+                ) : null}
               </div>
-              {tab === "entregados" && order.estado === "ENTREGADO" ? (
-                <button onClick={() => router.push(`/devolucion?pedidoId=${encodeURIComponent(order.pedidoId)}`)}
-                  className="wf-btn py-2.5 px-3 text-[11px] font-bold bg-white border border-border-default text-text-primary inline-flex items-center justify-center gap-2 text-center">
-                  <RefreshIcon size={16} className="shrink-0 ml-1" />SOLICITAR CAMBIO O DEVOLUCIÓN
-                </button>
-              ) : null}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
