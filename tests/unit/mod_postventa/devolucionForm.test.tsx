@@ -100,8 +100,24 @@ describe("DevolucionForm", () => {
     })));
   });
 
-  it("permite quitar la evidencia antes de enviar", () => {
+  it("exige evidencia cuando el motivo es producto defectuoso", () => {
     abrir();
+
+    fireEvent.change(screen.getByLabelText("Motivo"), { target: { value: "PRODUCTO_DEFECTUOSO" } });
+
+    const enviar = screen.getByRole("button", { name: /ENVIAR SOLICITUD/ }) as HTMLButtonElement;
+    expect(screen.getByText("Este motivo exige al menos una evidencia.")).toBeDefined();
+    expect(enviar.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Subir evidencia"), {
+      target: { files: [new File(["x"], "suela.png", { type: "image/png" })] },
+    });
+
+    expect(screen.getByText("suela.png")).toBeDefined();
+    expect(enviar.disabled).toBe(false);
+  });
+
+  it("permite quitar la evidencia antes de enviar", () => {    abrir();
     const archivo = new File(["x"], "suela.png", { type: "image/png" });
 
     fireEvent.change(screen.getByLabelText("Subir evidencia"), { target: { files: [archivo] } });
