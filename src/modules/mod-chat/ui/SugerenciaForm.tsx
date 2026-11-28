@@ -52,7 +52,9 @@ export function SugerenciaForm({
   const [tipo, setTipo] = useState<"SUGERENCIA" | "BUG">("SUGERENCIA");
   const [titulo, setTitulo] = useState("");
   const [detalle, setDetalle] = useState("");
-  const [correoContacto, setCorreoContacto] = useState(correo);
+  const [correoEditado, setCorreoEditado] = useState<string | null>(null);
+  // El perfil puede llegar después del montaje: se usa el valor del cliente hasta que edite.
+  const correoContacto = correoEditado ?? correo;
   const [evidencia, setEvidencia] = useState<{ nombre: string; archivo: File } | null>(null);
   const [gracias, setGracias] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -140,7 +142,7 @@ export function SugerenciaForm({
           aria-label="Descripción de la experiencia" rows={5} maxLength={SUGERENCIA_DESCRIPCION_MAX} className="wf-input px-3 py-2.5 text-sm outline-none" />
         <p className="text-[11px] text-text-secondary text-right">{detalle.length}/{SUGERENCIA_DESCRIPCION_MAX}</p>
         {!valido && <p className="text-[11px] text-text-secondary">Completa el título (mín. 3) y la descripción (mín. 6) para activar Enviar.</p>}
-        <input value={correoContacto} onChange={(e) => setCorreoContacto(e.target.value)}
+        <input value={correoContacto} onChange={(e) => setCorreoEditado(e.target.value)}
           type="email" placeholder="Correo de contacto" aria-label="Correo de contacto" className="wf-input px-3 py-2.5 text-sm outline-none" />
         <input ref={fileRef} type="file" accept="image/jpeg,image/png" className="hidden" aria-label="Elegir captura de la biblioteca" onChange={(e) => handleFile(e.target.files?.[0])} />
         {!evidencia ? (

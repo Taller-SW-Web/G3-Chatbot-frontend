@@ -6,7 +6,7 @@ import { enviarSugerenciaUseCase } from "@/modules/mod-chat/application/enviarSu
 import { useChatStore } from "@/shared/auth/chatStore";
 import { container } from "@/shared/di/container";
 
-/** `/sugerencias`: reportar bug o enviar sugerencia con captura. */
+/** `/sugerencias`: reportar bug o enviar sugerencia con captura. Solo para clientes (SPEC-24 Req. 3). */
 export function SugerenciasPage() {
   const router = useRouter();
   const cliente = useChatStore((s) => s.cliente);
@@ -14,7 +14,7 @@ export function SugerenciasPage() {
   return (
     <div className="relative min-h-full p-4 flex flex-col gap-3">
       <SugerenciaForm
-        correo={cliente?.correo ?? "cliente.demo@correo.com"}
+        correo={cliente?.correo ?? ""}
         onEnviar={(input) =>
           enviarSugerenciaUseCase(container.chat, {
             tipo: input.tipo,

@@ -31,6 +31,7 @@ import { ADJUNTOS_MAX_POR_MENSAJE } from "@/modules/mod-chat/domain/entities/Adj
 import { AttachmentButton } from "@/modules/mod-chat/ui/AttachmentButton";
 import { AttachmentPreviewList } from "@/modules/mod-chat/ui/AttachmentPreviewList";
 import { AttachmentPrivacyNotice } from "@/modules/mod-chat/ui/AttachmentPrivacyNotice";
+import { AttachmentSourceSheet } from "@/modules/mod-chat/ui/AttachmentSourceSheet";
 
 const CLAVE_AVISO_ADJUNTOS = "chat-adjunto-privacidad";
 
@@ -68,7 +69,9 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
   const [eligeCategoria, setEligeCategoria] = useState(false);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const [avisoAdjuntos, setAvisoAdjuntos] = useState(false);
+  const [origenAdjuntos, setOrigenAdjuntos] = useState(false);
   const archivoAdjuntoRef = useRef<HTMLInputElement>(null);
+  const camaraAdjuntoRef = useRef<HTMLInputElement>(null);
   const adjuntos = useAdjuntosChat(conversationId);
   const accionOcupadaRef = useRef(false);
   /** Claves `mensajeId:acción:índice` ya ejecutadas; evita repetir al rehidratar. */
@@ -200,7 +203,7 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
       setAvisoAdjuntos(true);
       return;
     }
-    archivoAdjuntoRef.current?.click();
+    setOrigenAdjuntos(true);
   }
 
   function aceptarAvisoAdjuntos() {
@@ -210,7 +213,15 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
       // Sin localStorage el aviso vuelve a mostrarse: no bloquea el chat.
     }
     setAvisoAdjuntos(false);
-    archivoAdjuntoRef.current?.click();
+    setOrigenAdjuntos(true);
+  }
+
+  const cerrarOrigenAdjuntos = useCallback(() => setOrigenAdjuntos(false), []);
+
+  // Galería y cámara entran por el mismo `agregarArchivos`: mismas validaciones y el mismo límite.
+  function elegirOrigenAdjunto(origen: "galeria" | "camara") {
+    setOrigenAdjuntos(false);
+    (origen === "camara" ? camaraAdjuntoRef : archivoAdjuntoRef).current?.click();
   }
 
   async function ejecutarAccionRapida(accion: AccionRapidaChat) {
@@ -374,6 +385,19 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
               e.target.value = "";
             }}
           />
+          <input
+            ref={camaraAdjuntoRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            capture="environment"
+            className="hidden"
+            aria-label="Tomar foto con la cámara"
+            onChange={(e) => {
+              // Sin cámara o con el permiso denegado no llega archivo: no se adjunta nada.
+              if (e.target.files) adjuntos.agregarArchivos(e.target.files);
+              e.target.value = "";
+            }}
+          />
           <AttachmentButton
             onClick={abrirSelectorAdjuntos}
             disabled={bloqueado}
@@ -405,6 +429,13 @@ export function ChatPage({ conversationId }: { conversationId: string }) {
         <AttachmentPrivacyNotice
           onAceptar={aceptarAvisoAdjuntos}
           onCerrar={() => setAvisoAdjuntos(false)}
+        />
+      )}
+      {origenAdjuntos && (
+        <AttachmentSourceSheet
+          onGaleria={() => elegirOrigenAdjunto("galeria")}
+          onCamara={() => elegirOrigenAdjunto("camara")}
+          onCerrar={cerrarOrigenAdjuntos}
         />
       )}
     </div>
