@@ -114,11 +114,33 @@ describe("ReclamoForm", () => {
     expect((screen.getByLabelText("Solución esperada") as HTMLInputElement).value).toBe(solucion);
   });
 
+  it("sin documento muestra validación visible al enviar", async () => {
+    abrir();
+    fireEvent.change(screen.getByLabelText(/Descripci.n del reclamo/), { target: { value: DESCRIPCION } });
+    fireEvent.change(screen.getByLabelText("Documento"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR RECLAMO/ }));
+
+    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(screen.getByText("Documento requerido")).toBeDefined();
+    expect(onOk).not.toHaveBeenCalled();
+  });
+
   it("cancela sin enviar", () => {
     abrir();
     fireEvent.click(screen.getByRole("button", { name: "CANCELAR" }));
 
     expect(onCancelar).toHaveBeenCalledTimes(1);
+    expect(onOk).not.toHaveBeenCalled();
+  });
+
+  it("muestra error cuando el teléfono está vacío", async () => {
+    abrir();
+    fireEvent.change(screen.getByLabelText(/Descripci.n del reclamo/), { target: { value: DESCRIPCION } });
+    fireEvent.change(screen.getByLabelText("Documento"), { target: { value: "12345678" } });
+    fireEvent.change(screen.getByLabelText(/Tel.fono/), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR RECLAMO/ }));
+
+    expect(await screen.findByText("Teléfono requerido")).toBeDefined();
     expect(onOk).not.toHaveBeenCalled();
   });
 });

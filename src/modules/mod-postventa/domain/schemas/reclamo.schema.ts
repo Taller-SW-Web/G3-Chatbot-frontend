@@ -28,6 +28,8 @@ export const reclamoSchema = z.object({
   tipo: z.enum(["RECLAMO", "QUEJA"]),
   motivo: z.enum(RECLAMO_MOTIVO_VALUES),
   descripcion: z.string().min(20, "Describe lo ocurrido (mín 20 caracteres)").max(1000),
+  nombre: z.string().optional(),
+  email: z.union([z.string().email("Correo inválido"), z.literal("")]).optional(),
   documento: z.string().min(1, "Documento requerido").max(20),
   telefono: z.string().min(1, "Teléfono requerido").max(20),
   solucion: z.string().max(500).optional(),

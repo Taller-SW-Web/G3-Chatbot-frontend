@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReclamoPage } from "@/modules/mod-postventa/ui/ReclamoPage";
+import { useChatStore } from "@/shared/auth/chatStore";
 
 const push = vi.hoisted(() => vi.fn());
 const params = vi.hoisted(() => ({ value: new URLSearchParams() }));
@@ -143,5 +144,43 @@ describe("ReclamoPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /ENVIAR RECLAMO/ }));
 
     expect(await screen.findByText(/Revisa los datos del formulario/)).toBeDefined();
+  });
+
+  it("prellena nombre y correo del perfil, y documento solo si no está enmascarado", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    useChatStore.setState({ ultimoPedido: { documento: "72458912" } as never });
+    renderPage();
+
+    expect((await screen.findByDisplayValue("Ana Pérez"))).toBeDefined();
+    expect(screen.getByDisplayValue("ana@example.com")).toBeDefined();
+    expect(screen.getByDisplayValue("+51999888777")).toBeDefined();
+    expect(screen.getByDisplayValue("72458912")).toBeDefined();
+  });
+
+  it("navega al historial de reclamos desde la confirmación", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    renderPage();
+
+    await screen.findByDisplayValue("+51999888777");
+    fireEvent.change(await screen.findByLabelText(/Descripci.n del reclamo/), {
+      target: { value: "El producto llegó defectuoso y no funciona correctamente." },
+    });
+    fireEvent.change(screen.getByLabelText("Documento"), {
+      target: { value: "12345678" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR RECLAMO/ }));
+
+    expect(await screen.findByText(/SE REGISTR.*TU RECLAMO/)).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "VER EN HISTORIAL" }));
+    expect(push).toHaveBeenCalledWith("/pedidos/reclamos");
+  });
+
+  it("cancela el formulario y regresa a pedidos", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    renderPage();
+
+    await screen.findByDisplayValue("+51999888777");
+    fireEvent.click(screen.getByRole("button", { name: "CANCELAR" }));
+    expect(push).toHaveBeenCalledWith("/pedidos");
   });
 });
