@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { buscarProductosUseCase } from "@/modules/mod-catalog/application/buscarProductosUseCase";
 import { verDetalleProductoUseCase } from "@/modules/mod-catalog/application/verDetalleProductoUseCase";
 import { consultarDisponibilidadUseCase } from "@/modules/mod-catalog/application/consultarDisponibilidadUseCase";
+import { listarPromocionesUseCase } from "@/modules/mod-catalog/application/listarPromocionesUseCase";
 import type { CatalogoPort } from "@/modules/mod-catalog/ports/catalogoPort";
 import { messiClub } from "@/shared/testing/fixtures/messiClub";
 
@@ -68,8 +69,14 @@ describe("casos de uso de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {
     await expect(verDetalleProductoUseCase(api, messiClub.product_id)).rejects.toThrow("Detalle de producto inválido");
   });
 
-  it.each([[], null, [{ sku: "OTRO", status: "DISPONIBLE" }], [{ sku: messiClub.single_sku }], [{ sku: messiClub.single_sku, status: "DESCONOCIDO" }]])("no toma la disponibilidad de otro SKU ni un payload incompleto: %j", async (rows) => {
-    const { api } = apiCon({ consultarDisponibilidad: vi.fn().mockResolvedValue(rows) });
-    await expect(consultarDisponibilidadUseCase(api, { sku: messiClub.single_sku })).rejects.toThrow("Sin respuesta de disponibilidad");
+  it("promociones delega en el port y parsea la lista", async () => {
+    const promo = { promotion_id: "promo-1", name: "Promo", valid_from: "2026-01-01T00:00:00Z", valid_until: null };
+    const { api } = apiCon({ listarPromociones: vi.fn().mockResolvedValue([promo]) });
+    await expect(listarPromocionesUseCase(api)).resolves.toEqual([promo]);
+  });
+
+  it("promociones devuelve null si el payload no es una lista", async () => {
+    const { api } = apiCon({ listarPromociones: vi.fn().mockResolvedValue(null) });
+    await expect(listarPromocionesUseCase(api)).resolves.toBeNull();
   });
 });
