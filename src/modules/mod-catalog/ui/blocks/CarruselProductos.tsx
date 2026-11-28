@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { PlusIcon } from "@/shared/ui/icons";
 import {
   canAddCard,
@@ -29,9 +28,9 @@ export function CarruselProductos({
   onAdd: (p: CatalogCardItem) => void;
   onDetalle: (p: CatalogCardItem) => void;
 }) {
-  const [verMas, setVerMas] = useState(false);
   const crossSell = variant === "cross_sell";
-  const visibles = crossSell ? productos.slice(0, 3) : variant === "recomendacion" ? productos.slice(0, 5) : verMas ? productos.slice(0, 10) : productos.slice(0, 2);
+  // Hasta 10 tarjetas por carrusel (SPEC-06 Req. 4); sin expansión local que oculte resultados.
+  const visibles = crossSell ? productos.slice(0, 3) : variant === "recomendacion" ? productos.slice(0, 5) : productos.slice(0, 10);
   return (
     <div className="self-start w-full rounded-md bg-white border border-border-default p-2 flex flex-col gap-2 wf-card">
       {titulo && <p className="px-1 text-[14px] font-semibold text-text-primary">{sanitize(titulo)}</p>}
@@ -62,11 +61,6 @@ export function CarruselProductos({
           </div>
         ))}
       </div>
-      {!crossSell && variant !== "recomendacion" && productos.length > 2 && (
-        <button onClick={() => setVerMas((v) => !v)} className="min-h-11 text-[12px] font-semibold underline text-text-secondary">
-          {verMas ? "Ver menos" : "Ver más productos"}
-        </button>
-      )}
     </div>
   );
 }

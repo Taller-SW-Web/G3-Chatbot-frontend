@@ -15,11 +15,20 @@ const h = vi.hoisted(() => ({
   disponibilidad: vi.fn(),
   agregar: vi.fn(),
   abrirChat: vi.fn(),
+  promociones: vi.fn(),
 }));
 
 vi.mock("@/modules/mod-catalog/application/buscarProductosUseCase", () => ({ buscarProductosUseCase: h.buscar }));
 vi.mock("@/modules/mod-catalog/application/verDetalleProductoUseCase", () => ({ verDetalleProductoUseCase: h.detalle }));
 vi.mock("@/modules/mod-catalog/application/consultarDisponibilidadUseCase", () => ({ consultarDisponibilidadUseCase: h.disponibilidad }));
+vi.mock("@/modules/mod-catalog/application/listarPromocionesUseCase", () => ({ listarPromocionesUseCase: h.promociones }));
+
+const PROMOS = ["Cyber 10%", "Running week", "Fútbol 2x1"].map((name, i) => ({
+  promotion_id: `promo-${i + 1}`,
+  name,
+  valid_from: "2026-11-01T05:00:00Z",
+  valid_until: i === 0 ? "2026-12-01T04:59:00Z" : null,
+}));
 
 /** Acciones cableadas por `app/page.tsx` (catálogo + carrito + chat). */
 vi.mock("@/shared/di/container", () => ({ container: { catalogo: {} } }));
@@ -72,6 +81,7 @@ async function agregarDesdeModal() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  h.promociones.mockResolvedValue(PROMOS);
   useChatStore.setState({
     cliente: null,
     ultimaConversacionId: null,
@@ -291,18 +301,39 @@ describe("HomePage (catálogo + slots)", () => {
   it("abre el chat de ofertas desde el banner y las acciones rápidas", async () => {
     montar();
 
-    fireEvent.click(screen.getByLabelText("Ver ofertas Inka Athletics"));
+    fireEvent.click(await screen.findByLabelText("Ver ofertas Inka Athletics"));
     await waitFor(() => expect(h.abrirChat).toHaveBeenCalledWith("Ver ofertas"));
 
     fireEvent.click(screen.getByText("Rastrear pedido"));
     await waitFor(() => expect(h.abrirChat).toHaveBeenCalledWith("Rastrear pedido"));
   });
 
-  it("cambia el banner activo", () => {
+  it("muestra una slide por promoción real y cada indicador cambia el contenido (frontend#183)", async () => {
     montar();
-    expect(screen.getByText("1 / 4")).toBeDefined();
-    fireEvent.click(screen.getByLabelText("Banner 3"));
-    expect(screen.getByText("3 / 4")).toBeDefined();
+    expect(await screen.findByText("Cyber 10%")).toBeDefined();
+    expect(screen.getByText("1 / 3")).toBeDefined();
+    expect(screen.getByText(/Vigente hasta el/)).toBeDefined();
+    expect(screen.getAllByRole("button", { name: /^Banner \d/ })).toHaveLength(3);
+
+    fireEvent.click(screen.getByLabelText("Banner 3: Fútbol 2x1"));
+    expect(screen.getByTestId("banner-promocion").textContent).toBe("Fútbol 2x1");
+    expect(screen.getByText("3 / 3")).toBeDefined();
+  });
+
+  it("con una sola promoción no muestra indicadores ni contador", async () => {
+    h.promociones.mockResolvedValue(PROMOS.slice(0, 1));
+    montar();
+    expect(await screen.findByText("Cyber 10%")).toBeDefined();
+    expect(screen.queryByText(/\d \/ \d/)).toBeNull();
+    expect(screen.queryAllByRole("button", { name: /^Banner \d/ })).toHaveLength(0);
+  });
+
+  it("sin promociones o si fallan, el banner no se muestra y no hay error (SPEC-05 · Scenario: Promociones no disponibles)", async () => {
+    h.promociones.mockRejectedValue(new Error("503"));
+    montar();
+    await waitFor(() => expect(h.promociones).toHaveBeenCalled());
+    expect(screen.queryByLabelText("Ver ofertas Inka Athletics")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("sobrevive a un resultado de agregado sin mensaje de error", async () => {

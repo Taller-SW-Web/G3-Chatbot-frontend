@@ -19,6 +19,8 @@ import {
 import { buscarProductosUseCase } from "@/modules/mod-catalog/application/buscarProductosUseCase";
 import { verDetalleProductoUseCase } from "@/modules/mod-catalog/application/verDetalleProductoUseCase";
 import { consultarDisponibilidadUseCase } from "@/modules/mod-catalog/application/consultarDisponibilidadUseCase";
+import { listarPromocionesUseCase } from "@/modules/mod-catalog/application/listarPromocionesUseCase";
+import { formatPromotionDate } from "@/modules/mod-catalog/domain/entities/PromocionesUI";
 import {
   ORDEN_CATALOGO_POR_DEFECTO,
   ordenParaApi,
@@ -26,6 +28,9 @@ import {
 } from "@/modules/mod-catalog/domain/entities/OrdenCatalogo";
 import { SelectorOrden } from "@/modules/mod-catalog/ui/SelectorOrden";
 import { container } from "@/shared/di/container";
+
+/** Slides del banner: una por promoción vigente, hasta 4. */
+const MAX_SLIDES_BANNER = 4;
 
 /** Producto y variante elegidos para agregar desde la home. */
 export type HomeAgregarInput = {
@@ -62,6 +67,18 @@ export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomeP
   /** Gesto táctil del banner: horizontal cambia de slide, el clic posterior no navega. */
   const swipeBanner = useRef<{ x: number; y: number; id: number } | null>(null);
   const swipeConsumido = useRef(false);
+
+  // Banner alimentado por `GET /catalogo/promociones` (SPEC-05 · Scenario: Primera apertura).
+  // Si falla o no hay promociones vigentes, el banner no se muestra y no hay error visible.
+  const promociones = useQuery({
+    queryKey: ["catalogo", "promociones"],
+    queryFn: () => listarPromocionesUseCase(container.catalogo),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const slides = (promociones.data ?? []).slice(0, MAX_SLIDES_BANNER);
+  const slideActual = slides.length > 0 ? Math.min(banner, slides.length - 1) : 0;
+  const promocion = slides[slideActual];
 
   // Grid con datos reales (SPEC-06). Sin fallback a mocks en este flujo.
   const catalogo = useQuery({
@@ -134,7 +151,9 @@ export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomeP
     const dy = e.clientY - inicio.y;
     if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy)) return;
     swipeConsumido.current = true;
-    setBanner((actual) => (dx < 0 ? (actual + 1) % 4 : (actual + 3) % 4));
+    const total = slides.length;
+    if (total < 2) return;
+    setBanner((actual) => (dx < 0 ? (actual + 1) % total : (actual + total - 1) % total));
   }
 
   function abrirOfertas() {
@@ -158,6 +177,7 @@ export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomeP
             {agregado}
           </p>
         )}
+        {promocion && (<>
         <button onClick={abrirOfertas} disabled={creando}
           data-testid="banner-ofertas"
           onPointerDown={onBannerPointerDown}
@@ -175,17 +195,28 @@ export function HomePage({ onAgregar, onAbrirChat, mensajeMaxCaracteres }: HomeP
             </span>
             <span className="font-heading text-[28px] leading-[32px]">ENCUENTRA TU<br /><span className="text-action-primary">PRÓXIMA META</span></span>
             <span className="inka-energy-bar" aria-hidden />
-            <span className="text-[14px] text-text-inverse-soft">Equípate para dar tu mejor paso. Consulta disponibilidad.</span>
+            <span className="text-[14px] font-bold text-text-inverse" data-testid="banner-promocion">{promocion.name}</span>
+            <span className="text-[13px] text-text-inverse-soft">
+              {promocion.valid_until
+                ? `Vigente hasta el ${formatPromotionDate(promocion.valid_until)}.`
+                : "Equípate para dar tu mejor paso. Consulta disponibilidad."}
+            </span>
             <span className="mt-1 inline-flex w-fit items-center gap-2 rounded-sm bg-action-primary px-4 py-2.5 text-[13px] font-bold tracking-wide text-surface-ink">VER OFERTAS →</span>
           </span>
-          <span className="absolute bottom-2 right-2 rounded-full bg-surface-ink-soft border border-border-inverse px-2 py-0.5 text-[11px] font-bold text-text-inverse">{banner + 1} / 4</span>
+          {slides.length > 1 && (
+            <span className="absolute bottom-2 right-2 rounded-full bg-surface-ink-soft border border-border-inverse px-2 py-0.5 text-[11px] font-bold text-text-inverse">{slideActual + 1} / {slides.length}</span>
+          )}
         </button>
-        <div className="flex justify-center gap-1.5 -mt-2">
-          {[0, 1, 2, 3].map((i) => (
-            <button key={i} aria-label={`Banner ${i + 1}`} onClick={() => setBanner(i)}
-              className={`h-2 rounded-full transition-all ${i === banner ? "w-6 bg-surface-ink" : "w-2 bg-border-default"}`} />
-          ))}
-        </div>
+        {/* Un indicador por promoción real: cada uno cambia el contenido del banner. */}
+        {slides.length > 1 && (
+          <div className="flex justify-center gap-1.5 -mt-2">
+            {slides.map((p, i) => (
+              <button key={p.promotion_id} aria-label={`Banner ${i + 1}: ${p.name}`} aria-pressed={i === slideActual} onClick={() => setBanner(i)}
+                className={`h-2 rounded-full transition-all ${i === slideActual ? "w-6 bg-surface-ink" : "w-2 bg-border-default"}`} />
+            ))}
+          </div>
+        )}
+        </>)}
 
         <div className="flex items-end justify-between">
           <h2 className="font-heading text-[24px] leading-[32px]">PRODUCTOS EN OFERTA</h2>

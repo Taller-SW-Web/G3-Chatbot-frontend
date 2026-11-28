@@ -34,4 +34,6 @@ export interface CatalogoPort {
   buscarProductos(input: BuscarProductosInput): Promise<PaginaCatalogo>;
   verDetalleProducto(productId: string): Promise<unknown>;
   consultarDisponibilidad(sku: string, cantidad?: number): Promise<DisponibilidadPuntual[]>;
+  /** `GET /catalogo/promociones` → `items` sin validar (los filtra `parsePromotions`). */
+  listarPromociones(): Promise<unknown>;
 }

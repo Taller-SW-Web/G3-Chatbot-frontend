@@ -23,7 +23,7 @@ Home con ofertas, tarjetas de producto, detalle, variantes, disponibilidad y pro
 
 ## Endpoints
 
-`GET /catalogo/productos`, `GET /catalogo/productos/{productId}`, `GET /catalogo/disponibilidad`.
+`GET /catalogo/productos`, `GET /catalogo/productos/{productId}`, `GET /catalogo/disponibilidad`, `GET /catalogo/promociones` (banner de la home).
 
 El grid de la home acepta `orden` (`relevancia`, `precio_asc`, `precio_desc`, `nombre_asc`, `nombre_desc`) mediante `SelectorOrden`; `relevancia` es el valor por defecto y no se envía al backend.
 
