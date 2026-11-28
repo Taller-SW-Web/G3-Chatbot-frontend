@@ -148,7 +148,7 @@ describe("ReclamoPage", () => {
 
   it("prellena nombre y correo del perfil, y documento solo si no está enmascarado", async () => {
     params.value = new URLSearchParams("pedidoId=PED-2026-00002");
-    useChatStore.setState({ ultimoPedido: { documento: "72458912" } as any });
+    useChatStore.setState({ ultimoPedido: { documento: "72458912" } as never });
     renderPage();
 
     expect((await screen.findByDisplayValue("Ana Pérez"))).toBeDefined();
