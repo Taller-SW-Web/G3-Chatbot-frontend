@@ -309,3 +309,46 @@ describe("AuthModal", () => {
     expect(useChatStore.getState().authOpen).toBe(false);
   });
 });
+
+describe("AuthModal accesible (frontend#190)", () => {
+  function montarConDisparador() {
+    return render(
+      <>
+        <button>Abrir login</button>
+        <main><a href="/ofertas">Ofertas</a></main>
+        <AuthModal />
+      </>
+    );
+  }
+
+  it("tiene nombre accesible, enfoca el diálogo y deja el fondo inerte", () => {
+    montarConDisparador();
+
+    const dialogo = screen.getByRole("dialog", { name: "Inicia sesión" });
+    expect(dialogo.contains(document.activeElement)).toBe(true);
+    expect((screen.getByRole("link", { name: "Ofertas", hidden: true }).closest("main") as HTMLElement).inert).toBe(true);
+    expect(document.body.style.overflow).toBe("hidden");
+  });
+
+  it("Tab no sale del diálogo y Escape lo cierra devolviendo el foco", () => {
+    const disparador = document.createElement("button");
+    document.body.appendChild(disparador);
+    disparador.focus();
+    const { rerender } = render(<AuthModal />);
+
+    const dialogo = screen.getByRole("dialog", { name: "Inicia sesión" });
+    const controles = Array.from(dialogo.querySelectorAll<HTMLElement>("button:not([disabled]), input, a[href]"));
+    controles[controles.length - 1].focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(controles[0]);
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(controles[controles.length - 1]);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(useChatStore.getState().authOpen).toBe(false);
+    rerender(<></>);
+    expect(document.activeElement).toBe(disparador);
+    expect(document.body.style.overflow).toBe("");
+    disparador.remove();
+  });
+});

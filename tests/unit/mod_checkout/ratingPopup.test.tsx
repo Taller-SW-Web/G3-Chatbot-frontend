@@ -96,3 +96,25 @@ describe("RatingPopup (SPEC-24 Req. 7)", () => {
     expect(window.localStorage.getItem("compra-calificacion-descartada:PED-1")).toBe("1");
   });
 });
+
+describe("RatingPopup accesible (frontend#190)", () => {
+  it("tiene nombre accesible y Escape equivale a Ahora no", () => {
+    montar();
+
+    const dialogo = screen.getByRole("dialog", { name: "Califica tu compra" });
+    expect(dialogo.contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(window.localStorage.getItem("compra-calificacion-descartada:PED-1")).toBe("1");
+  });
+
+  it("Tab no sale del diálogo", () => {
+    montar();
+
+    const dialogo = screen.getByRole("dialog", { name: "Califica tu compra" });
+    const controles = Array.from(dialogo.querySelectorAll<HTMLElement>("button:not([disabled]), textarea"));
+    controles[controles.length - 1].focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(controles[0]);
+  });
+});
