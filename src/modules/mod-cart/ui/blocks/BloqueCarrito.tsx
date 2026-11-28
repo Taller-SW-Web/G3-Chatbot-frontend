@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { CartDiscounts } from "@/modules/mod-cart/ui/CartDiscounts";
 import { PriceTag } from "@/modules/mod-catalog/public";
 import { parseAmount } from "@/modules/mod-catalog/public";
@@ -19,6 +20,31 @@ export function BloqueCarrito({
   onVerCarrito: () => void;
   onPagar: () => void;
 }) {
+  const motivoId = useId();
+  const lineas = datos.lineas ?? [];
+  const lineasDisponibles = lineas.filter((l) => l.disponible);
+  const tieneLineasDisponibles = lineasDisponibles.length > 0;
+  const promocionesOk = datos.promociones_ok !== false;
+
+  // SPEC-11 / SPEC-14: El checkout solo se bloquea si el carrito queda sin ninguna línea disponible
+  const puedePagar = Boolean(
+    lineas.length > 0 &&
+      promocionesOk &&
+      tieneLineasDisponibles
+  );
+
+  let motivoBloqueo = "";
+  if (lineas.length === 0) {
+    motivoBloqueo = "Tu carrito está vacío.";
+  } else if (!promocionesOk) {
+    motivoBloqueo = "No pudimos calcular promociones en este momento.";
+  } else if (!tieneLineasDisponibles) {
+    const todosAgotados = lineas.every((l) => l.nota?.toLowerCase().includes("agotad"));
+    motivoBloqueo = todosAgotados
+      ? "Los productos de tu carrito están agotados."
+      : "Los productos de tu carrito ya no están disponibles.";
+  }
+
   const total = datos.total ?? datos.subtotal;
   return (
     <div
@@ -26,15 +52,15 @@ export function BloqueCarrito({
       className="rounded-md bg-white border border-border-default p-3 flex flex-col gap-2 wf-card"
     >
       <p className="font-heading text-[15px] uppercase">
-        Carrito ({datos.lineas.length})
+        Carrito ({lineas.length})
       </p>
-      {datos.lineas.slice(0, 3).map((l) => (
+      {lineas.slice(0, 3).map((l) => (
         <div key={l.item_id} className="flex justify-between text-[13px] gap-2">
           <span className="truncate">
             {sanitize(l.nombre)} · {l.cantidad}
             {!l.disponible && (
               <span data-testid="linea-no-disponible" className="ml-1 text-error-default">
-                — Ya no disponible
+                — {l.nota?.toLowerCase().includes("agotad") ? "Agotado" : "Ya no disponible"}
               </span>
             )}
           </span>
@@ -64,13 +90,20 @@ export function BloqueCarrito({
           VER CARRITO
         </button>
         <button
-          onClick={onPagar}
+          onClick={puedePagar ? onPagar : undefined}
+          disabled={!puedePagar}
+          aria-describedby={!puedePagar && motivoBloqueo ? motivoId : undefined}
           data-testid="btn-pagar"
-          className="wf-btn py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink"
+          className="wf-btn py-2.5 text-[11px] font-bold bg-action-primary text-surface-ink disabled:opacity-50 disabled:cursor-not-allowed"
         >
           PAGAR
         </button>
       </div>
+      {!puedePagar && motivoBloqueo && (
+        <p id={motivoId} role="status" className="text-[11px] text-text-secondary">
+          {motivoBloqueo}
+        </p>
+      )}
     </div>
   );
 }

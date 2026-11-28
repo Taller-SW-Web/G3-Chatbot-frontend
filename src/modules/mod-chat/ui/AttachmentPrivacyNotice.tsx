@@ -1,6 +1,7 @@
 "use client";
 
 import { PhotoIcon } from "@/shared/ui/icons";
+import { useDialogoModal } from "@/shared/ui/useDialogoModal";
 
 /**
  * Aviso de privacidad antes de la primera carga de una imagen (SPEC-23 Req. 2).
@@ -14,8 +15,9 @@ export function AttachmentPrivacyNotice({
   onAceptar: () => void;
   onCerrar: () => void;
 }) {
+  const dialogoRef = useDialogoModal<HTMLDivElement>(onCerrar);
   return (
-    <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5">
+    <div data-capa-modal className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5">
       <button
         type="button"
         tabIndex={-1}
@@ -24,10 +26,12 @@ export function AttachmentPrivacyNotice({
         onClick={onCerrar}
       />
       <div
+        ref={dialogoRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="adjunto-privacidad-titulo"
-        className="relative pop-in w-full max-w-[340px] bg-white rounded-lg shadow-xl p-5 flex flex-col gap-3"
+        className="relative pop-in w-full max-w-[340px] bg-white rounded-lg shadow-xl p-5 flex flex-col gap-3 outline-none"
       >
         <div className="flex items-center gap-2">
           <div className="wf-check w-10 h-10 rounded-full flex items-center justify-center bg-warning-background text-warning-default">
