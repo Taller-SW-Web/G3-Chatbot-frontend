@@ -9,6 +9,7 @@ const api = vi.hoisted(() => ({
   solicitarOtpCelular: vi.fn(),
   verificarOtpCelular: vi.fn(),
   validarContactoCelular: vi.fn(),
+  fetchProfile: vi.fn(),
   logout: vi.fn(),
 }));
 const push = vi.hoisted(() => vi.fn());
@@ -30,7 +31,7 @@ function cliente(extra: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useChatStore.setState({ cliente: null, accessToken: null });
+  useChatStore.setState({ cliente: null, accessToken: null, errorPerfil: null });
   api.solicitarOtpCelular.mockResolvedValue({
     enviado: true,
     celularEnmascarado: "*****321",
@@ -41,6 +42,11 @@ beforeEach(() => {
     celularEnmascarado: "*****321",
   });
   api.validarContactoCelular.mockResolvedValue({ verificado: true });
+  api.fetchProfile.mockResolvedValue({
+    id: "u1",
+    nombreCompleto: "Ana Torres",
+    correo: "ana@ejemplo.pe",
+  });
   api.logout.mockImplementation(async () => {
     useChatStore.getState().logout();
     return { ok: true };
@@ -58,7 +64,7 @@ describe("MiCuentaPage", () => {
     expect(push).toHaveBeenCalledWith("/");
   });
 
-  it("muestra los datos del cliente y el estado de su celular", () => {
+  it("muestra los datos del cliente y el estado de su celular sin inventar documento", () => {
     useChatStore.setState({ cliente: cliente() });
     render(<MiCuentaPage />);
 
@@ -67,8 +73,57 @@ describe("MiCuentaPage", () => {
     expect(screen.getByText("Celular (opcional)")).toBeDefined();
     expect(screen.getByText("*****321")).toBeDefined();
     expect(screen.getByText("Sin verificar")).toBeDefined();
-    expect(screen.getByText("No registrado")).toBeDefined();
+    expect(screen.queryByText("Documento")).toBeNull();
     expect(screen.getByRole("button", { name: "VERIFICAR CELULAR" })).toBeDefined();
+  });
+
+  it("sin documento registrado no muestra la fila de documento (SPEC-03)", () => {
+    useChatStore.setState({ cliente: cliente({ tipoDocumento: undefined, documentoEnmascarado: undefined }) });
+    render(<MiCuentaPage />);
+
+    expect(screen.queryByText("Documento")).toBeNull();
+  });
+
+  it("sin celular no muestra botón que falle (SPEC-03)", () => {
+    useChatStore.setState({ cliente: cliente({ celularEnmascarado: undefined, celular: undefined }) });
+    render(<MiCuentaPage />);
+
+    expect(screen.getByText("—")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "VERIFICAR CELULAR" })).toBeNull();
+  });
+
+  it("perfil no disponible muestra mensaje de error y permite reintentar sin borrar el token (SPEC-03)", async () => {
+    useChatStore.setState({ accessToken: "jwt_token", cliente: null });
+    api.fetchProfile.mockResolvedValueOnce({
+      id: "u1",
+      nombreCompleto: "Ana Torres Recuperada",
+      correo: "ana@ejemplo.pe",
+    });
+
+    render(<MiCuentaPage />);
+
+    expect(screen.getByText("No pudimos cargar tus datos en este momento")).toBeDefined();
+    const retryBtn = screen.getByRole("button", { name: "REINTENTAR" });
+    expect(retryBtn).toBeDefined();
+    expect(screen.getByRole("button", { name: "CERRAR SESIÓN" })).toBeDefined();
+
+    fireEvent.click(retryBtn);
+
+    await waitFor(() => expect(screen.getByText("Ana Torres Recuperada")).toBeDefined());
+    expect(useChatStore.getState().accessToken).toBe("jwt_token");
+  });
+
+  it("muestra error 503 cuando viene expuesto desde el store (SPEC-03 :199-202)", () => {
+    useChatStore.setState({
+      accessToken: "jwt_token",
+      cliente: cliente(),
+      errorPerfil: "No pudimos cargar tus datos en este momento",
+    });
+    render(<MiCuentaPage />);
+
+    expect(screen.getByText("No pudimos cargar tus datos en este momento")).toBeDefined();
+    expect(screen.getByRole("button", { name: "REINTENTAR" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "CERRAR SESIÓN" })).toBeDefined();
   });
 
   it("verifica el celular con el código de 6 dígitos", async () => {
@@ -103,8 +158,6 @@ describe("MiCuentaPage", () => {
     fireEvent.change(screen.getByLabelText("Código de verificación"), { target: { value: "000000" } });
     fireEvent.click(screen.getByRole("button", { name: "VERIFICAR" }));
 
-    // La respuesta se procesa cuando aparece el aviso; esperar solo la llamada
-    // dejaría pasar el test aunque el resultado nunca se aplicara.
     expect(await screen.findByRole("alert")).toBeDefined();
     expect(screen.getByText(/No pudimos verificar el c.digo/)).toBeDefined();
     expect(useChatStore.getState().cliente?.celularVerificado).toBe(false);
