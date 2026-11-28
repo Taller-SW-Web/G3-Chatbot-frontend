@@ -53,6 +53,27 @@ function problemDe(error: unknown): {
   };
 }
 
+type AvisoCarrito = {
+  avisoCarrito?: string | null;
+  ajustesCarrito?: Array<{
+    sku: string;
+    solicitado: number;
+    ajustado: number;
+    motivo: string;
+  }>;
+};
+
+/** SPEC-03 Req. 4: aviso de fusión + ajustes por línea, listo para el banner. */
+function mensajeAvisoCarrito(answer: AvisoCarrito): string | null {
+  if (!answer.avisoCarrito) return null;
+  const ajustes = (answer.ajustesCarrito ?? []).map(
+    (a) => `${a.sku}: ${a.solicitado} → ${a.ajustado} (${a.motivo})`
+  );
+  return ajustes.length > 0
+    ? `${answer.avisoCarrito} Ajustes: ${ajustes.join("; ")}.`
+    : answer.avisoCarrito;
+}
+
 /**
  * Global auth modal (AppShell). SPEC-01/02/03: registration, email
  * verification, login, MFA challenge and resume of the pending action. The
@@ -66,6 +87,7 @@ export function AuthModal() {
   const setCliente = useChatStore((s) => s.setCliente);
   const accionPendiente = useChatStore((s) => s.accionPendiente);
   const setAccionPendiente = useChatStore((s) => s.setAccionPendiente);
+  const setAvisoCarrito = useChatStore((s) => s.setAvisoCarrito);
   const vistaInicial = useChatStore((s) => s.authVista);
   const [tab, setTab] = useState<"login" | "registro">(vistaInicial);
   const [paso, setPaso] = useState<Paso>("login");
@@ -139,6 +161,7 @@ export function AuthModal() {
       }
       applySession(answer.accessToken, answer.expiresIn);
       setCliente(clienteDesdeUsuario(answer.usuario, d.correo));
+      setAvisoCarrito(mensajeAvisoCarrito(answer));
       await hidratarPerfil(d.correo);
       continuar();
     } catch (error) {
@@ -193,6 +216,7 @@ export function AuthModal() {
       const opened = await container.auth.verifyMfaCode(codigo);
       applySession(opened.accessToken, opened.expiresIn);
       setCliente(clienteDesdeUsuario(opened.usuario, contacto));
+      setAvisoCarrito(mensajeAvisoCarrito(opened));
       await hidratarPerfil(contacto);
       continuar();
     } catch (error) {
