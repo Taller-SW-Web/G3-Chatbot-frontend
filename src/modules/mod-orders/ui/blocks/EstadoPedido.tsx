@@ -44,12 +44,13 @@ function HitosVentas({ hitos }: { hitos: HitoPedido[] }) {
       {hitos.map((h, i) => (
         <div key={`${h.titulo}-${i}`} className="flex gap-3">
           <div className="flex flex-col items-center">
-            <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${h.done ? "bg-surface-ink border-surface-ink text-text-inverse" : "bg-accent-volt border-surface-ink text-surface-ink"}`}>
-              {h.done ? <CheckIcon size={16} /> : <TruckIcon size={16} />}
+            {/* Los pasos que aún no ocurren van en gris (SPEC-17 · Scenario: Pedido en preparación). */}
+            <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${h.done ? "bg-surface-ink border-surface-ink text-text-inverse" : "bg-white border-border-default text-text-secondary"}`}>
+              {h.done ? <CheckIcon size={16} /> : <span className="w-1.5 h-1.5 rounded-full bg-border-default" />}
             </div>
             {i < hitos.length - 1 && <div className={`w-[2px] flex-1 ${h.done ? "bg-surface-ink" : "bg-border-default"}`} />}
           </div>
-          <div className="pb-4"><p className="text-[14px] font-bold">{h.titulo}</p><p className="text-[12px] text-text-secondary">{h.fecha || "Pendiente"}</p></div>
+          <div className="pb-4"><p className={`text-[14px] font-bold ${h.done ? "text-text-primary" : "text-text-secondary"}`}>{h.titulo}</p><p className="text-[12px] text-text-secondary">{h.fecha || "Pendiente"}</p></div>
         </div>
       ))}
     </>
