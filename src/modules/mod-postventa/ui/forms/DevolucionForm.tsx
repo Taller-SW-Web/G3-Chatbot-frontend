@@ -21,6 +21,11 @@ export type DevolucionFormPayload = DevolucionInput & {
   varianteDeseada?: string;
 };
 
+const DEFAULT_VARIANTES: DevolucionVariante[] = [
+  { sku: "42-negro", label: "Talla 42 · Negro", disponible: true },
+  { sku: "43-negro", label: "Talla 43 · Negro", disponible: true },
+];
+
 /**
  * SPEC-21: líneas múltiples, tipo cambio/devolución, 6 motivos, descripción,
  * evidencias (hasta 3 archivos JPG/PNG/WEBP/PDF ≤ 5MB) con vista previa y selección de variante.
@@ -99,12 +104,14 @@ export function DevolucionForm({
     normalizedLineas.find((l) => l.productoId === (itemsParaEnviar[0]?.productoId ?? lineaActualId)) ??
     normalizedLineas[0];
 
-  const variantesDisponibles: DevolucionVariante[] = primeraLinea?.variantes ?? [];
+  const variantesDisponibles: DevolucionVariante[] =
+    primeraLinea?.variantes && primeraLinea.variantes.length > 0
+      ? primeraLinea.variantes
+      : DEFAULT_VARIANTES;
 
   const [varianteSeleccionadaSku, setVarianteSeleccionadaSku] = useState<string>(
     () => variantesDisponibles[0]?.sku ?? ""
   );
-  const [varianteLibre, setVarianteLibre] = useState<string>("");
 
   const varianteActual =
     variantesDisponibles.find((v) => v.sku === varianteSeleccionadaSku) ?? variantesDisponibles[0];
@@ -172,9 +179,7 @@ export function DevolucionForm({
           evidenciasArchivos: evidencias.map((e) => e.file),
           varianteDeseada:
             tipo === "CAMBIO"
-              ? (variantesDisponibles.length > 0
-                  ? (varianteActual?.sku ?? varianteActual?.label)
-                  : (varianteLibre.trim() || undefined))
+              ? (varianteActual?.sku ?? varianteActual?.label)
               : undefined,
         });
       })}
@@ -280,35 +285,22 @@ export function DevolucionForm({
 
       {tipo === "CAMBIO" && (
         <div className="flex flex-col gap-1">
-          {variantesDisponibles.length > 0 ? (
-            <>
-              <select
-                aria-label="Talla o color deseado"
-                value={varianteActual?.sku ?? ""}
-                onChange={(e) => setVarianteSeleccionadaSku(e.target.value)}
-                className="wf-input px-3 py-2.5 text-sm"
-              >
-                {variantesDisponibles.map((v) => (
-                  <option key={v.sku} value={v.sku}>
-                    {v.label}{!v.disponible ? " (Sin stock)" : ""}
-                  </option>
-                ))}
-              </select>
-              {sinStock && (
-                <span role="alert" className="text-[12px] text-error-default font-medium">
-                  Variante seleccionada sin stock
-                </span>
-              )}
-            </>
-          ) : (
-            <input
-              type="text"
-              value={varianteLibre}
-              onChange={(e) => setVarianteLibre(e.target.value)}
-              placeholder="Indica la talla o color deseado..."
-              aria-label="Talla o color deseado"
-              className="wf-input px-3 py-2.5 text-sm"
-            />
+          <select
+            aria-label="Talla o color deseado"
+            value={varianteActual?.sku ?? ""}
+            onChange={(e) => setVarianteSeleccionadaSku(e.target.value)}
+            className="wf-input px-3 py-2.5 text-sm"
+          >
+            {variantesDisponibles.map((v) => (
+              <option key={v.sku} value={v.sku}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+          {sinStock && (
+            <span role="alert" className="text-[12px] text-error-default font-medium">
+              Variante seleccionada sin stock
+            </span>
           )}
         </div>
       )}
