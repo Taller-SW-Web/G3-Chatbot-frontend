@@ -30,6 +30,7 @@ const h = vi.hoisted(() => {
   };
   return {
     cartData: undefined as unknown,
+    sinDatos: false,
     isPending: false,
     CONV_STORE,
     CONV_PROP,
@@ -67,14 +68,14 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: h.push }) }));
 // El GET resuelve la conversación del store; la página NO recibe la prop.
 vi.mock("@/modules/mod-cart/application/useCarrito", () => ({
   useCarrito: () => ({
-    query: { data: h.cartData ?? h.CARRITO, isPending: h.isPending ?? false, isError: false, refetch: vi.fn() },
+    query: { data: h.sinDatos ? undefined : (h.cartData ?? h.CARRITO), isPending: h.isPending ?? false, isError: false, refetch: vi.fn() },
     queryKey: ["carrito", "anonimo", "cliente"],
     conversacion: h.CONV_STORE,
     dueno: "anonimo",
   }),
 }));
 
-function renderCart(props: { conversacionId?: string } = {}) {
+function renderCart(props: { conversacionId?: string; initialVacio?: boolean } = {}) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -87,6 +88,7 @@ describe("CartPage: mutaciones del carrito anónimo (SPEC-11)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     h.cartData = undefined;
+    h.sinDatos = false;
     h.isPending = false;
     h.actualizar.mockResolvedValue(h.CARRITO);
     h.quitar.mockResolvedValue({ mensaje: "ok" });
@@ -96,6 +98,14 @@ describe("CartPage: mutaciones del carrito anónimo (SPEC-11)", () => {
   });
 
   afterEach(() => cleanup());
+
+  it("pinta el estado vacío en el primer render cuando el servidor no ve carrito", () => {
+    h.isPending = true;
+    h.sinDatos = true;
+    renderCart({ initialVacio: true });
+    expect(screen.getByTestId("carrito-vacio")).toBeDefined();
+    expect(screen.queryByRole("status", { name: "Cargando carrito" })).toBeNull();
+  });
 
   it("muestra el esqueleto de carga cuando el carrito está pendiente", () => {
     h.isPending = true;

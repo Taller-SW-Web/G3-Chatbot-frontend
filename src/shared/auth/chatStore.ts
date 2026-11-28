@@ -5,6 +5,7 @@ import { persist } from "zustand/middleware";
 import type { Cliente } from "@/shared/auth/Cliente";
 import type { CarritoUI } from "@/modules/mod-cart/public";
 import { isTokenExpiringSoon, sincronizarCookieSesion } from "@/shared/auth/sesion";
+import { syncCartPresenceCookie } from "@/shared/auth/cartPresence";
 import { maskCelular } from "@/shared/security/sanitize";
 import { queryClient } from "@/shared/di/queryClient";
 
@@ -112,7 +113,10 @@ export const useChatStore = create<ChatState>()(
         if (!accessToken) return false;
         return isTokenExpiringSoon(expiraEn);
       },
-      setCarrito: (carrito) => set({ carrito }),
+      setCarrito: (carrito) => {
+        syncCartPresenceCookie(carrito.lineas.length > 0 || carrito.count > 0);
+        set({ carrito });
+      },
       setAccionPendiente: (accionPendiente) => set({ accionPendiente }),
       setAuthOpen: (authOpen) => set({ authOpen, authVista: "login" }),
       abrirRegistro: () => set({ authOpen: true, authVista: "registro" }),
@@ -120,6 +124,7 @@ export const useChatStore = create<ChatState>()(
       setPrimerMensaje: (primerMensaje) => set({ primerMensaje }),
       logout: () => {
         sincronizarCookieSesion(false);
+        syncCartPresenceCookie(false);
         // Pedidos y carrito cacheados en memoria pertenecen al usuario que sale.
         // El catálogo es público: borrarlo también cancelaría su carga en curso al arrancar
         // (el refresh de arranque de un visitante anónimo termina en logout) y dejaría la home cargando.

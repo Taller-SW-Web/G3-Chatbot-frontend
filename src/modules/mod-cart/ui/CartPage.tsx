@@ -26,12 +26,33 @@ import { parseAmount } from "@/modules/mod-catalog/public";
 import { parseCartDiscounts } from "@/modules/mod-cart/domain/utils/cartDiscounts";
 import { sanitize } from "@/shared/security/sanitize";
 
+function CarritoVacio() {
+  return (
+    <div className="p-4" data-testid="carrito-vacio">
+      <p className="text-sm text-text-secondary text-center py-8">
+        Tu carrito está vacío. Prueba con Ver ofertas o Buscar productos.
+      </p>
+    </div>
+  );
+}
+
 /**
  * `/carrito`: líneas con datos reales del backend (SPEC-10, SPEC-11).
  * Fuente de verdad: `GET /carrito` (precios, stock y totales recalculados).
  * El badge del header lo sincroniza `useCarrito` (count/subtotal), compartido.
+ *
+ * `initialVacio` llega del servidor: sin cookie de carrito no hay nada que
+ * consultar y el estado vacío se pinta en el primer HTML, sin esperar a la
+ * hidratación (LCP de `/carrito`, #164). Con cookie se mantiene el skeleton
+ * hasta que `GET /carrito` confirma las líneas.
  */
-export function CartPage({ conversacionId }: { conversacionId?: string }) {
+export function CartPage({
+  conversacionId,
+  initialVacio = false,
+}: {
+  conversacionId?: string;
+  initialVacio?: boolean;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const cliente = useChatStore((s) => s.cliente);
@@ -195,6 +216,11 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   );
   const errorTexto = hayError ? mensajeCarrito(errorCode) : null;
 
+  if (initialVacio && !carrito) {
+    // SSR con la cookie ausente: el estado vacío es el primer HTML y el LCP.
+    return <CarritoVacio />;
+  }
+
   if (carritoQuery.isPending) {
     // Shell renderizado en servidor: totales, CTA y mensaje de carga pintan en
     // el primer render. Antes, el LCP de `/carrito` era el estado vacío que
@@ -252,13 +278,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
     // "Vacío" solo cuando de verdad no hay carrito que mostrar; el resto es error.
     const sinCarrito = errorCode === "REQUIERE_SESION" || errorCode === "RECURSO_NO_ENCONTRADO";
     if (sinCarrito) {
-      return (
-        <div className="p-4">
-          <p className="text-sm text-text-secondary text-center py-8">
-            Tu carrito está vacío. Prueba con Ver ofertas o Buscar productos.
-          </p>
-        </div>
-      );
+      return <CarritoVacio />;
     }
     return (
       <div className="p-4">
