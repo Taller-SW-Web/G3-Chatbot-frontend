@@ -56,14 +56,14 @@ G3-Chatbot-frontend/
 
 | id | Responsabilidad | Rutas | `dependsOn` |
 |---|---|---|---|
-| `mod-auth` | sesión, registro, MFA, OTP, perfil, política de contraseña | `/cuenta`, `/verificar-correo` | — |
+| `mod-auth` | sesión, registro, MFA, OTP, perfil, política de contraseña, términos y privacidad | `/cuenta`, `/verificar-correo`, `/terminos`, `/privacidad` | — |
 | `mod-catalog` | home, tarjetas, detalle, variantes, disponibilidad, promociones | `/` | — |
 | `mod-cart` | carrito, items, cupón, carrito anónimo por conversación | `/carrito` | `mod-catalog` |
-| `mod-shipping` | cotización de envío y direcciones | bloque en `/checkout` | — |
+| `mod-shipping` | cotización de envío y direcciones | bloque en `/checkout` | `mod-cart` |
 | `mod-checkout` | checkout, pago simulado, confirmación | `/checkout`, `/exito` | `mod-cart`, `mod-shipping` |
 | `mod-orders` | pedidos, detalle, seguimiento, reenvío de confirmación | `/pedidos`, `/pedidos/[tab]`, `/pedido`, `/seguimiento` | `mod-checkout` |
 | `mod-postventa` | devoluciones, reclamos, evidencias, constancias y CSAT (`DeliveryRating` + adapter) | `/devolucion`, `/reclamo` | `mod-orders` |
-| `mod-chat` | turnos, SSE, historial, sidebar, bloques, sugerencias | `/chat/[id]`, `/sugerencias` | todos |
+| `mod-chat` | turnos, SSE, historial, sidebar, bloques, sugerencias y búsqueda | `/chat/[id]`, `/buscar`, `/sugerencias` | todos |
 
 ### DAG
 
@@ -89,6 +89,7 @@ adapter; `mod-orders` solo expone el detalle y decide cuándo mostrar el slot
 |---|---|
 | Estructura | falta `MODULE.md`, `module.manifest.ts`, `public.ts`, `ui/`, `ports/` o `adapters/`; falta un `*Port.ts`; no hay adapter |
 | Manifiestos | ids desparejos con las carpetas; `name`/`owner`/`dependsOn` distintos del manifiesto central; dependencia inexistente |
+| Rutas | `routes.path` sin `app/**/page.tsx`, una página sin módulo dueño o una ruta declarada dos veces |
 | Registry | `src/modules/registry.generated.ts` desactualizado |
 | Import profundo | un módulo importa `mod-x/domain`, `/application`, `/ports` o `/adapters` |
 | DAG | import o `container.<alias>` de un módulo que no está en `dependsOn` |
@@ -129,9 +130,12 @@ excepciones hardcodeadas.
 | `/devolucion` | `app/devolucion/page.tsx` | `AppShell` + `AuthGuard` + `Suspense` + `DevolucionPage` |
 | `/reclamo` | `app/reclamo/page.tsx` | `AppShell` + `AuthGuard` + `Suspense` + `ReclamoPage` |
 | `/chat/[id]` | `app/chat/[id]/page.tsx` | `AppShell` + `ChatPage` |
+| `/buscar` | `app/buscar/page.tsx` | `AppShell` + `SearchChatsPage` |
 | `/sugerencias` | `app/sugerencias/page.tsx` | `AppShell` + `SugerenciasPage` |
 | `/cuenta` | `app/cuenta/page.tsx` | `AppShell` + `MiCuentaPage` |
 | `/verificar-correo` | `app/verificar-correo/page.tsx` | `AppShell` + `VerificarCorreoPage` |
+| `/terminos` | `app/terminos/page.tsx` | `AppShell` + `TerminosPage` |
+| `/privacidad` | `app/privacidad/page.tsx` | `AppShell` + `PrivacidadPage` |
 
 `AppShell` es el chrome único (header, carrito, sidebar y modal de acceso). Vive
 en `shared/ui/shell` y compone módulos por su `public.ts`; está documentado en
@@ -172,6 +176,9 @@ módulo necesita una operación sin duplicar el adapter.
   `dependsOn`.
 - `src/modules/<id>/module.manifest.ts`: `routes`, `nav`, `endpoints` y
   `dependsOn` (debe coincidir con el central).
+- `check-modules.mjs` contrasta `routes` con las `page.tsx` reales: falla si una
+  ruta declarada no tiene página, si una página no tiene módulo dueño o si dos
+  módulos reclaman la misma ruta.
 - `pnpm modules:sync` regenera `src/modules/registry.generated.ts`.
 - `pnpm modules:check` falla si el registry quedó desactualizado.
 - Añadir un módulo = crear la carpeta con sus capas + `MODULE.md` +
@@ -191,8 +198,8 @@ pnpm build
 pnpm modules:check
 ```
 
-`pnpm modules:check` incluye estructura, fronteras, registry y contrato. En CI
-sin el repo del backend se define `OPENAPI_PATH` o se acepta el aviso de
+`pnpm modules:check` incluye estructura, rutas, fronteras, registry y contrato.
+En CI sin el repo del backend se define `OPENAPI_PATH` o se acepta el aviso de
 contrato omitido.
 
 ## 10. Flujo de una feature

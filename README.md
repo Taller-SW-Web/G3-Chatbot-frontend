@@ -8,7 +8,7 @@ Frontend de Next.js del canal chatbot. La arquitectura está descrita en `arquit
 - `src/modules/mod-*/` — 8 módulos por capacidad (`domain`, `application`, `ports`, `adapters`, `ui`) con `MODULE.md`, `module.manifest.ts` y `public.ts`.
 - `src/app/` — rutas Next; cada `page.tsx` es un wrapper que compone `AppShell` + `AuthGuard` + la página del módulo.
 
-Regla: un módulo solo importa `shared/*`, su propio árbol y el `public.ts` de los módulos de su `dependsOn`. `pnpm modules:check` verifica estructura, fronteras, registry y contrato (`OPENAPI_PATH`, default `../G3-Chatbot-backend/docs/openapi.json`).
+Regla: un módulo solo importa `shared/*`, su propio árbol y el `public.ts` de los módulos de su `dependsOn`. `pnpm modules:check` verifica estructura, rutas (`module.manifest.ts` contra `app/**/page.tsx`), fronteras, registry y contrato (`OPENAPI_PATH`, default `../G3-Chatbot-backend/docs/openapi.json`).
 
 Flujo de trabajo (spec primero, un PR por módulo, gates):
 [`docs/flujo-de-trabajo.md`](docs/flujo-de-trabajo.md). Estructura completa:
@@ -30,7 +30,7 @@ pnpm typecheck
 pnpm test
 pnpm build
 pnpm modules:sync   # regenera src/modules/registry.generated.ts
-pnpm modules:check  # ids, registry, estructura, fronteras y contrato
+pnpm modules:check  # ids, rutas, registry, estructura, fronteras y contrato
 ```
 
 ## Variables de entorno

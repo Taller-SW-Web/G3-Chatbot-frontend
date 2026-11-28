@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 import { resolveApiProxyTarget } from "./src/shared/config/apiProxyTarget";
-import { buildCsp } from "./src/shared/security/csp";
+import { buildCsp, CSP_REPORT_ENDPOINTS } from "./src/shared/security/csp";
 
 // ADR-0023 & ADR-0031: el navegador llama a /api/* en el propio origen y Next.js reenvía al API Gateway (Kong OSS).
 // Variable de servidor por entorno (Preview y Production: https://<gateway>.up.railway.app).
@@ -14,6 +14,8 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+  // Reporting API solo se procesa sobre HTTPS; en dev queda `report-uri`.
+  ...(isDev ? [] : [{ key: "Reporting-Endpoints", value: CSP_REPORT_ENDPOINTS }]),
   // Report-Only primero: la CSP se observa en producción antes de volverla bloqueante.
   {
     key: "Content-Security-Policy-Report-Only",

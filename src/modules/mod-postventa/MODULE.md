@@ -43,7 +43,7 @@ El CSAT se muestra dentro de `/pedido` como slot inyectado; no registra una ruta
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_postventa/` (9 archivos)
+- Unitarias: `tests/unit/mod_postventa/` (10 archivos)
 
 ## Reglas
 

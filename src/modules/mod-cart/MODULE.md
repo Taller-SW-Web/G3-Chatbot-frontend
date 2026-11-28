@@ -31,7 +31,7 @@ Líneas del carrito, cantidades, cupón, totales, bloque `CARRITO` del chat, el 
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_cart/` (8 archivos)
+- Unitarias: `tests/unit/mod_cart/` (9 archivos)
 
 ## Reglas
 

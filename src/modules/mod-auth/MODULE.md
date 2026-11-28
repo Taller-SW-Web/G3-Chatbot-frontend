@@ -36,7 +36,7 @@ Ninguna. Consume `shared/api`, `shared/auth`, `shared/ui` y su propio árbol.
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_auth/` (8 archivos)
+- Unitarias: `tests/unit/mod_auth/` (11 archivos)
 
 ## Reglas
 
