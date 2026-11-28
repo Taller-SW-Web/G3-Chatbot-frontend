@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDialogoModal } from "@/shared/ui/useDialogoModal";
 import { container } from "@/shared/di/container";
 import { httpStatus } from "@/shared/api/httpError";
 
@@ -60,14 +61,16 @@ export function RatingPopup({ onClose, pedidoId }: { onClose: () => void; pedido
     descartarCalificacionCompra(pedidoId);
     onClose();
   }
+  // Escape equivale a "Ahora no" antes de enviar y a "Entendido" después.
+  const dialogoRef = useDialogoModal<HTMLDivElement>(enviado ? onClose : ahoraNo);
 
   return (
-    <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5">
+    <div data-capa-modal className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5">
       <button type="button" tabIndex={-1} aria-hidden="true" className="absolute inset-0 cursor-default" onClick={ahoraNo} />
-      <div className="relative pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl max-h-[85%] overflow-y-auto no-scrollbar p-6 flex flex-col items-center gap-3 text-center" role="dialog" aria-modal="true">
+      <div ref={dialogoRef} tabIndex={-1} className="relative pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl max-h-[85%] overflow-y-auto no-scrollbar p-6 flex flex-col items-center gap-3 text-center outline-none" role="dialog" aria-modal="true" aria-labelledby="calificacion-compra-titulo">
         {!enviado ? (
           <>
-            <p className="font-heading text-[15px] tracking-[0.06em] uppercase text-text-primary">Califica tu compra</p>
+            <h2 id="calificacion-compra-titulo" className="font-heading text-[15px] tracking-[0.06em] uppercase text-text-primary">Califica tu compra</h2>
             <p className="text-[13px] text-text-secondary">Tu opinión ayuda a Botleta a mejorar. ¿Cómo fue tu experiencia?</p>
             <div className="flex items-center gap-2" role="radiogroup" aria-label="Estrellas">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -104,7 +107,7 @@ export function RatingPopup({ onClose, pedidoId }: { onClose: () => void; pedido
           </>
         ) : (
           <>
-            <p className="font-heading text-[20px]">¡GRACIAS POR TU OPINIÓN!</p>
+            <h2 id="calificacion-compra-titulo" className="font-heading text-[20px]">¡GRACIAS POR TU OPINIÓN!</h2>
             <p className="text-[13px] text-text-secondary">Registramos {stars}/5 estrellas. Usaremos tu retroalimentación para mejorar.</p>
             <button onClick={onClose} className="wf-btn w-full py-3 text-[12px] font-bold tracking-wide bg-surface-ink text-text-inverse">ENTENDIDO</button>
           </>

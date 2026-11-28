@@ -168,4 +168,27 @@ describe("OrderHistoryPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "CONSULTAR CON EL ASISTENTE" }));
     expect(push).toHaveBeenCalledWith("/");
   });
+
+  it("en 'Entregados' muestra pedidos con estado ANULADO con su etiqueta sin inventar reembolso (SPEC-17 :121)", async () => {
+    renderPage();
+    fireEvent.click(screen.getByText("Entregados"));
+
+    await waitFor(() => expect(screen.getByText("Pedido PED-2026-00003")).toBeDefined());
+    expect(screen.getAllByText("Anulado").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Si corresponde un reembolso/)).toBeNull();
+  });
+
+  it("muestra estado de error y permite reintentar la consulta de pedidos", async () => {
+    listarPedidos.mockRejectedValueOnce(new Error("network failure"));
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText("No puedo consultar tus pedidos en este momento.")).toBeDefined()
+    );
+    const retryBtn = screen.getByRole("button", { name: "REINTENTAR" });
+    expect(retryBtn).toBeDefined();
+
+    fireEvent.click(retryBtn);
+    await waitFor(() => expect(listarPedidos).toHaveBeenCalledTimes(2));
+  });
 });
