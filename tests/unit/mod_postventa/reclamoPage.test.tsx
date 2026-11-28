@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReclamoPage } from "@/modules/mod-postventa/ui/ReclamoPage";
+import { useChatStore } from "@/shared/auth/chatStore";
 
 const push = vi.hoisted(() => vi.fn());
 const params = vi.hoisted(() => ({ value: new URLSearchParams() }));
@@ -145,13 +146,15 @@ describe("ReclamoPage", () => {
     expect(await screen.findByText(/Revisa los datos del formulario/)).toBeDefined();
   });
 
-  it("prellena documento, nombre y correo del perfil", async () => {
+  it("prellena nombre y correo del perfil, y documento solo si no está enmascarado", async () => {
     params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    useChatStore.setState({ ultimoPedido: { documento: "72458912" } as any });
     renderPage();
 
     expect((await screen.findByDisplayValue("Ana Pérez"))).toBeDefined();
     expect(screen.getByDisplayValue("ana@example.com")).toBeDefined();
     expect(screen.getByDisplayValue("+51999888777")).toBeDefined();
+    expect(screen.getByDisplayValue("72458912")).toBeDefined();
   });
 
   it("navega al historial de reclamos desde la confirmación", async () => {

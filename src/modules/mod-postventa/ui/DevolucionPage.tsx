@@ -70,14 +70,22 @@ export function DevolucionPage() {
           ? envio.input.items
           : [{ productoId: envio.input.linea, cantidad: 1 }];
 
+      // SPEC-21 :49,130: el contrato REST con Ventas no incluye varianteDeseada;
+      // se anexa a la descripcion hasta que se defina un campo dedicado.
+      let descFinal = envio.input.descripcion || "";
+      if (envio.input.tipo === "CAMBIO" && envio.input.varianteDeseada) {
+        descFinal = descFinal
+          ? `${descFinal} · Variante solicitada: ${envio.input.varianteDeseada}`
+          : `Variante solicitada: ${envio.input.varianteDeseada}`;
+      }
+
       return container.postventa.crearDevolucion({
         pedidoId,
         tipo: envio.input.tipo,
         motivo: envio.input.motivo,
-        descripcion: envio.input.descripcion,
+        descripcion: descFinal || undefined,
         items,
         evidencias: evidenciasSubidas,
-        varianteDeseada: envio.input.varianteDeseada,
         ...(forzar ? { forzar: true } : {}),
       });
     },

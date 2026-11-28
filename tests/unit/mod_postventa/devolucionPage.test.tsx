@@ -286,5 +286,4 @@ describe("DevolucionPage", () => {
 
     expect(await screen.findByText(/Solicitar devolución/)).toBeDefined();
   });
-  });
 });

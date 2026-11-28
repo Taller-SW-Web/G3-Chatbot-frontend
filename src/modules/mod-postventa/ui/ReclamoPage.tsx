@@ -35,10 +35,10 @@ export function ReclamoPage() {
 
   const nombreInicial = perfil.data?.nombreCompleto || cliente?.nombreCompleto || ultimoPedido?.nombre || "";
   const emailInicial = perfil.data?.correo || cliente?.correo || "";
-  const documentoInicial =
-    cliente?.tipoDocumento && cliente?.documentoEnmascarado
-      ? `${cliente.tipoDocumento} ${cliente.documentoEnmascarado}`
-      : cliente?.documentoEnmascarado ?? "";
+  // SPEC-19 :24,110: usar el documento no enmascarado del último pedido; si no existe o viene enmascarado,
+  // dejar vacío para que el cliente ingrese su número completo (SPEC-03 :211).
+  const docUltimoPedido = (ultimoPedido as { documento?: string } | null)?.documento ?? "";
+  const documentoInicial = docUltimoPedido && !docUltimoPedido.includes("*") ? docUltimoPedido : "";
   const telefonoInicial = perfil.data?.celular ?? cliente?.celular ?? "";
 
   const crear = useMutation({

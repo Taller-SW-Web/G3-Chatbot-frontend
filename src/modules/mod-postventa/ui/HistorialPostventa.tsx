@@ -16,25 +16,35 @@ function formatDate(value: string | null | undefined): string {
 }
 
 const ETIQUETAS_ESTADO: Record<string, string> = {
-  REGISTRADO: "Registrado",
-  REGISTRADA: "Registrada",
+  // SPEC-20 (Reclamos - F6)
+  REGISTRADO: "Recibido",
+  REGISTRADA: "Recibida",
+  EN_PROCESO: "En revisión",
+  ATENDIDO: "Respondido",
+  ATENDIDA: "Respondida",
+  DERIVADO: "Derivado a otro equipo",
+  DERIVADA: "Derivado a otro equipo",
+
+  // SPEC-22 (Devoluciones - F3)
+  SOLICITADA: "Recibida",
+  SOLICITADO: "Recibido",
+  EN_EVALUACION: "En revisión",
+  APROBADA: "Aprobada",
+  APROBADO: "Aprobado",
+  RECHAZADA: "Rechazada",
+  RECHAZADO: "Rechazado",
+  COMPLETADA: "Completada",
+  COMPLETADO: "Completado",
+
+  // Estados complementarios
   EN_REVISION: "En revisión",
   PENDIENTE: "Pendiente",
-  APROBADO: "Aprobado",
-  APROBADA: "Aprobada",
-  RECHAZADO: "Rechazado",
-  RECHAZADA: "Rechazada",
   RESUELTO: "Resuelto",
   RESUELTA: "Resuelta",
-  ATENDIDO: "Atendido",
-  ATENDIDA: "Atendida",
-  EN_PROCESO: "En proceso",
   REEMBOLSADO: "Reembolsado",
   REEMBOLSADA: "Reembolsada",
   ANULADO: "Anulado",
   ANULADA: "Anulada",
-  SOLICITADA: "Solicitada",
-  SOLICITADO: "Solicitado",
   PENDIENTE_ENVIO: "Pendiente de envío",
   RECIBIDO: "Recibido",
   FINALIZADO: "Finalizado",

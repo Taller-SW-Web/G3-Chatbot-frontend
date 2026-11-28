@@ -37,11 +37,14 @@ afterEach(cleanup);
 
 describe("HistorialPostventa y bloques", () => {
   it("humaniza badges de estado", () => {
-    expect(humanizarEstado("SOLICITADA")).toBe("Solicitada");
+    expect(humanizarEstado("SOLICITADA")).toBe("Recibida");
+    expect(humanizarEstado("EN_EVALUACION")).toBe("En revisión");
     expect(humanizarEstado("APROBADA")).toBe("Aprobada");
     expect(humanizarEstado("RECHAZADA")).toBe("Rechazada");
-    expect(humanizarEstado("REGISTRADO")).toBe("Registrado");
-    expect(humanizarEstado("EN_PROCESO")).toBe("En proceso");
+    expect(humanizarEstado("REGISTRADO")).toBe("Recibido");
+    expect(humanizarEstado("EN_PROCESO")).toBe("En revisión");
+    expect(humanizarEstado("ATENDIDO")).toBe("Respondido");
+    expect(humanizarEstado("DERIVADO")).toBe("Derivado a otro equipo");
     expect(humanizarEstado("RESUELTO")).toBe("Resuelto");
     expect(humanizarEstado("")).toBe("—");
     expect(humanizarEstado("OTRO_ESTADO")).toBe("Otro_estado");
@@ -68,7 +71,7 @@ describe("HistorialPostventa y bloques", () => {
     renderWithClient(<HistorialDevoluciones />);
 
     expect(await screen.findByText(/DEV-10/)).toBeDefined();
-    expect(screen.getByText("Solicitada")).toBeDefined();
+    expect(screen.getByText("Recibida")).toBeDefined();
   });
 
   it("HistorialDevoluciones muestra estado vacío y navega", async () => {
@@ -110,7 +113,7 @@ describe("HistorialPostventa y bloques", () => {
     renderWithClient(<HistorialReclamos />);
 
     expect(await screen.findByText(/REC-20/)).toBeDefined();
-    expect(screen.getByText("En proceso")).toBeDefined();
+    expect(screen.getByText("En revisión")).toBeDefined();
   });
 
   it("HistorialReclamos muestra estado vacío y navega", async () => {

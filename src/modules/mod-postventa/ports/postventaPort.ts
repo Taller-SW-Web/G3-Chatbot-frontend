@@ -26,8 +26,6 @@ export type CrearDevolucionInput = {
   descripcion?: string;
   items: DevolucionItemInput[];
   evidencias?: DevolucionEvidenciaInput[];
-  /** SPEC-21: variante elegida en caso de CAMBIO (talla, color, etc.). */
-  varianteDeseada?: string;
   /** Reenvía pese a un `409 DEVOLUCION_DUPLICADA` (acción "Registrar igual"). */
   forzar?: boolean;
 };
