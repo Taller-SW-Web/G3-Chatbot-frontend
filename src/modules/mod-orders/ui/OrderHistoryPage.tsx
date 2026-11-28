@@ -24,7 +24,7 @@ export type OrderHistorySlots = {
 const TABS: Tab[] = ["proceso", "entregados", "reembolso", "reclamos"];
 const TAB_LABEL: Record<Tab, string> = {
   proceso: "En proceso",
-  entregados: "Entregados",
+  entregados: "Finalizados",
   reembolso: "Reembolso/Cambio",
   reclamos: "Reclamos",
 };
@@ -40,7 +40,7 @@ function formatDate(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? value : DATE.format(date);
 }
 
-/** `/pedidos` pestañas En proceso/Entregados/Reembolsos/Reclamos. SPEC-17,18,21,22 */
+/** `/pedidos` pestañas En proceso/Finalizados/Reembolsos/Reclamos. SPEC-17,18,21,22 */
 export function OrderHistoryPage({
   initialTab = "proceso",
   slots,
@@ -64,7 +64,7 @@ export function OrderHistoryPage({
 
   const allOrders = pedidos.data?.pages.flatMap((p) => p.items) ?? [];
   const inProcess = allOrders.filter((o) => o.estado !== "ENTREGADO" && o.estado !== "ANULADO");
-  // "Entregados" también muestra los anulados para que el cliente los encuentre;
+  // "Finalizados" también muestra los anulados para que el cliente los encuentre;
   // las acciones de postventa solo aplican a ENTREGADO.
   const delivered = allOrders.filter((o) => o.estado === "ENTREGADO" || o.estado === "ANULADO");
   const visibleOrders = tab === "proceso" ? inProcess : delivered;
@@ -125,19 +125,19 @@ export function OrderHistoryPage({
               </button>
             </div>
           )}
-          {!pedidos.isLoading && !pedidos.isError && visibleOrders.length === 0 && (
+          {!pedidos.isLoading && !pedidos.isError && visibleOrders.length === 0 && !pedidos.hasNextPage && (
             <div className="py-10 px-4 flex flex-col items-center justify-center text-center gap-3.5 bg-white rounded-md border border-border-default screen-enter my-1">
               <div className="w-14 h-14 rounded-full bg-surface-cloud flex items-center justify-center text-text-secondary border border-border-default">
                 {tab === "proceso" ? <TruckIcon size={24} /> : <CheckIcon size={24} />}
               </div>
               <div className="flex flex-col gap-1 items-center max-w-[280px]">
                 <h3 className="font-heading text-[16px] tracking-wide text-text-primary uppercase">
-                  {tab === "proceso" ? "NO TIENES PEDIDOS EN PROCESO" : "NO TIENES PEDIDOS ENTREGADOS"}
+                  {tab === "proceso" ? "NO TIENES PEDIDOS EN PROCESO" : "NO TIENES PEDIDOS FINALIZADOS"}
                 </h3>
                 <p className="text-[13px] text-text-secondary leading-relaxed">
                   {tab === "proceso"
                     ? "Aún no tienes pedidos en esta pestaña. ¿Buscas tu próxima compra o necesitas ayuda con un pedido?"
-                    : "Aún no tienes pedidos entregados registrados en tu cuenta."}
+                    : "Aún no tienes pedidos finalizados registrados en tu cuenta."}
                 </p>
               </div>
               <button

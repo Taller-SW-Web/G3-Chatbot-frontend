@@ -119,9 +119,9 @@ describe("OrderHistoryPage", () => {
     expect(push).toHaveBeenCalledWith("/pedido?pedidoId=PED-2026-00001");
   });
 
-  it("en 'Entregados' no muestra el CSAT en la lista y permite abrir reclamo o devolución", async () => {
+  it("en 'Finalizados' no muestra el CSAT en la lista y permite abrir reclamo o devolución", async () => {
     renderPage();
-    fireEvent.click(screen.getByText("Entregados"));
+    fireEvent.click(screen.getByText("Finalizados"));
 
     await waitFor(() => expect(screen.getByText("Pedido PED-2026-00002")).toBeDefined());
     expect(screen.getByText("Pedido PED-2026-00003")).toBeDefined();
@@ -169,9 +169,9 @@ describe("OrderHistoryPage", () => {
     expect(push).toHaveBeenCalledWith("/");
   });
 
-  it("en 'Entregados' muestra fallback neutro 'Anulado' y reembolso para pedidos ANULADO sin motivo", async () => {
+  it("en 'Finalizados' muestra fallback neutro 'Anulado' y reembolso para pedidos ANULADO sin motivo", async () => {
     renderPage();
-    fireEvent.click(screen.getByText("Entregados"));
+    fireEvent.click(screen.getByText("Finalizados"));
 
     await waitFor(() => expect(screen.getByText("Pedido PED-2026-00003")).toBeDefined());
     expect(screen.getAllByText("Anulado").length).toBeGreaterThanOrEqual(1);
@@ -181,7 +181,7 @@ describe("OrderHistoryPage", () => {
     ).toBeDefined();
   });
 
-  it("en 'Entregados' muestra 'Anulado por falta de stock' cuando el pedido trae motivo de stock", async () => {
+  it("en 'Finalizados' muestra 'Anulado por falta de stock' cuando el pedido trae motivo de stock", async () => {
     listarPedidos.mockResolvedValueOnce({
       items: [
         {
@@ -200,7 +200,7 @@ describe("OrderHistoryPage", () => {
       pageSize: 20,
     });
     renderPage();
-    fireEvent.click(screen.getByText("Entregados"));
+    fireEvent.click(screen.getByText("Finalizados"));
 
     await waitFor(() => expect(screen.getByText("Pedido PED-2026-00004")).toBeDefined());
     expect(screen.getAllByText("Anulado por falta de stock").length).toBeGreaterThanOrEqual(1);
@@ -241,6 +241,7 @@ describe("OrderHistoryPage", () => {
 
     expect(await screen.findByText("Pedido PED-2026-00020")).toBeDefined();
     expect(screen.queryByText("Pedido PED-2026-00021")).toBeNull();
+    expect(screen.queryByText("NO TIENES PEDIDOS EN PROCESO")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "VER MÁS" }));
 
     expect(await screen.findByText("Pedido PED-2026-00025")).toBeDefined();
