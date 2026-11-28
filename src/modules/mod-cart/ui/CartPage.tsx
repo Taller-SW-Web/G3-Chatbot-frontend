@@ -196,36 +196,53 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   const errorTexto = hayError ? mensajeCarrito(errorCode) : null;
 
   if (carritoQuery.isPending) {
+    // Shell renderizado en servidor: totales, CTA y mensaje de carga pintan en
+    // el primer render. Antes, el LCP de `/carrito` era el estado vacío que
+    // aparecía recién tras hidratar y resolver `GET /carrito` (issue #164).
     return (
-      <div className="flex flex-col min-h-full p-4 gap-3 screen-enter" role="status" aria-label="Cargando carrito">
-        <p className="sr-only">Cargando carrito…</p>
-        <div className="flex flex-col gap-3">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="rounded-md bg-white border border-border-default p-3 flex gap-3 wf-card">
-              <div className="w-20 h-20 shrink-0 rounded-md shimmer" />
-              <div className="flex-1 min-w-0 flex flex-col gap-2">
-                <div className="h-4 w-3/4 rounded shimmer" />
-                <div className="h-3 w-1/3 rounded shimmer" />
-                <div className="h-4 w-20 rounded shimmer mt-1" />
-                <div className="h-6 w-24 rounded shimmer mt-1" />
-              </div>
+      <div className="flex flex-col min-h-full" data-testid="cart-page" aria-busy="true">
+        <div className="p-4 flex flex-col gap-3 flex-1">
+          <div role="status" aria-label="Cargando carrito" className="rounded-md bg-white border border-border-default p-4 flex flex-col gap-2">
+            <p className="sr-only">Cargando carrito…</p>
+            <p className="font-heading text-[15px] uppercase text-text-primary">Preparando tu carrito</p>
+            <p className="text-[13px] text-text-secondary">
+              Estamos consultando tus productos, precios y stock. En un momento verás el
+              detalle y podrás continuar con el pago.
+            </p>
+            <div className="flex flex-col gap-3 pt-1" aria-hidden>
+              {[1, 2].map((n) => (
+                <div key={n} className="rounded-md bg-surface-cloud border border-border-default p-3 flex gap-3">
+                  <div className="w-16 h-16 shrink-0 rounded-md shimmer" />
+                  <div className="flex-1 min-w-0 flex flex-col gap-2">
+                    <div className="h-4 w-3/4 rounded shimmer" />
+                    <div className="h-3 w-1/3 rounded shimmer" />
+                    <div className="h-4 w-20 rounded shimmer" />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
-        <div className="rounded-md bg-white border border-border-default p-3.5 flex flex-col gap-2.5 mt-2 wf-card">
-          <div className="flex justify-between">
-            <div className="h-3.5 w-20 rounded shimmer" />
-            <div className="h-3.5 w-16 rounded shimmer" />
+        <div className="border-t border-border-default p-4 flex flex-col gap-2 bg-white sticky bottom-0">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-text-secondary">Subtotal</span>
+            <span aria-hidden className="h-4 w-20 rounded shimmer" />
           </div>
-          <div className="flex justify-between">
-            <div className="h-3.5 w-28 rounded shimmer" />
-            <div className="h-3.5 w-14 rounded shimmer" />
+          <span aria-hidden className="h-4 w-28 rounded shimmer" />
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-text-secondary">Total</span>
+            <span aria-hidden className="h-5 w-24 rounded shimmer" />
           </div>
-          <div className="border-t border-border-default pt-2 flex justify-between">
-            <div className="h-5 w-24 rounded shimmer" />
-            <div className="h-5 w-20 rounded shimmer" />
-          </div>
-          <div className="h-11 w-full rounded shimmer mt-2" />
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            data-testid="btn-ir-a-pagar"
+            className="wf-btn py-3.5 text-sm font-bold tracking-wide bg-action-primary text-surface-ink disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            IR A PAGAR
+          </button>
+          <p className="text-[12px] text-text-secondary text-center">Cargando totales…</p>
         </div>
       </div>
     );

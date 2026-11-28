@@ -102,6 +102,8 @@ describe("CartPage: mutaciones del carrito anónimo (SPEC-11)", () => {
     renderCart();
     expect(screen.getByRole("status", { name: "Cargando carrito" })).toBeDefined();
     expect(screen.getByText("Cargando carrito…")).toBeDefined();
+    // El shell (CTA y totales) también pinta en servidor: no espera la hidratación.
+    expect(screen.getByTestId("btn-ir-a-pagar").hasAttribute("disabled")).toBe(true);
   });
 
   it("sin prop, '+' usa la conversación que resolvió el GET", async () => {

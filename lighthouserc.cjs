@@ -19,19 +19,15 @@ module.exports = {
       },
     },
     assert: {
+      // Desde el fix de #164 ninguna URL auditada depende de la hidratación
+      // para pintar su LCP: /carrito renderiza su shell en servidor y ya no
+      // necesita el techo temporal de 4800 ms.
       assertMatrix: [
       {
-        // El objetivo de producto (LCP <= 2500 ms) ya se cumple en las
-        // pantallas que renderizan contenido en servidor. `/carrito` queda
-        // con el techo de CI 4800 ms hasta que su estado vacío no dependa de
-        // la hidratación (issue #164).
-        matchingUrlPattern: "^http://localhost:3000/(buscar|privacidad)?$",
-        assertions: {
-          "largest-contentful-paint": ["error", { maxNumericValue: 2500 }],
-        },
-      },
-      {
         matchingUrlPattern: ".*",
+        // La mediana de las 3 corridas es el valor que bloquea (no la mejor corrida):
+        // así una corrida afortunada no esconde una regresión real.
+        aggregationMethod: "median",
         assertions: {
         // Presupuesto de Accesibilidad (mínimo 90% automatizado)
         "categories:accessibility": ["error", { minScore: 0.9 }],
@@ -42,10 +38,7 @@ module.exports = {
 
         // Presupuesto Core Web Vitals (H5-P4 - Mobile First)
         // Objetivo del proyecto: LCP <= 2500 ms y TBT <= 200 ms (ver docs/rendimiento-lighthouse.md).
-        // Excepción técnica en CI aprobada por @Ankarmin el 2026-11-27 (Issue #164): `/carrito`
-        // renderiza su estado vacío tras la hidratación y mide ~3971 ms con CPU 4x; el resto de
-        // URLs cumple 2500 ms (assertMatrix). El techo global de 4800 ms queda para esa excepción.
-        "largest-contentful-paint": ["error", { maxNumericValue: 4800 }],
+        "largest-contentful-paint": ["error", { maxNumericValue: 2500 }],
         // CLS <= 0.10 (umbral estricto "Good" de Core Web Vitals)
         "cumulative-layout-shift": ["error", { maxNumericValue: 0.1 }],
         // TBT (proxy en laboratorio de interactividad / INP, techo acotado a 350 ms en CI)
