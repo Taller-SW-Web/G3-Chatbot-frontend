@@ -110,6 +110,15 @@ describe("safe additive offer contract", () => {
   });
 });
 
+describe("search carousel size (SPEC-06 Req. 4, frontend#183)", () => {
+  it("shows up to 10 cards at once without a local expand toggle", () => {
+    bubble([{ tipo: "CARRUSEL_PRODUCTOS", datos: { titulo: "Resultados", productos: Array.from({ length: 12 }, (_, n) => ({ ...item, product_id: `fixture-${n + 1}`, name: `Producto ${n + 1}` })) } }]);
+    expect(screen.getByText("Producto 10")).toBeTruthy();
+    expect(screen.queryByText("Producto 11")).toBeNull();
+    expect(screen.queryByText("Ver más productos")).toBeNull();
+  });
+});
+
 describe("recommendation and cross-sell presentation", () => {
   it("renders reasons and at most three cross-sell items without a local silence policy", () => {
     const action = vi.fn();

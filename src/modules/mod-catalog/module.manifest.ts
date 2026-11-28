@@ -10,6 +10,7 @@ export const manifest = {
     "/catalogo/productos",
     "/catalogo/productos/{productId}",
     "/catalogo/disponibilidad",
+    "/catalogo/promociones",
   ],
   dependsOn: [],
 } satisfies ModuleManifest;

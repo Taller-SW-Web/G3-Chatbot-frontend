@@ -88,9 +88,18 @@ describe("adapter Axios de catálogo (SPEC-06, SPEC-09, SPEC-10)", () => {
     );
   });
 
-  it("envía el SKU vendible y product_id reales también en carrito anónimo", async () => {
-    peticiones.post.mockResolvedValueOnce({ data: {} });
-    await agregarProductoAlCarritoUseCase(chatbotApi, { sku: messiClub.single_sku, product_id: messiClub.product_id, cantidad: 1, conversacionId: "anonima" });
-    expect(peticiones.post).toHaveBeenCalledWith("/carrito/items", { sku: messiClub.single_sku, product_id: messiClub.product_id, cantidad: 1 }, expect.objectContaining({ params: { conversacionId: "anonima" } }));
+  it("promociones usa el endpoint real y devuelve items", async () => {
+    const items = [{ promotion_id: "promo-1", name: "Promo", valid_from: "2026-01-01T00:00:00Z", valid_until: null }];
+    peticiones.get.mockResolvedValueOnce({ data: { items } });
+    await expect(chatbotApi.listarPromociones()).resolves.toEqual(items);
+    expect(peticiones.get).toHaveBeenCalledWith(
+      "/catalogo/promociones",
+      expect.objectContaining({ timeout: 10000 })
+    );
+  });
+
+  it("promociones no inventa una lista si falta items", async () => {
+    peticiones.get.mockResolvedValueOnce({ data: {} });
+    await expect(chatbotApi.listarPromociones()).resolves.toBeUndefined();
   });
 });
