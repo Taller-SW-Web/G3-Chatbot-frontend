@@ -39,6 +39,7 @@ function resetStore() {
     expiraEn: null,
     cliente: null,
     accionPendiente: null,
+    avisoCarrito: null,
     authOpen: true,
     authVista: "login",
   });
@@ -118,6 +119,24 @@ describe("AuthModal", () => {
     expect(useChatStore.getState().cliente?.correo).toBe("ana@ejemplo.pe");
     expect(useChatStore.getState().authOpen).toBe(false);
     expect(useChatStore.getState().accionPendiente).toBeNull();
+  });
+
+  it("expone el aviso de carrito fusionado tras iniciar sesión", async () => {
+    api.login.mockResolvedValue({
+      ...sesion,
+      avisoCarrito: "Unimos los productos que agregaste con los de tu cuenta",
+      ajustesCarrito: [
+        { sku: "SKU-A", solicitado: 3, ajustado: 2, motivo: "STOCK_INSUFICIENTE" },
+      ],
+    });
+    render(<AuthModal />);
+
+    login();
+    await waitFor(() => expect(useChatStore.getState().authOpen).toBe(false));
+
+    expect(useChatStore.getState().avisoCarrito).toBe(
+      "Unimos los productos que agregaste con los de tu cuenta Ajustes: SKU-A: 3 → 2 (STOCK_INSUFICIENTE)."
+    );
   });
 
   it("no navega a una acción pendiente externa tras iniciar sesión", async () => {
