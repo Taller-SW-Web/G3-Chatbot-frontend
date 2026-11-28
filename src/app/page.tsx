@@ -2,7 +2,9 @@
 
 import { AppShell } from "@/shared/ui/shell/AppShell";
 import { HomePage } from "@/modules/mod-catalog/public";
-import { MENSAJE_MAX_CARACTERES } from "@/modules/mod-chat/public";
+// El límite vive en el kernel: importarlo de `mod-chat/public` arrastraba al
+// primer render el grafo de UI del chat (markdown, bloques y formularios).
+import { MENSAJE_MAX_CARACTERES } from "@/shared/config/chatContract";
 import { useHomeActions } from "@/app/_home/useHomeActions";
 
 /**

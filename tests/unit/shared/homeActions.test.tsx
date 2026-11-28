@@ -16,7 +16,9 @@ const h = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: h.push }) }));
 vi.mock("@/shared/di/container", () => ({ container: { carrito: {}, chat: {} } }));
 vi.mock("@/modules/mod-cart/application/agregarProductoAlCarritoUseCase", () => ({ agregarProductoAlCarritoUseCase: h.agregar }));
-vi.mock("@/modules/mod-chat/application/crearConversacionUseCase", () => ({ crearConversacionUseCase: h.crear }));
+// `useHomeActions` carga el chat bajo demanda desde el public.ts: se mockea esa
+// superficie para no transformar el barrel completo (markdown, bloques, SSE).
+vi.mock("@/modules/mod-chat/public", () => ({ crearConversacionUseCase: h.crear }));
 
 const producto: CatalogCardItem = {
   product_id: "p1",

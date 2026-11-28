@@ -13,7 +13,15 @@ import {
   conversacionParaCarrito,
   mensajeCarrito,
 } from "@/modules/mod-cart/public";
-import { crearConversacionUseCase } from "@/modules/mod-chat/public";
+
+/**
+ * Crea una conversación cargando `mod-chat` bajo demanda: el chat (markdown,
+ * bloques, formularios y SSE) no forma parte del render inicial de la home.
+ */
+async function crearConversacionChat() {
+  const { crearConversacionUseCase } = await import("@/modules/mod-chat/public");
+  return crearConversacionUseCase(container.chat);
+}
 
 /** Mensaje del agregado; en 409 VARIANTE_REQUERIDA indica qué falta (talla/color). */
 function mensajeAgregar(error: unknown): string {
@@ -44,7 +52,7 @@ export function useHomeActions() {
     if (sel.sku == null) return { ok: false, mensaje: mensajeAgregar(new Error("sku requerido")) };
     const sku = sel.sku;
     const crearConversacion = async () => {
-      const { conversacionId } = await crearConversacionUseCase(container.chat);
+      const { conversacionId } = await crearConversacionChat();
       convCreadaRef.current = conversacionId;
       return conversacionId;
     };
@@ -83,7 +91,7 @@ export function useHomeActions() {
 
   /** Crea una conversación real, deja el texto como primer mensaje y abre el chat. */
   async function onAbrirChat(texto: string): Promise<void> {
-    const { conversacionId } = await crearConversacionUseCase(container.chat);
+    const { conversacionId } = await crearConversacionChat();
     setPrimerMensaje(texto);
     router.push(`/chat/${encodeURIComponent(conversacionId)}`);
   }

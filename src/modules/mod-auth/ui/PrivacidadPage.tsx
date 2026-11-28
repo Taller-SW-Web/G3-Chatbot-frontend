@@ -1,35 +1,23 @@
-"use client";
-
-import { useRouter } from "next/navigation";
 import { ArrowLeftIcon } from "@/shared/ui/icons/ArrowLeftIcon";
+import { BotonVolver } from "@/shared/ui/BotonVolver";
 
 /**
  * `/privacidad`: Política de privacidad y protección de datos personales.
  * Basada en docs/conversacion/privacidad.md (§5 Contenido mínimo propuesto, Ley N.° 29733, SPEC-05 y SPEC-23).
+ *
+ * Server Component: el contenido es estático y solo el botón "volver" hidrata.
  */
 export function PrivacidadPage() {
-  const router = useRouter();
-
-  const handleVolver = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push("/");
-    }
-  };
-
   return (
     <div className="wf-phone flex flex-col h-screen max-h-[880px] bg-surface-cloud">
       <header className="flex items-center justify-between px-4 py-2 border-b border-border-inverse bg-surface-ink text-text-inverse sticky top-0 z-20">
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            aria-label="Volver"
-            onClick={handleVolver}
+          <BotonVolver
+            label="Volver"
             className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse text-lg leading-none hover:bg-surface-ink cursor-pointer"
           >
             <ArrowLeftIcon size={20} />
-          </button>
+          </BotonVolver>
         </div>
         <p className="font-heading uppercase tracking-[0.08em] text-[16px]">POLÍTICA DE PRIVACIDAD</p>
         <div className="w-10" />
@@ -186,13 +174,9 @@ export function PrivacidadPage() {
         </section>
 
         <div className="pt-2 pb-4">
-          <button
-            type="button"
-            onClick={handleVolver}
-            className="wf-btn w-full py-3 text-[12px] font-bold bg-action-primary text-surface-ink hover:bg-action-primary-hover active:scale-[0.98] transition-all shadow-sm cursor-pointer"
-          >
+          <BotonVolver className="wf-btn w-full py-3 text-[12px] font-bold bg-action-primary text-surface-ink hover:bg-action-primary-hover active:scale-[0.98] transition-all shadow-sm cursor-pointer">
             VOLVER
-          </button>
+          </BotonVolver>
         </div>
       </main>
     </div>

@@ -9,11 +9,11 @@ Un módulo puede importarla libremente; ella solo importa módulos por su `publi
 |---|---|
 | `api/` | Instancia Axios + interceptores (`http.ts`), problem+json (`httpError.ts`), idempotencia y single-flight |
 | `auth/` | Store de sesión/carrito (`chatStore`), helpers de sesión, tipos de cliente, `AuthGuard`, `SesionIndicator`, modal de celular, `usePerfil` y el tipo/normalización de la política de contraseña (las reglas evaluables viven en `mod-auth`) |
-| `config/` | `apiConfig` y el tipo de los `module.manifest.ts` |
+| `config/` | `apiConfig`, `chatContract` (límite del compositor compartido con `mod-chat`, SPEC-05) y el tipo de los `module.manifest.ts` |
 | `di/` | Composition root (`container`) y `queryClient` |
 | `security/` | `sanitize`, CSP y colector de reportes (`csp-report`) |
 | `testing/` | `setup.ts` de Vitest y fixtures compartidos |
-| `ui/` | Iconos, `BrandLogo`, `StatusBadge`, `BloqueError`, `QueryProvider` y `ui/shell/AppShell` |
+| `ui/` | Iconos, `BrandLogo`, `StatusBadge`, `BloqueError`, `BotonVolver`, `QueryProvider` y `ui/shell/AppShell` |
 
 ## Excepciones de composición
 

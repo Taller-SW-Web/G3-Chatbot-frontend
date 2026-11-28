@@ -1,7 +1,8 @@
 import type { ChatStreamEvento, ChatStreamPort } from "@/modules/mod-chat/ports/chatStreamPort";
+import { MENSAJE_MAX_CARACTERES } from "@/shared/config/chatContract";
 
 /** Largo máximo del mensaje que acepta el backend (1 a 1000 caracteres). */
-export const MENSAJE_MAX_CARACTERES = 1000;
+export { MENSAJE_MAX_CARACTERES };
 
 /**
  * Recorta y valida el texto; lanza si está vacío o excede el máximo.

@@ -26,12 +26,33 @@ import { parseAmount } from "@/modules/mod-catalog/public";
 import { parseCartDiscounts } from "@/modules/mod-cart/domain/utils/cartDiscounts";
 import { sanitize } from "@/shared/security/sanitize";
 
+function CarritoVacio() {
+  return (
+    <div className="p-4" data-testid="carrito-vacio">
+      <p className="text-sm text-text-secondary text-center py-8">
+        Tu carrito está vacío. Prueba con Ver ofertas o Buscar productos.
+      </p>
+    </div>
+  );
+}
+
 /**
  * `/carrito`: líneas con datos reales del backend (SPEC-10, SPEC-11).
  * Fuente de verdad: `GET /carrito` (precios, stock y totales recalculados).
  * El badge del header lo sincroniza `useCarrito` (count/subtotal), compartido.
+ *
+ * `initialVacio` llega del servidor: sin cookie de carrito no hay nada que
+ * consultar y el estado vacío se pinta en el primer HTML, sin esperar a la
+ * hidratación (LCP de `/carrito`, #164). Con cookie se mantiene el skeleton
+ * hasta que `GET /carrito` confirma las líneas.
  */
-export function CartPage({ conversacionId }: { conversacionId?: string }) {
+export function CartPage({
+  conversacionId,
+  initialVacio = false,
+}: {
+  conversacionId?: string;
+  initialVacio?: boolean;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const cliente = useChatStore((s) => s.cliente);
@@ -195,37 +216,60 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
   );
   const errorTexto = hayError ? mensajeCarrito(errorCode) : null;
 
+  if (initialVacio && (!carrito || carrito.lineas.length === 0)) {
+    // El HTML del servidor ya trae este nodo: mantenerlo evita que la
+    // re-renderización del carrito vacío cree un LCP nuevo tras hidratar.
+    return <CarritoVacio />;
+  }
+
   if (carritoQuery.isPending) {
+    // Shell renderizado en servidor: totales, CTA y mensaje de carga pintan en
+    // el primer render. Antes, el LCP de `/carrito` era el estado vacío que
+    // aparecía recién tras hidratar y resolver `GET /carrito` (issue #164).
     return (
-      <div className="flex flex-col min-h-full p-4 gap-3 screen-enter" role="status" aria-label="Cargando carrito">
-        <p className="sr-only">Cargando carrito…</p>
-        <div className="flex flex-col gap-3">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="rounded-md bg-white border border-border-default p-3 flex gap-3 wf-card">
-              <div className="w-20 h-20 shrink-0 rounded-md shimmer" />
-              <div className="flex-1 min-w-0 flex flex-col gap-2">
-                <div className="h-4 w-3/4 rounded shimmer" />
-                <div className="h-3 w-1/3 rounded shimmer" />
-                <div className="h-4 w-20 rounded shimmer mt-1" />
-                <div className="h-6 w-24 rounded shimmer mt-1" />
-              </div>
+      <div className="flex flex-col min-h-full" data-testid="cart-page" aria-busy="true">
+        <div className="p-4 flex flex-col gap-3 flex-1">
+          <div role="status" aria-label="Cargando carrito" className="rounded-md bg-white border border-border-default p-4 flex flex-col gap-2">
+            <p className="sr-only">Cargando carrito…</p>
+            <p className="font-heading text-[15px] uppercase text-text-primary">Preparando tu carrito</p>
+            <p className="text-[13px] text-text-secondary">
+              Estamos consultando tus productos, precios y stock. En un momento verás el
+              detalle y podrás continuar con el pago.
+            </p>
+            <div className="flex flex-col gap-3 pt-1" aria-hidden>
+              {[1, 2].map((n) => (
+                <div key={n} className="rounded-md bg-surface-cloud border border-border-default p-3 flex gap-3">
+                  <div className="w-16 h-16 shrink-0 rounded-md shimmer" />
+                  <div className="flex-1 min-w-0 flex flex-col gap-2">
+                    <div className="h-4 w-3/4 rounded shimmer" />
+                    <div className="h-3 w-1/3 rounded shimmer" />
+                    <div className="h-4 w-20 rounded shimmer" />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
-        <div className="rounded-md bg-white border border-border-default p-3.5 flex flex-col gap-2.5 mt-2 wf-card">
-          <div className="flex justify-between">
-            <div className="h-3.5 w-20 rounded shimmer" />
-            <div className="h-3.5 w-16 rounded shimmer" />
+        <div className="border-t border-border-default p-4 flex flex-col gap-2 bg-white sticky bottom-0">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-text-secondary">Subtotal</span>
+            <span aria-hidden className="h-4 w-20 rounded shimmer" />
           </div>
-          <div className="flex justify-between">
-            <div className="h-3.5 w-28 rounded shimmer" />
-            <div className="h-3.5 w-14 rounded shimmer" />
+          <span aria-hidden className="h-4 w-28 rounded shimmer" />
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-text-secondary">Total</span>
+            <span aria-hidden className="h-5 w-24 rounded shimmer" />
           </div>
-          <div className="border-t border-border-default pt-2 flex justify-between">
-            <div className="h-5 w-24 rounded shimmer" />
-            <div className="h-5 w-20 rounded shimmer" />
-          </div>
-          <div className="h-11 w-full rounded shimmer mt-2" />
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            data-testid="btn-ir-a-pagar"
+            className="wf-btn py-3.5 text-sm font-bold tracking-wide bg-action-primary text-surface-ink disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            IR A PAGAR
+          </button>
+          <p className="text-[12px] text-text-secondary text-center">Cargando totales…</p>
         </div>
       </div>
     );
@@ -235,13 +279,7 @@ export function CartPage({ conversacionId }: { conversacionId?: string }) {
     // "Vacío" solo cuando de verdad no hay carrito que mostrar; el resto es error.
     const sinCarrito = errorCode === "REQUIERE_SESION" || errorCode === "RECURSO_NO_ENCONTRADO";
     if (sinCarrito) {
-      return (
-        <div className="p-4">
-          <p className="text-sm text-text-secondary text-center py-8">
-            Tu carrito está vacío. Prueba con Ver ofertas o Buscar productos.
-          </p>
-        </div>
-      );
+      return <CarritoVacio />;
     }
     return (
       <div className="p-4">
