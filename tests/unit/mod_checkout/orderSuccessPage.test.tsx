@@ -42,6 +42,8 @@ describe("OrderSuccessPage: confirmación real sin datos demo (SPEC-16, SPEC-24)
       },
       ultimoPedido: {
         orderId: "PED-REAL-12345",
+        nuevoEstado: "PAGADO",
+        plazoEstimadoDias: 1,
         total: 189.5,
         subtotal: 175.0,
         costoEnvio: 14.5,
@@ -58,19 +60,44 @@ describe("OrderSuccessPage: confirmación real sin datos demo (SPEC-16, SPEC-24)
         tarjetaMarca: "Mastercard",
         tarjetaLast4: "5678",
         correoEnmascarado: "r***@test.pe",
-      },
+      } as never,
     });
 
     render(<OrderSuccessPage />);
 
     expect(screen.getByText("¡PEDIDO CONFIRMADO!")).toBeDefined();
     expect(screen.getByText(/PED-REAL-12345/)).toBeDefined();
+    expect(screen.getByText(/Entrega estimada en 1 día hábil\./)).toBeDefined();
     expect(screen.getByText("S/ 189.50")).toBeDefined();
     expect(screen.getByText("Mastercard •••• 5678")).toBeDefined();
     expect(screen.getByText("Calle Las Begonias 450 · San Isidro")).toBeDefined();
     expect(screen.getByText(/Te enviaremos la confirmación a r\*\*\*@test\.pe/)).toBeDefined();
     expect(screen.queryByText(/PED-2026-00891/)).toBeNull();
     expect(screen.queryByText(/cliente\.demo@correo\.com/)).toBeNull();
+  });
+
+  it("con pago en proceso muestra 'PAGO RECIBIDO' antes del ACK (SPEC-14 :166,173)", () => {
+    useChatStore.setState({
+      cliente: { id: "cli-1", nombreCompleto: "Rosa", correo: "rosa@test.pe" },
+      ultimoPedido: {
+        orderId: "PED-PROC-999",
+        estado: "PAGO_EN_PROCESO",
+        plazoEstimadoDias: 2,
+        total: 100,
+        subtotal: 100,
+        costoEnvio: 0,
+        lineas: [{ nombre: "P1", cantidad: 1, precio: 100 }],
+        tarjetaMarca: "Visa",
+        tarjetaLast4: "1234",
+      } as never,
+    });
+
+    render(<OrderSuccessPage />);
+
+    expect(screen.getByText("PAGO RECIBIDO")).toBeDefined();
+    expect(screen.getByText(/Pago recibido\. Estamos confirmando tu pedido\.\.\./)).toBeDefined();
+    expect(screen.getByText(/Entrega estimada en 2 días hábiles\./)).toBeDefined();
+    expect(screen.queryByText(/¡PEDIDO CONFIRMADO!/)).toBeNull();
   });
 
   it("en incógnito permite volver a mis pedidos o seguir comprando", () => {

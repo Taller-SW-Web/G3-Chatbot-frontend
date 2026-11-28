@@ -28,6 +28,7 @@ export function DireccionForm({
   onValid,
   guardarDireccion = false,
   onGuardarChange,
+  summary,
   direccionGuardada,
   avisoDireccion,
 }: {
@@ -35,22 +36,45 @@ export function DireccionForm({
   /** SPEC-12: el cliente decide si la dirección queda guardada en su perfil. */
   guardarDireccion?: boolean;
   onGuardarChange?: (guardar: boolean) => void;
+  /** SPEC-12: snapshot del checkout con contacto y dirección previa. */
+  summary?: Record<string, unknown> | null;
   /** SPEC-12: dirección predeterminada o guardada para prellenar. */
   direccionGuardada?: DireccionGuardadaInput | null;
   /** SPEC-12: aviso cuando Seguridad falla al guardar la dirección. */
   avisoDireccion?: string | null;
 }) {
   const cliente = useChatStore((s) => s.cliente);
-  const ultimoPedido = useChatStore((s) => s.ultimoPedido);
   const tipoPerfil = tipoValido(cliente?.ultimoDocumento?.tipo)
     ? cliente.ultimoDocumento.tipo
     : tipoValido(cliente?.tipoDocumento) ? cliente.tipoDocumento : undefined;
 
-  const fuenteGuardada = direccionGuardada ?? (ultimoPedido?.direccion && ultimoPedido?.distrito ? {
-    nombre: ultimoPedido.nombre,
-    direccion: ultimoPedido.direccion,
-    distrito: ultimoPedido.distrito,
-  } : null);
+  // SPEC-12 :89-91: El documento del cliente se prellena desde checkout.summary.contacto
+  // del pedido anterior, nunca del perfil de Seguridad.
+  const summaryContacto = (summary?.contacto ?? {}) as Record<string, unknown>;
+  const docTipoSummary = tipoValido(summaryContacto.tipoDocumento)
+    ? (summaryContacto.tipoDocumento as TipoDocumento)
+    : tipoValido(summaryContacto.docTipo)
+      ? (summaryContacto.docTipo as TipoDocumento)
+      : undefined;
+  const docNumSummary =
+    typeof summaryContacto.numeroDocumento === "string"
+      ? summaryContacto.numeroDocumento
+      : typeof summaryContacto.docNum === "string"
+        ? summaryContacto.docNum
+        : undefined;
+
+  // Dirección guardada / predeterminada (SPEC-12 :104-107):
+  const summaryDireccion = (summary?.direccion ?? {}) as Record<string, unknown>;
+  const fuenteGuardada = direccionGuardada ?? (
+    summaryDireccion.direccion && summaryDireccion.distrito
+      ? {
+          nombre: typeof summaryDireccion.destinatario === "string" ? summaryDireccion.destinatario : (typeof summaryDireccion.nombre === "string" ? summaryDireccion.nombre : undefined),
+          direccion: typeof summaryDireccion.direccion === "string" ? summaryDireccion.direccion : undefined,
+          distrito: typeof summaryDireccion.distrito === "string" ? summaryDireccion.distrito : undefined,
+          referencia: typeof summaryDireccion.referencia === "string" ? summaryDireccion.referencia : undefined,
+        }
+      : null
+  );
 
   const [cambiado, setCambiado] = useState(false);
   const usandoGuardada = !cambiado && Boolean(fuenteGuardada?.direccion && fuenteGuardada?.distrito);
@@ -63,8 +87,8 @@ export function DireccionForm({
       direccion: fuenteGuardada?.direccion ?? "",
       distrito: fuenteGuardada?.distrito ?? "",
       referencia: fuenteGuardada?.referencia ?? "",
-      docTipo: (fuenteGuardada?.docTipo && tipoValido(fuenteGuardada.docTipo)) ? fuenteGuardada.docTipo : (tipoValido(tipoPerfil) ? tipoPerfil : "DNI"),
-      docNum: fuenteGuardada?.docNum ?? "",
+      docTipo: docTipoSummary ?? (fuenteGuardada?.docTipo && tipoValido(fuenteGuardada.docTipo) ? fuenteGuardada.docTipo : (tipoValido(tipoPerfil) ? tipoPerfil : "DNI")),
+      docNum: docNumSummary ?? fuenteGuardada?.docNum ?? "",
     },
   });
   const values = useWatch({ control });

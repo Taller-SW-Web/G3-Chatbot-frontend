@@ -107,3 +107,26 @@ it("muestra el aviso cuando Seguridad falla al guardar la dirección", () => {
   expect(aviso).toBeDefined();
   expect(aviso.textContent).toContain("No pudimos guardar tu dirección para la próxima vez");
 });
+
+it("prellena documento y dirección desde checkout.summary (SPEC-12 :89-91, :104-107)", () => {
+  const summary = {
+    contacto: {
+      tipoDocumento: "DNI",
+      numeroDocumento: "72458912",
+    },
+    direccion: {
+      destinatario: "Carlos Ramos",
+      direccion: "Av. Larco 1234, dpto. 502",
+      distrito: "Miraflores",
+      referencia: "Cerca al parque",
+    },
+  };
+  render(<DireccionForm onValid={vi.fn()} summary={summary} />);
+
+  expect((screen.getByLabelText("Nombre completo") as HTMLInputElement).value).toBe("Carlos Ramos");
+  expect((screen.getByLabelText("Dirección exacta") as HTMLInputElement).value).toBe("Av. Larco 1234, dpto. 502");
+  expect((screen.getByLabelText("Distrito de entrega") as HTMLSelectElement).value).toBe("Miraflores");
+  expect((screen.getByLabelText("Tipo de documento") as HTMLSelectElement).value).toBe("DNI");
+  expect((screen.getByLabelText("Número de documento") as HTMLInputElement).value).toBe("72458912");
+  expect(screen.getByTestId("aviso-direccion-guardada")).toBeDefined();
+});

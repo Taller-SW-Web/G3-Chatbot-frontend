@@ -277,9 +277,13 @@ export function CheckoutPage() {
         return;
       }
 
-      if (res.avisoDireccion) {
-        setAvisoDireccion(res.avisoDireccion);
-      }
+      const summaryEnvio = checkoutSesion?.summary?.envio as { plazoEstimadoDias?: number } | undefined;
+      const plazoEstimadoDias =
+        typeof summaryEnvio?.plazoEstimadoDias === "number"
+          ? summaryEnvio.plazoEstimadoDias
+          : typeof (checkoutSesion?.summary as { plazoEstimadoDias?: unknown })?.plazoEstimadoDias === "number"
+            ? (checkoutSesion?.summary as { plazoEstimadoDias: number }).plazoEstimadoDias
+            : undefined;
 
       setUltimoPedido({
         orderId,
@@ -304,7 +308,10 @@ export function CheckoutPage() {
         tarjetaLast4: res.ultimos4 || pago.tarjetaNum.replace(/\D/g, "").slice(-4) || "••••",
         correoEnmascarado: res.correoEnmascarado,
         mensajeConfirmacion: res.mensaje,
-      });
+        estado: res.estado,
+        nuevoEstado: res.nuevoEstado,
+        plazoEstimadoDias,
+      } as never);
 
       router.push("/exito");
     } catch (err: unknown) {
@@ -452,7 +459,7 @@ export function CheckoutPage() {
             onValid={setDir}
             guardarDireccion={guardarDireccion}
             onGuardarChange={setGuardarDireccion}
-            direccionGuardada={checkoutSesion?.direccionGuardada}
+            summary={checkoutSesion?.summary}
             avisoDireccion={avisoDireccion}
           />
           <CotizacionEnvio

@@ -77,11 +77,24 @@ export function OrderSuccessPage() {
   const total = pedido.total ?? pedido.subtotal ?? 0;
   const aviso = avisoConfirmacion(pedido.correoEnmascarado, correo);
 
+  const pedidoData = pedido as { estado?: string; nuevoEstado?: string; plazoEstimadoDias?: number };
+  const esConfirmado = pedidoData.nuevoEstado === "PAGADO";
+  const plazoDias = pedidoData.plazoEstimadoDias;
+  const textoPlazo = plazoDias
+    ? `Entrega estimada en ${plazoDias} ${plazoDias === 1 ? "día hábil" : "días hábiles"}.`
+    : "";
+
   return (
     <div className="relative min-h-full p-6 flex flex-col items-center gap-3 text-center">
       <div className="wf-check w-16 h-16 rounded-full flex items-center justify-center bg-success-background text-success-default"><CheckIcon size={24} /></div>
-      <h2 className="font-heading text-[24px] leading-8">¡PEDIDO CONFIRMADO!</h2>
-      <p className="text-[14px] text-text-secondary">Pedido {orderId} · {aviso} Entrega estimada en 1 día hábil.</p>
+      <h2 className="font-heading text-[24px] leading-8">
+        {esConfirmado ? "¡PEDIDO CONFIRMADO!" : "PAGO RECIBIDO"}
+      </h2>
+      <p className="text-[14px] text-text-secondary">
+        {esConfirmado
+          ? `Pedido ${orderId} · ${aviso} ${textoPlazo}`.trim()
+          : `Pago recibido. Estamos confirmando tu pedido... ${textoPlazo}`.trim()}
+      </p>
       <div className="rounded-md bg-white border border-border-default w-full p-3 text-left flex flex-col gap-2">
         <div className="flex justify-between text-[14px]"><span className="text-text-secondary">Total pagado</span><span className="font-heading text-[18px]">S/ {total.toFixed(2)}</span></div>
         <div className="border-t border-dashed border-border-default pt-2 flex flex-col gap-1 text-[13px]">
