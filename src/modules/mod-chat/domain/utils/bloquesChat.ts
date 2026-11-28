@@ -43,12 +43,26 @@ export function parseQuickActions(value: unknown): { pregunta?: string; acciones
   return { pregunta: typeof value.pregunta === "string" ? value.pregunta : undefined, acciones };
 }
 
-export function carouselMetadata(bloque: BloqueCarrusel): { titulo?: string; variant?: "recomendacion" | "cross_sell" | "ofertas"; partial: boolean } {
+export function carouselMetadata(bloque: BloqueCarrusel): {
+  titulo?: string;
+  variant?: "recomendacion" | "cross_sell" | "ofertas";
+  partial: boolean;
+  total?: number;
+  siguiente: Record<string, unknown> | null;
+} {
   const data = bloque.datos;
+  const total = data?.total;
+  const siguiente = data?.siguiente;
+  const pagina = esObjeto(siguiente) ? siguiente.pagina : undefined;
   return {
     partial: data?.partial === true,
     titulo: typeof data?.titulo === "string" ? data.titulo : undefined,
     variant: data?.variant === "recomendacion" || data?.variant === "cross_sell" || data?.variant === "ofertas" ? data.variant : undefined,
+    total: typeof total === "number" && Number.isInteger(total) && total >= 0 ? total : undefined,
+    // The payload travels untouched; only a real next page enables "Ver más".
+    siguiente: esObjeto(siguiente) && typeof pagina === "number" && Number.isInteger(pagina) && pagina >= 2
+      ? siguiente
+      : null,
   };
 }
 

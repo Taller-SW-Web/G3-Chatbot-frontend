@@ -38,7 +38,16 @@ export type BloqueTexto = BloqueBase & {
 /** Backend wraps catalog payloads in `datos`; there is no top-level `titulo`. */
 export type BloqueCarrusel = BloqueBase & {
   tipo: "CARRUSEL_PRODUCTOS";
-  datos: { productos: BackendCarouselItem[]; variant?: "recomendacion" | "cross_sell" | "ofertas"; titulo?: string; partial?: boolean };
+  datos: {
+    productos: BackendCarouselItem[];
+    variant?: "recomendacion" | "cross_sell" | "ofertas";
+    titulo?: string;
+    partial?: boolean;
+    /** Total reported by Productos (the consulted total when `partial`). */
+    total?: number;
+    /** Exact `BUSCAR_PAGINA` payload; `null` on the last page. */
+    siguiente?: Record<string, unknown> | null;
+  };
 };
 
 export type PromotionsBlock = BloqueBase & {
