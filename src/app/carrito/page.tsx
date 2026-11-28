@@ -11,6 +11,12 @@ import { CART_PRESENCE_COOKIE } from "@/shared/auth/cartPresence";
 export default async function CarritoRoute() {
   const cookieStore = await cookies();
   const initialVacio = cookieStore.get(CART_PRESENCE_COOKIE)?.value !== "1";
+  console.log(
+    "carrito initialVacio",
+    initialVacio,
+    "cookie",
+    cookieStore.get(CART_PRESENCE_COOKIE)?.value ?? "none",
+  );
 
   return (
     <AppShell initialScreen="carrito">

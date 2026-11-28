@@ -29,7 +29,7 @@ import { sanitize } from "@/shared/security/sanitize";
 function CarritoVacio() {
   return (
     <div className="p-4" data-testid="carrito-vacio">
-      <p className="text-sm text-text-secondary text-center py-8">
+      <p className="text-sm text-text-secondary text-center py-8" data-ssr="1">
         Tu carrito está vacío. Prueba con Ver ofertas o Buscar productos.
       </p>
     </div>
