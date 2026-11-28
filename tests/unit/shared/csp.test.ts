@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { apiOrigin, buildCsp } from "@/shared/security/csp";
+import {
+  apiOrigin,
+  buildCsp,
+  CSP_REPORT_ENDPOINTS,
+  CSP_REPORT_GROUP,
+  CSP_REPORT_PATH,
+} from "@/shared/security/csp";
 import { resolveApiProxyTarget } from "@/shared/config/apiProxyTarget";
 
 const directivas = (csp: string) => Object.fromEntries(csp.split("; ").map((d) => [d.split(" ")[0], d]));
@@ -33,6 +39,19 @@ describe("buildCsp", () => {
     const d = directivas(buildCsp({ isDev: true }));
     expect(d["script-src"]).toContain("'unsafe-eval'");
     expect(d["connect-src"]).toContain("ws:");
+  });
+
+  it("declara el mismo endpoint con report-uri (CSP2) y report-to (CSP3)", () => {
+    const d = directivas(buildCsp());
+    expect(d["report-uri"]).toBe(`report-uri ${CSP_REPORT_PATH}`);
+    expect(d["report-to"]).toBe(`report-to ${CSP_REPORT_GROUP}`);
+    expect(CSP_REPORT_ENDPOINTS).toBe(`${CSP_REPORT_GROUP}="${CSP_REPORT_PATH}"`);
+  });
+
+  it("en desarrollo no declara report-to (Reporting-Endpoints no se procesa sobre HTTP)", () => {
+    const d = directivas(buildCsp({ isDev: true }));
+    expect(d["report-uri"]).toBe(`report-uri ${CSP_REPORT_PATH}`);
+    expect(d["report-to"]).toBeUndefined();
   });
 
   it("añade a connect-src solo el origen de un API absoluto", () => {

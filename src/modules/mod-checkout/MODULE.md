@@ -36,7 +36,7 @@ Checkout en dos pasos (dirección → tarjeta), temporizador de 15 minutos, inte
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_checkout/` (3 archivos)
+- Unitarias: `tests/unit/mod_checkout/` (5 archivos)
 
 ## Reglas
 
