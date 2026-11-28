@@ -7,8 +7,21 @@ const onOk = vi.fn();
 const onCancelar = vi.fn();
 
 const LINEAS = [
-  { productoId: "P-1", label: "Zapatilla Volta · 42" },
-  { productoId: "P-2", label: "Zapatilla Volta · 43" },
+  {
+    productoId: "P-1",
+    label: "Zapatilla Volta · 42",
+    variantes: [
+      { sku: "SKU-42-NEGRO", label: "Talla 42 · Negro", disponible: true },
+      { sku: "SKU-42-AZUL", label: "Talla 42 · Azul", disponible: true },
+    ],
+  },
+  {
+    productoId: "P-2",
+    label: "Zapatilla Volta · 43",
+    variantes: [
+      { sku: "SKU-43-NEGRO", label: "Talla 43 · Negro", disponible: true },
+    ],
+  },
 ];
 
 beforeEach(() => {
@@ -65,6 +78,12 @@ describe("DevolucionForm", () => {
     expect(screen.queryByLabelText("Talla o color deseado")).toBeNull();
   });
 
+  it("sin variantes reales no inventa el selector de cambio", () => {
+    abrir([{ productoId: "P-3", label: "Producto sin variantes" }]);
+
+    expect(screen.queryByLabelText("Talla o color deseado")).toBeNull();
+  });
+
   it("envía la solicitud con línea, motivo y descripción", async () => {
     abrir();
 
@@ -100,8 +119,24 @@ describe("DevolucionForm", () => {
     })));
   });
 
-  it("permite quitar la evidencia antes de enviar", () => {
+  it("exige evidencia cuando el motivo es producto defectuoso", () => {
     abrir();
+
+    fireEvent.change(screen.getByLabelText("Motivo"), { target: { value: "PRODUCTO_DEFECTUOSO" } });
+
+    const enviar = screen.getByRole("button", { name: /ENVIAR SOLICITUD/ }) as HTMLButtonElement;
+    expect(screen.getByText("Este motivo exige al menos una evidencia.")).toBeDefined();
+    expect(enviar.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Subir evidencia"), {
+      target: { files: [new File(["x"], "suela.png", { type: "image/png" })] },
+    });
+
+    expect(screen.getByText("suela.png")).toBeDefined();
+    expect(enviar.disabled).toBe(false);
+  });
+
+  it("permite quitar la evidencia antes de enviar", () => {    abrir();
     const archivo = new File(["x"], "suela.png", { type: "image/png" });
 
     fireEvent.change(screen.getByLabelText("Subir evidencia"), { target: { files: [archivo] } });
@@ -127,5 +162,97 @@ describe("DevolucionForm", () => {
     await Promise.resolve();
     expect(onOk).not.toHaveBeenCalled();
     expect((screen.getByLabelText("Línea a devolver") as HTMLSelectElement).value).toBe("");
+  });
+
+  it("permite seleccionar 2 líneas con cantidades distintas", async () => {
+    abrir([
+      { productoId: "P-1", label: "Zapatilla Volta · 42", cantidadMaxima: 5 },
+      { productoId: "P-2", label: "Zapatilla Volta · 43", cantidadMaxima: 5 },
+    ]);
+
+    fireEvent.click(screen.getByLabelText("Seleccionar Zapatilla Volta · 43"));
+    fireEvent.change(screen.getByLabelText("Cantidad para Zapatilla Volta · 42"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("Cantidad para Zapatilla Volta · 43"), { target: { value: "3" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR SOLICITUD/ }));
+
+    await waitFor(() => expect(onOk).toHaveBeenCalledTimes(1));
+    expect(onOk).toHaveBeenCalledWith(expect.objectContaining({
+      items: [
+        { productoId: "P-1", cantidad: 2 },
+        { productoId: "P-2", cantidad: 3 },
+      ],
+    }));
+  });
+
+  it("permite adjuntar hasta 3 evidencias", async () => {
+    abrir();
+    const file1 = new File(["1"], "ev1.png", { type: "image/png" });
+    const file2 = new File(["2"], "ev2.png", { type: "image/png" });
+    const file3 = new File(["3"], "ev3.png", { type: "image/png" });
+
+    fireEvent.change(screen.getByLabelText("Subir evidencia"), { target: { files: [file1, file2, file3] } });
+
+    expect(screen.getByText("ev1.png")).toBeDefined();
+    expect(screen.getByText("ev2.png")).toBeDefined();
+    expect(screen.getByText("ev3.png")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR SOLICITUD/ }));
+
+    await waitFor(() => expect(onOk).toHaveBeenCalledTimes(1));
+    expect(onOk).toHaveBeenCalledWith(expect.objectContaining({
+      evidenciasArchivos: [file1, file2, file3],
+    }));
+  });
+
+  it("bloquea envío si la variante elegida no tiene stock", async () => {
+    abrir([
+      {
+        productoId: "P-1",
+        label: "Zapatilla Volta · 42",
+        variantes: [
+          { sku: "SKU-42-ROJO", label: "Talla 42 · Rojo", disponible: false },
+          { sku: "SKU-42-AZUL", label: "Talla 42 · Azul", disponible: true },
+        ],
+      },
+    ]);
+
+    expect(screen.getByRole("alert").textContent).toContain("Variante seleccionada sin stock");
+    const enviar = screen.getByRole("button", { name: /ENVIAR SOLICITUD/ }) as HTMLButtonElement;
+    expect(enviar.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Talla o color deseado"), {
+      target: { value: "SKU-42-AZUL" },
+    });
+
+    expect(screen.queryByText("Variante seleccionada sin stock")).toBeNull();
+    expect(enviar.disabled).toBe(false);
+
+    fireEvent.click(enviar);
+    await waitFor(() => expect(onOk).toHaveBeenCalledTimes(1));
+    expect(onOk).toHaveBeenCalledWith(expect.objectContaining({
+      varianteDeseada: "SKU-42-AZUL",
+    }));
+  });
+
+  it("permite añadir evidencia adicional y valida límite", () => {
+    abrir();
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click");
+    fireEvent.click(screen.getByText(/Evidencia \(JPG\/PNG/));
+    expect(clickSpy).toHaveBeenCalled();
+
+    const file1 = new File(["1"], "ev1.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("Subir evidencia"), { target: { files: [file1] } });
+    expect(screen.getByText("ev1.png")).toBeDefined();
+
+    fireEvent.click(screen.getByText(/\+ Adjuntar otra evidencia/));
+    expect(clickSpy).toHaveBeenCalledTimes(2);
+
+    const fileGrande = new File(["x"], "grande.png", { type: "image/png" });
+    Object.defineProperty(fileGrande, "size", { value: 6 * 1024 * 1024 });
+    fireEvent.change(screen.getByLabelText("Subir evidencia"), { target: { files: [fileGrande] } });
+    expect(screen.getByText("Cada evidencia debe ser ≤ 5MB")).toBeDefined();
+
+    clickSpy.mockRestore();
   });
 });

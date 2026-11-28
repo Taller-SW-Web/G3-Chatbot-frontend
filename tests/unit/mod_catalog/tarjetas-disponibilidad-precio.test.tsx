@@ -109,7 +109,22 @@ describe("A17 · disponibilidad y precio en tarjetas", () => {
 
 describe("A17 · devoluciones sin etiquetas de stock", () => {
   it("las opciones de cambio no muestran Disponible ni Pocas unidades", () => {
-    render(<DevolucionForm lineas={["Zapatilla Volta · 42"]} onOk={vi.fn()} onCancelar={vi.fn()} />);
+    render(
+      <DevolucionForm
+        lineas={[
+          {
+            productoId: "P-1",
+            label: "Zapatilla Volta · 42",
+            variantes: [
+              { sku: "42-negro", label: "Talla 42 · Negro", disponible: true },
+              { sku: "43-negro", label: "Talla 43 · Negro", disponible: true },
+            ],
+          },
+        ]}
+        onOk={vi.fn()}
+        onCancelar={vi.fn()}
+      />
+    );
 
     const opciones = screen.getByLabelText("Talla o color deseado").querySelectorAll("option");
     expect([...opciones].map((o) => o.textContent)).toEqual(["Talla 42 · Negro", "Talla 43 · Negro"]);

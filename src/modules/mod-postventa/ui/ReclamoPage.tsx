@@ -7,6 +7,7 @@ import { CheckIcon } from "@/shared/ui/icons";
 import { ReclamoForm } from "@/modules/mod-postventa/ui/forms/ReclamoForm";
 import { container } from "@/shared/di/container";
 import { usePerfil } from "@/shared/auth/usePerfil";
+import { useChatStore } from "@/shared/auth/chatStore";
 import type { ReclamoInput } from "@/modules/mod-postventa/domain/schemas/reclamo.schema";
 import type { CrearReclamoInput } from "@/modules/mod-postventa/ports/postventaPort";
 import {
@@ -29,6 +30,16 @@ export function ReclamoPage() {
   const [ultimoEnvio, setUltimoEnvio] = useState<CrearReclamoInput | null>(null);
 
   const perfil = usePerfil();
+  const cliente = useChatStore((s) => s.cliente);
+  const ultimoPedido = useChatStore((s) => s.ultimoPedido);
+
+  const nombreInicial = perfil.data?.nombreCompleto || cliente?.nombreCompleto || ultimoPedido?.nombre || "";
+  const emailInicial = perfil.data?.correo || cliente?.correo || "";
+  // SPEC-19 :24,110: usar el documento no enmascarado del último pedido; si no existe o viene enmascarado,
+  // dejar vacío para que el cliente ingrese su número completo (SPEC-03 :211).
+  const docUltimoPedido = (ultimoPedido as { documento?: string } | null)?.documento ?? "";
+  const documentoInicial = docUltimoPedido && !docUltimoPedido.includes("*") ? docUltimoPedido : "";
+  const telefonoInicial = perfil.data?.celular ?? cliente?.celular ?? "";
 
   const crear = useMutation({
     mutationFn: ({ input, forzar }: { input: CrearReclamoInput; forzar?: boolean }) =>
@@ -52,16 +63,26 @@ export function ReclamoPage() {
   });
 
   function payloadDe(input: ReclamoInput): CrearReclamoInput {
+    const nombre = input.nombre?.trim() || nombreInicial || "";
+    const email = input.email?.trim() || emailInicial || "";
+    const documento = input.documento?.trim();
+    const telefono = input.telefono?.trim();
+
+    if (!documento || !nombre || !email) {
+      setError("Completa los datos del consumidor para registrar el reclamo.");
+      throw new Error("Datos del consumidor incompletos");
+    }
+
     return {
       pedidoId: input.pedidoId,
       tipo: input.tipo,
       motivo: input.motivo,
       detalle: input.descripcion + (input.solucion ? `\n\nSolución esperada: ${input.solucion}` : ""),
       consumidor: {
-        nombreCompleto: perfil.data?.nombreCompleto ?? "",
-        documento: input.documento,
-        email: perfil.data?.correo ?? "",
-        telefono: input.telefono,
+        nombreCompleto: nombre,
+        documento,
+        email,
+        telefono,
       },
       solucionEsperada: input.solucion,
     };
@@ -112,7 +133,10 @@ export function ReclamoPage() {
       )}
       <ReclamoForm
         pedidoId={pedidoId}
-        telefonoInicial={perfil.data?.celular ?? ""}
+        nombreInicial={nombreInicial}
+        emailInicial={emailInicial}
+        documentoInicial={documentoInicial}
+        telefonoInicial={telefonoInicial}
         onOk={async (input) => {
           const payload = payloadDe(input);
           setUltimoEnvio(payload);

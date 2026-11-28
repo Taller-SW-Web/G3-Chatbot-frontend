@@ -88,7 +88,9 @@ describe("OrderDetailPage", () => {
     expect(screen.getByText("1 día")).toBeDefined();
     expect(screen.getByText("Pago confirmado")).toBeDefined();
     expect(screen.getByText("Pedido recibido")).toBeDefined();
-    expect(screen.getByText("PAGADO")).toBeDefined();
+    // Las etiquetas son para el cliente; el enum interno de Ventas no se muestra (frontend#187).
+    expect(screen.getByText("Pago confirmado")).toBeDefined();
+    expect(screen.queryByText("PAGADO")).toBeNull();
     expect(obtenerPedido).toHaveBeenCalledWith("PED-2026-00002");
   });
 
@@ -137,5 +139,67 @@ describe("OrderDetailPage", () => {
     expect(await screen.findByText("No pudimos consultar el pedido")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "REINTENTAR" }));
     await waitFor(() => expect(obtenerPedido).toHaveBeenCalledTimes(2));
+  });
+
+  it("muestra motivo de anulación por falta de stock y aviso de reembolso cuando el pedido está ANULADO con motivo de stock", async () => {
+    obtenerPedido.mockResolvedValue({
+      ...PEDIDO,
+      estado: "ANULADO",
+      estadoEtiqueta: "Anulado",
+      motivoAnulacion: "STOCK_NO_DISPONIBLE",
+      reembolso: "Si corresponde un reembolso, se procesará al medio de pago original.",
+      historial: [
+        { estado: "CREADO", etiqueta: "Pendiente de pago", fecha: "2026-11-02T10:00:00Z", completado: true },
+        { estado: "ANULADO", etiqueta: "Anulado", motivo: "STOCK_NO_DISPONIBLE", fecha: "2026-11-02T10:05:00Z", completado: true },
+      ],
+    });
+    renderPage();
+
+    expect(await screen.findByText("Pedido PED-2026-00002")).toBeDefined();
+    expect(screen.getByText(/Anulado el/)).toBeDefined();
+    expect(screen.getAllByText("Anulado por falta de stock").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByText(/El pedido fue anulado debido a que no hay stock disponible/i)
+    ).toBeDefined();
+    expect(
+      screen.getByText("Si corresponde un reembolso, se procesará al medio de pago original.")
+    ).toBeDefined();
+    expect(screen.getByText("Motivo: Falta de stock")).toBeDefined();
+    expect(screen.queryByText("Pago confirmado")).toBeNull();
+    expect(screen.queryByText(/Slot CSAT/)).toBeNull();
+  });
+
+  it("muestra fallback neutro 'Anulado' cuando el pedido está ANULADO sin motivo ni reembolso", async () => {
+    obtenerPedido.mockResolvedValue({
+      ...PEDIDO,
+      estado: "ANULADO",
+      estadoEtiqueta: "Anulado",
+      historial: [
+        { estado: "CREADO", etiqueta: "Pendiente de pago", fecha: "2026-11-02T10:00:00Z", completado: true },
+        { estado: "ANULADO", etiqueta: "Anulado", fecha: "2026-11-02T10:05:00Z", completado: true },
+      ],
+    });
+    renderPage();
+
+    expect(await screen.findByText("Pedido PED-2026-00002")).toBeDefined();
+    expect(screen.getByText("El pedido fue anulado.")).toBeDefined();
+    expect(screen.queryByText("Anulado por falta de stock")).toBeNull();
+    expect(screen.queryByText("Reembolso")).toBeNull();
+  });
+
+  it("renderiza esqueleto accesible de carga mientras consulta el pedido", () => {
+    obtenerPedido.mockReturnValue(new Promise(() => {}));
+    renderPage();
+
+    const loading = screen.getByRole("status", { name: "Cargando detalle del pedido" });
+    expect(loading).toBeDefined();
+    expect(screen.getByText("Cargando pedido…")).toBeDefined();
+  });
+
+  it("muestra mensaje de lista de productos vacía", async () => {
+    obtenerPedido.mockResolvedValue({ ...PEDIDO, items: [] });
+    renderPage();
+
+    expect(await screen.findByText("Este pedido no tiene productos registrados.")).toBeDefined();
   });
 });

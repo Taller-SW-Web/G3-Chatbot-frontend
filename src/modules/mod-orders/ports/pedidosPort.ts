@@ -39,8 +39,10 @@ export type PedidoEnvio = {
 export type PedidoDetalle = PedidoResumen & {
   items: PedidoLinea[];
   envio: PedidoEnvio | null;
-  historial: { estado: string; etiqueta: string; fecha: string; completado: boolean }[];
+  historial: { estado: string; etiqueta: string; fecha: string; completado: boolean; motivo?: string | null }[];
   seguimientoDisponible?: boolean;
+  motivoAnulacion?: string | null;
+  reembolso?: string | null;
   /** SPEC-24: el cliente ya calificó la entrega; el slot de CSAT no debe mostrarse. */
   csatEnviado?: boolean;
 };

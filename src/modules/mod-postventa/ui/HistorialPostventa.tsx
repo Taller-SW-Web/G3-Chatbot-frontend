@@ -15,6 +15,47 @@ function formatDate(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? value : DATE.format(date);
 }
 
+const ETIQUETAS_ESTADO: Record<string, string> = {
+  // SPEC-20 (Reclamos - F6)
+  REGISTRADO: "Recibido",
+  REGISTRADA: "Recibida",
+  EN_PROCESO: "En revisión",
+  ATENDIDO: "Respondido",
+  ATENDIDA: "Respondida",
+  DERIVADO: "Derivado a otro equipo",
+  DERIVADA: "Derivado a otro equipo",
+
+  // SPEC-22 (Devoluciones - F3)
+  SOLICITADA: "Recibida",
+  SOLICITADO: "Recibido",
+  EN_EVALUACION: "En revisión",
+  APROBADA: "Aprobada",
+  APROBADO: "Aprobado",
+  RECHAZADA: "Rechazada",
+  RECHAZADO: "Rechazado",
+  COMPLETADA: "Completada",
+  COMPLETADO: "Completado",
+
+  // Estados complementarios
+  EN_REVISION: "En revisión",
+  PENDIENTE: "Pendiente",
+  RESUELTO: "Resuelto",
+  RESUELTA: "Resuelta",
+  REEMBOLSADO: "Reembolsado",
+  REEMBOLSADA: "Reembolsada",
+  ANULADO: "Anulado",
+  ANULADA: "Anulada",
+  PENDIENTE_ENVIO: "Pendiente de envío",
+  RECIBIDO: "Recibido",
+  FINALIZADO: "Finalizado",
+};
+
+export function humanizarEstado(estado: string): string {
+  if (!estado) return "—";
+  const norm = estado.trim().toUpperCase();
+  return ETIQUETAS_ESTADO[norm] ?? (estado.charAt(0).toUpperCase() + estado.slice(1).toLowerCase());
+}
+
 /** Pestaña Reembolso/Cambio del historial de pedidos (SPEC-22). */
 export function HistorialDevoluciones() {
   const router = useRouter();
@@ -73,7 +114,7 @@ export function HistorialDevoluciones() {
         pedidoId: d.pedidoId,
         tipo: d.tipo,
         estado: d.estado,
-        estadoEtiqueta: d.estado,
+        estadoEtiqueta: humanizarEstado(d.estado),
         motivo: d.motivo,
         fecha: formatDate(d.fechaRegistro),
         estadoReembolso: d.estadoReembolso ?? undefined,
@@ -142,7 +183,7 @@ export function HistorialReclamos() {
         tipo: r.tipo,
         motivo: r.motivo,
         estado: r.estado,
-        estadoEtiqueta: r.estado,
+        estadoEtiqueta: humanizarEstado(r.estado),
         fechaLimiteSLA: r.fechaLimiteSLA ? formatDate(r.fechaLimiteSLA) : null,
       }))} />
     </div>
