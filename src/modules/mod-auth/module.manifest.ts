@@ -7,6 +7,8 @@ export const manifest = {
   routes: [
     { path: "/cuenta", description: "Datos de la cuenta y verificación del celular" },
     { path: "/verificar-correo", description: "Canje del enlace de verificación de correo" },
+    { path: "/terminos", description: "Términos y condiciones de compra y servicio" },
+    { path: "/privacidad", description: "Política de privacidad y protección de datos personales" },
   ],
   nav: [{ href: "/cuenta", label: "Mi cuenta" }],
   endpoints: [
