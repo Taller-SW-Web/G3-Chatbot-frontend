@@ -33,7 +33,7 @@ function abrir(conversacionActual?: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useChatStore.setState({ cliente: null });
+  useChatStore.setState({ cliente: null, authOpen: false, accionPendiente: null });
   api.listarConversaciones.mockResolvedValue([]);
   api.buscarConversaciones.mockResolvedValue([]);
   api.crearConversacion.mockResolvedValue({ conversacionId: "nueva" });
@@ -42,6 +42,16 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("Sidebar", () => {
+  it("cierra el drawer al pedir login para no apilar diálogos", async () => {
+    abrir();
+
+    fireEvent.click(await screen.findByText("Historial de pedidos"));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(useChatStore.getState().authOpen).toBe(true);
+    expect(useChatStore.getState().accionPendiente).toBe("/pedidos");
+  });
+
   it("lista las conversaciones recientes y navega al elegirlas", async () => {
     api.listarConversaciones.mockResolvedValue([resumen("a", "Tallas", "¿Tienes 42?")]);
     abrir();
