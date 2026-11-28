@@ -67,18 +67,29 @@ export function AppShell({
   }, [conversationId, setUltimaConversacionId]);
 
   useEffect(() => {
-    const { accessToken, isTokenExpiringSoon, applySession, setCliente, logout } = useChatStore.getState();
+    const { accessToken, isTokenExpiringSoon, applySession, setCliente, logout, setErrorPerfil } =
+      useChatStore.getState();
     if (accessToken && !isTokenExpiringSoon()) return;
     container.api
       .refreshSession()
       .then((opened) => {
         applySession(opened.accessToken, opened.expiresIn);
-        setCliente(clienteDesdeUsuario(opened.usuario, ""));
         return container.api
           .fetchProfile()
-          .then((perfil) => setCliente(clienteDesdePerfil(perfil, "")))
-          .catch(() => {
-            // Un fallo 503/red al consultar el perfil no cierra la sesión activa (SPEC-03).
+          .then((perfil) => {
+            setCliente(clienteDesdePerfil(perfil, ""));
+            setErrorPerfil(null);
+          })
+          .catch((err: unknown) => {
+            const status =
+              (err as { response?: { status?: number }; status?: number })?.response?.status ??
+              (err as { status?: number })?.status;
+            if (status === 401) {
+              logout();
+              return;
+            }
+            // Un fallo 503/red al consultar el perfil no cierra la sesión activa (SPEC-03 :199-202).
+            setErrorPerfil("No pudimos cargar tus datos en este momento");
           });
       })
       .catch(() => {

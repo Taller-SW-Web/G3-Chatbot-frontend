@@ -27,6 +27,11 @@ describe("LoginForm", () => {
     expect(link.getAttribute("target")).toBe("_blank");
   });
 
+  it("si no hay URL de recuperación configurada, no muestra el enlace (SPEC-03)", () => {
+    render(createElement(LoginForm, { onOk: vi.fn(), urlRecuperacion: "" }));
+    expect(screen.queryByRole("link", { name: "¿Olvidaste tu contraseña?" })).toBeNull();
+  });
+
   it("tras recibir error limpia el campo de contraseña (SPEC-03)", () => {
     const { rerender } = render(
       createElement(LoginForm, { onOk: vi.fn(), error: null })

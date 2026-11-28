@@ -19,19 +19,24 @@ export function MiCuentaPage() {
   const setCliente = useChatStore((s) => s.setCliente);
   const accessToken = useChatStore((s) => s.accessToken);
   const logout = useChatStore((s) => s.logout);
+  const errorPerfilStore = useChatStore((s) => s.errorPerfil);
+  const setErrorPerfilStore = useChatStore((s) => s.setErrorPerfil);
   const [otp, setOtp] = useState(false);
   const [cargando, setCargando] = useState(false);
-  const [errorPerfil, setErrorPerfil] = useState<string | null>(null);
+  const [errorPerfilLocal, setErrorPerfilLocal] = useState<string | null>(null);
+  const errorPerfil = errorPerfilLocal ?? errorPerfilStore;
 
   // Reintenta consultar perfil sin cerrar la sesión ni borrar el token (SPEC-03)
   async function reintentarPerfil() {
     setCargando(true);
-    setErrorPerfil(null);
+    setErrorPerfilLocal(null);
     try {
       const perfil = await container.auth.fetchProfile();
       setCliente(clienteDesdePerfil(perfil, cliente?.correo ?? ""));
+      setErrorPerfilStore(null);
     } catch {
-      setErrorPerfil("No pudimos cargar tus datos en este momento");
+      setErrorPerfilLocal("No pudimos cargar tus datos en este momento");
+      setErrorPerfilStore("No pudimos cargar tus datos en este momento");
     } finally {
       setCargando(false);
     }

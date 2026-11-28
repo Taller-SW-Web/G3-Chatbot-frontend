@@ -31,7 +31,7 @@ function cliente(extra: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useChatStore.setState({ cliente: null, accessToken: null });
+  useChatStore.setState({ cliente: null, accessToken: null, errorPerfil: null });
   api.solicitarOtpCelular.mockResolvedValue({
     enviado: true,
     celularEnmascarado: "*****321",
@@ -111,6 +111,19 @@ describe("MiCuentaPage", () => {
 
     await waitFor(() => expect(screen.getByText("Ana Torres Recuperada")).toBeDefined());
     expect(useChatStore.getState().accessToken).toBe("jwt_token");
+  });
+
+  it("muestra error 503 cuando viene expuesto desde el store (SPEC-03 :199-202)", () => {
+    useChatStore.setState({
+      accessToken: "jwt_token",
+      cliente: cliente(),
+      errorPerfil: "No pudimos cargar tus datos en este momento",
+    });
+    render(<MiCuentaPage />);
+
+    expect(screen.getByText("No pudimos cargar tus datos en este momento")).toBeDefined();
+    expect(screen.getByRole("button", { name: "REINTENTAR" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "CERRAR SESIÓN" })).toBeDefined();
   });
 
   it("verifica el celular con el código de 6 dígitos", async () => {

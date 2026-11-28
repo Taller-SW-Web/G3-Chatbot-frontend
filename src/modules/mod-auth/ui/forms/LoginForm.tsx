@@ -13,7 +13,7 @@ export function LoginForm({
   correoInicial,
   error,
   cargando,
-  urlRecuperacion = process.env.NEXT_PUBLIC_RECUPERAR_PASSWORD_URL || "https://seguridad.marketplace.com/recuperar-password",
+  urlRecuperacion = process.env.NEXT_PUBLIC_RECUPERAR_PASSWORD_URL,
 }: {
   onOk: (d: LoginInput) => void;
   onReenviar?: () => void;
@@ -80,14 +80,16 @@ export function LoginForm({
         {cargando ? "INGRESANDO…" : "ENTRAR"}
       </button>
       <div className="flex flex-col gap-1 text-left">
-        <a
-          href={urlRecuperacion}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[12px] font-semibold underline text-text-secondary text-left inline-block"
-        >
-          ¿Olvidaste tu contraseña?
-        </a>
+        {urlRecuperacion ? (
+          <a
+            href={urlRecuperacion}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[12px] font-semibold underline text-text-secondary text-left inline-block"
+          >
+            ¿Olvidaste tu contraseña?
+          </a>
+        ) : null}
         <button
           type="button"
           onClick={onReenviar}
