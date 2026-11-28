@@ -29,7 +29,7 @@ import { sanitize } from "@/shared/security/sanitize";
 function CarritoVacio() {
   return (
     <div className="p-4" data-testid="carrito-vacio">
-      <p className="text-sm text-text-secondary text-center py-8" data-ssr="1">
+      <p className="text-sm text-text-secondary text-center py-8">
         Tu carrito está vacío. Prueba con Ver ofertas o Buscar productos.
       </p>
     </div>
@@ -216,8 +216,9 @@ export function CartPage({
   );
   const errorTexto = hayError ? mensajeCarrito(errorCode) : null;
 
-  if (initialVacio && !carrito) {
-    // SSR con la cookie ausente: el estado vacío es el primer HTML y el LCP.
+  if (initialVacio && (!carrito || carrito.lineas.length === 0)) {
+    // El HTML del servidor ya trae este nodo: mantenerlo evita que la
+    // re-renderización del carrito vacío cree un LCP nuevo tras hidratar.
     return <CarritoVacio />;
   }
 

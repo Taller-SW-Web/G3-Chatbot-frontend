@@ -107,6 +107,13 @@ describe("CartPage: mutaciones del carrito anónimo (SPEC-11)", () => {
     expect(screen.queryByRole("status", { name: "Cargando carrito" })).toBeNull();
   });
 
+  it("mantiene el estado vacío del servidor cuando el GET confirma cero líneas", () => {
+    h.cartData = { ...h.CARRITO, lineas: [], subtotal: 0, total: 0 };
+    renderCart({ initialVacio: true });
+    expect(screen.getByTestId("carrito-vacio")).toBeDefined();
+    expect(screen.queryByTestId("linea-carrito")).toBeNull();
+  });
+
   it("muestra el esqueleto de carga cuando el carrito está pendiente", () => {
     h.isPending = true;
     renderCart();
