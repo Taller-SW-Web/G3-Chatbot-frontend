@@ -18,6 +18,15 @@ export type SessionOpened = {
   accessToken: string;
   expiresIn: number;
   usuario: UsuarioSesion;
+  /** Fusión del carrito anónimo (SPEC-03 Req. 4); solo aparece cuando hubo carrito. */
+  carritoFusionado?: boolean;
+  avisoCarrito?: string | null;
+  ajustesCarrito?: Array<{
+    sku: string;
+    solicitado: number;
+    ajustado: number;
+    motivo: string;
+  }>;
 };
 
 export type MfaChallenge = {

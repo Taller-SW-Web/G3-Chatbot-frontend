@@ -16,6 +16,8 @@ type ChatState = {
   cliente: Cliente | null;
   /** Error al consultar el perfil (503 / red) manteniendo la sesión activa (SPEC-03 :199-202). */
   errorPerfil: string | null;
+  /** Aviso de fusión del carrito anónimo tras login/MFA (SPEC-03 Req. 4). */
+  avisoCarrito: string | null;
   carrito: CarritoUI;
   accionPendiente: string | null;
   /** Abre el modal de login/registro global (AppShell). */
@@ -35,6 +37,7 @@ type ChatState = {
   setToken: (t: string | null) => void;
   setCliente: (c: Cliente | null) => void;
   setErrorPerfil: (err: string | null) => void;
+  setAvisoCarrito: (aviso: string | null) => void;
   setExpiraEn: (v: number | null) => void;
   /** Stores a freshly opened session (SPEC-03 Req. 1/2/5). */
   applySession: (token: string, expiresIn: number, cliente?: Cliente | null) => void;
@@ -76,6 +79,7 @@ export const useChatStore = create<ChatState>()(
       chatSid: null,
       cliente: null,
       errorPerfil: null,
+      avisoCarrito: null,
       carrito: carritoVacio,
       accionPendiente: null,
       authOpen: false,
@@ -93,6 +97,7 @@ export const useChatStore = create<ChatState>()(
       },
       setCliente: (cliente) => set({ cliente }),
       setErrorPerfil: (errorPerfil) => set({ errorPerfil }),
+      setAvisoCarrito: (avisoCarrito) => set({ avisoCarrito }),
       setExpiraEn: (expiraEn) => set({ expiraEn }),
       applySession: (accessToken, expiresIn, cliente) => {
         sincronizarCookieSesion(true);
@@ -124,6 +129,7 @@ export const useChatStore = create<ChatState>()(
           expiraEn: null,
           cliente: null,
           errorPerfil: null,
+          avisoCarrito: null,
           carrito: carritoVacio,
           accionPendiente: null,
           ultimoPedido: null,
