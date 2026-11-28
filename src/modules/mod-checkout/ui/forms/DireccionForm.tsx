@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useChatStore } from "@/shared/auth/chatStore";
@@ -15,39 +15,100 @@ function tipoValido(value: unknown): value is TipoDocumento {
 }
 
 /** SPEC-12,14 documento A14 */
+export type DireccionGuardadaInput = {
+  nombre?: string;
+  direccion?: string;
+  distrito?: string;
+  referencia?: string;
+  docTipo?: TipoDocumento;
+  docNum?: string;
+};
+
 export function DireccionForm({
   onValid,
   guardarDireccion = false,
   onGuardarChange,
+  summary,
+  direccionGuardada,
+  avisoDireccion,
 }: {
   onValid: (d: DireccionInput | null) => void;
   /** SPEC-12: el cliente decide si la dirección queda guardada en su perfil. */
   guardarDireccion?: boolean;
   onGuardarChange?: (guardar: boolean) => void;
+  /** SPEC-12: snapshot del checkout con contacto y dirección previa. */
+  summary?: Record<string, unknown> | null;
+  /** SPEC-12: dirección predeterminada o guardada para prellenar. */
+  direccionGuardada?: DireccionGuardadaInput | null;
+  /** SPEC-12: aviso cuando Seguridad falla al guardar la dirección. */
+  avisoDireccion?: string | null;
 }) {
   const cliente = useChatStore((s) => s.cliente);
   const tipoPerfil = tipoValido(cliente?.ultimoDocumento?.tipo)
     ? cliente.ultimoDocumento.tipo
     : tipoValido(cliente?.tipoDocumento) ? cliente.tipoDocumento : undefined;
+
+  // SPEC-12 :89-91: El documento del cliente se prellena desde checkout.summary.contacto
+  // del pedido anterior, nunca del perfil de Seguridad.
+  const summaryContacto = (summary?.contacto ?? {}) as Record<string, unknown>;
+  const docTipoSummary = tipoValido(summaryContacto.tipoDocumento)
+    ? (summaryContacto.tipoDocumento as TipoDocumento)
+    : tipoValido(summaryContacto.docTipo)
+      ? (summaryContacto.docTipo as TipoDocumento)
+      : undefined;
+  const docNumSummary =
+    typeof summaryContacto.numeroDocumento === "string"
+      ? summaryContacto.numeroDocumento
+      : typeof summaryContacto.docNum === "string"
+        ? summaryContacto.docNum
+        : undefined;
+
+  // Dirección guardada / predeterminada (SPEC-12 :104-107):
+  const summaryDireccion = (summary?.direccion ?? {}) as Record<string, unknown>;
+  const fuenteGuardada = direccionGuardada ?? (
+    summaryDireccion.direccion && summaryDireccion.distrito
+      ? {
+          nombre: typeof summaryDireccion.destinatario === "string" ? summaryDireccion.destinatario : (typeof summaryDireccion.nombre === "string" ? summaryDireccion.nombre : undefined),
+          direccion: typeof summaryDireccion.direccion === "string" ? summaryDireccion.direccion : undefined,
+          distrito: typeof summaryDireccion.distrito === "string" ? summaryDireccion.distrito : undefined,
+          referencia: typeof summaryDireccion.referencia === "string" ? summaryDireccion.referencia : undefined,
+        }
+      : null
+  );
+
+  const [cambiado, setCambiado] = useState(false);
+  const usandoGuardada = !cambiado && Boolean(fuenteGuardada?.direccion && fuenteGuardada?.distrito);
+
   const { register, control, setValue, trigger, formState: { errors, touchedFields, dirtyFields } } = useForm<DireccionInput>({
     resolver: zodResolver(direccionSchema),
     mode: "onTouched",
     defaultValues: {
-      nombre: cliente?.nombreCompleto ?? "",
-      direccion: "",
-      distrito: "",
-      referencia: "",
-      docTipo: tipoValido(tipoPerfil) ? tipoPerfil : "DNI",
-      docNum: "",
+      nombre: fuenteGuardada?.nombre ?? cliente?.nombreCompleto ?? "",
+      direccion: fuenteGuardada?.direccion ?? "",
+      distrito: fuenteGuardada?.distrito ?? "",
+      referencia: fuenteGuardada?.referencia ?? "",
+      docTipo: docTipoSummary ?? (fuenteGuardada?.docTipo && tipoValido(fuenteGuardada.docTipo) ? fuenteGuardada.docTipo : (tipoValido(tipoPerfil) ? tipoPerfil : "DNI")),
+      docNum: docNumSummary ?? fuenteGuardada?.docNum ?? "",
     },
   });
   const values = useWatch({ control });
   const docTipo = useWatch({ control, name: "docTipo" });
 
   useEffect(() => {
-    if (cliente?.nombreCompleto && !dirtyFields.nombre) setValue("nombre", cliente.nombreCompleto);
-    if (tipoValido(tipoPerfil) && !dirtyFields.docTipo) setValue("docTipo", tipoPerfil);
-  }, [cliente?.nombreCompleto, tipoPerfil, dirtyFields.nombre, dirtyFields.docTipo, setValue]);
+    if (direccionGuardada?.direccion && direccionGuardada?.distrito && !cambiado) {
+      if (direccionGuardada.nombre) setValue("nombre", direccionGuardada.nombre, { shouldValidate: true });
+      setValue("direccion", direccionGuardada.direccion, { shouldValidate: true });
+      setValue("distrito", direccionGuardada.distrito, { shouldValidate: true });
+      if (direccionGuardada.referencia) setValue("referencia", direccionGuardada.referencia);
+      if (direccionGuardada.docTipo && tipoValido(direccionGuardada.docTipo)) setValue("docTipo", direccionGuardada.docTipo);
+      if (direccionGuardada.docNum) setValue("docNum", direccionGuardada.docNum, { shouldValidate: true });
+    }
+  }, [direccionGuardada, cambiado, setValue]);
+
+  useEffect(() => {
+    if (!usandoGuardada && cliente?.nombreCompleto && !dirtyFields.nombre) setValue("nombre", cliente.nombreCompleto);
+    if (!usandoGuardada && tipoValido(tipoPerfil) && !dirtyFields.docTipo) setValue("docTipo", tipoPerfil);
+  }, [usandoGuardada, cliente?.nombreCompleto, tipoPerfil, dirtyFields.nombre, dirtyFields.docTipo, setValue]);
 
   useEffect(() => {
     const parsed = direccionSchema.safeParse(values);
@@ -67,6 +128,35 @@ export function DireccionForm({
     <form id="direccion" onSubmit={(event) => event.preventDefault()}
       className="scroll-mt-20 rounded-md bg-white border border-border-default p-3 flex flex-col gap-3">
       <p className="font-heading text-[15px] uppercase">Dirección de envío</p>
+      {usandoGuardada && (
+        <div
+          data-testid="aviso-direccion-guardada"
+          className="rounded bg-surface-soft p-2.5 text-[12px] text-text-secondary flex items-center justify-between"
+        >
+          <span>Usando tu dirección guardada</span>
+          <button
+            type="button"
+            onClick={() => {
+              setCambiado(true);
+              setValue("direccion", "", { shouldValidate: true, shouldDirty: true });
+              setValue("distrito", "", { shouldValidate: true, shouldDirty: true });
+              setValue("referencia", "", { shouldValidate: true, shouldDirty: true });
+            }}
+            className="underline font-semibold text-text-primary"
+          >
+            Cambiar
+          </button>
+        </div>
+      )}
+      {avisoDireccion && (
+        <p
+          role="status"
+          data-testid="aviso-direccion-seguridad"
+          className="rounded bg-warning-background text-warning-default p-2 text-[12px] font-medium"
+        >
+          {avisoDireccion}
+        </p>
+      )}
       <div className="flex flex-col gap-1">
         <label htmlFor="direccion-nombre" className="text-[13px] font-semibold">Nombre completo</label>
         <input id="direccion-nombre" {...register("nombre")} placeholder="Nombre y apellidos" autoComplete="name" enterKeyHint="next"

@@ -97,6 +97,7 @@ export function CheckoutPage() {
   const [errorPago, setErrorPago] = useState<string | null>(null);
   const [segundosRestantes, setSegundosRestantes] = useState<number>(15 * 60);
   const [expirado, setExpirado] = useState(false);
+  const [avisoDireccion, setAvisoDireccion] = useState<string | null>(null);
 
   // Clave de idempotencia única por intento de pago (conservada en reintentos del mismo intento)
   const [idempotencyKeyPago, setIdempotencyKeyPago] = useState<string>(() => newKey("pay"));
@@ -191,7 +192,11 @@ export function CheckoutPage() {
       setAccionPendiente(null);
 
       setCheckoutSesion(sesion);
+      if (sesion.avisoDireccion) {
+        setAvisoDireccion(sesion.avisoDireccion);
+      }
       setIntentosRestantes(sesion.intentosRestantes ?? 3);
+      setExpirado(false);
       if (sesion.expiresAt) {
         const diffSegundos = Math.max(0, Math.floor((new Date(sesion.expiresAt).getTime() - Date.now()) / 1000));
         setSegundosRestantes(diffSegundos || 15 * 60);
@@ -242,6 +247,16 @@ export function CheckoutPage() {
     }
   }
 
+  async function reintentarCheckout() {
+    setExpirado(false);
+    setErrorPago(null);
+    setSegundosRestantes(15 * 60);
+    setCheckoutSesion(null);
+    checkoutKeyRef.current = null;
+    setIdempotencyKeyPago(newKey("pay"));
+    await confirmarDireccion();
+  }
+
   async function pagar() {
     if (!dir || !pago || !checkoutSesion?.id || pagando || expirado || intentosRestantes <= 0) return;
     setPagando(true);
@@ -260,24 +275,47 @@ export function CheckoutPage() {
         idempotencyKeyPago
       );
 
+      const orderId = res.orderId || checkoutSesion.orderId;
+      if (!orderId) {
+        setErrorPago("No se pudo obtener el identificador del pedido confirmado.");
+        return;
+      }
+
+      const summaryEnvio = checkoutSesion?.summary?.envio as { plazoEstimadoDias?: number } | undefined;
+      const plazoEstimadoDias =
+        typeof summaryEnvio?.plazoEstimadoDias === "number"
+          ? summaryEnvio.plazoEstimadoDias
+          : typeof (checkoutSesion?.summary as { plazoEstimadoDias?: unknown })?.plazoEstimadoDias === "number"
+            ? (checkoutSesion?.summary as { plazoEstimadoDias: number }).plazoEstimadoDias
+            : undefined;
+
       setUltimoPedido({
-        orderId: res.orderId || checkoutSesion.orderId || "PED-2026-00891",
+        orderId,
         total: res.monto || totalServidor,
         subtotal: Number(checkoutSesion.summary?.subtotal ?? carrito.subtotal),
         costoEnvio: costoEnvioServidor,
-        lineas: carrito.lineas.map((l) => ({
-          nombre: l.producto.nombre,
-          cantidad: l.cantidad,
-          precio: l.producto.precio,
-        })),
+        lineas: (checkoutSesion.summary?.lineas && Array.isArray(checkoutSesion.summary.lineas) && checkoutSesion.summary.lineas.length > 0)
+          ? (checkoutSesion.summary.lineas as Array<{ sku?: string; nombre?: string; cantidad: number; precioUnitario?: number; precio?: number }>).map((l) => ({
+              nombre: l.nombre || l.sku || "Producto",
+              cantidad: l.cantidad,
+              precio: l.precioUnitario ?? l.precio ?? 0,
+            }))
+          : carrito.lineas.map((l) => ({
+              nombre: l.producto.nombre,
+              cantidad: l.cantidad,
+              precio: l.producto.precio,
+            })),
         direccion: dir.direccion,
         distrito: dir.distrito,
         nombre: dir.nombre,
-        tarjetaMarca: res.marca || "Visa",
+        tarjetaMarca: res.marca || "Tarjeta",
         tarjetaLast4: res.ultimos4 || pago.tarjetaNum.replace(/\D/g, "").slice(-4) || "••••",
         correoEnmascarado: res.correoEnmascarado,
         mensajeConfirmacion: res.mensaje,
-      });
+        estado: res.estado,
+        nuevoEstado: res.nuevoEstado,
+        plazoEstimadoDias,
+      } as never);
 
       router.push("/exito");
     } catch (err: unknown) {
@@ -425,6 +463,8 @@ export function CheckoutPage() {
             onValid={setDir}
             guardarDireccion={guardarDireccion}
             onGuardarChange={setGuardarDireccion}
+            summary={checkoutSesion?.summary}
+            avisoDireccion={avisoDireccion}
           />
           <CotizacionEnvio
             cotizacion={cotizacion}
@@ -458,9 +498,20 @@ export function CheckoutPage() {
           {errorPago && (
             <div
               role="alert"
-              className="rounded-md bg-action-primary-soft text-ember-deep border border-border-default p-3 text-[13px] font-medium"
+              className="rounded-md bg-action-primary-soft text-ember-deep border border-border-default p-3 text-[13px] font-medium flex flex-col gap-2 items-start"
             >
-              {errorPago}
+              <span>{errorPago}</span>
+              {expirado && (
+                <button
+                  type="button"
+                  data-testid="btn-reintentar-checkout"
+                  onClick={reintentarCheckout}
+                  disabled={creandoCheckout}
+                  className="wf-btn px-4 py-2 text-[12px] font-bold bg-white border border-border-default"
+                >
+                  {creandoCheckout ? "Iniciando checkout…" : "Volver a intentar"}
+                </button>
+              )}
             </div>
           )}
 
@@ -474,7 +525,11 @@ export function CheckoutPage() {
             <button
               onClick={() => {
                 setPaso(1);
+                setExpirado(false);
                 setErrorPago(null);
+                setCheckoutSesion(null);
+                checkoutKeyRef.current = null;
+                setSegundosRestantes(15 * 60);
               }}
               disabled={pagando}
               className="wf-btn py-3 text-[12px] font-bold bg-white border border-border-default"
