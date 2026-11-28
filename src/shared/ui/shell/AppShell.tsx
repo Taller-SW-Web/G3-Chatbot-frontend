@@ -43,6 +43,8 @@ export function AppShell({
   useCarrito();
   const carrito = useChatStore((s) => s.carrito);
   const authOpen = useChatStore((s) => s.authOpen);
+  const avisoCarrito = useChatStore((s) => s.avisoCarrito);
+  const setAvisoCarrito = useChatStore((s) => s.setAvisoCarrito);
   const setUltimaConversacionId = useChatStore((s) => s.setUltimaConversacionId);
 
   useEffect(() => {
@@ -169,6 +171,23 @@ export function AppShell({
           )}
         </div>
       </header>
+
+      {avisoCarrito && (
+        <div
+          role="status"
+          className="flex items-start gap-2 px-4 py-3 bg-accent-volt-soft text-accent-volt-ink border-b border-border-default text-[12px]"
+        >
+          <p className="flex-1">{avisoCarrito}</p>
+          <button
+            type="button"
+            aria-label="Cerrar aviso de carrito"
+            onClick={() => setAvisoCarrito(null)}
+            className="shrink-0"
+          >
+            <XIcon size={16} />
+          </button>
+        </div>
+      )}
 
       <main key={initialScreen} className={`flex-1 min-h-0 bg-surface-cloud screen-enter ${initialScreen === "home" ? "overflow-hidden" : "overflow-y-auto no-scrollbar"}`}>
         {children}
