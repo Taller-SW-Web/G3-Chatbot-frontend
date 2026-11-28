@@ -195,4 +195,17 @@ describe("DevolucionPage", () => {
 
     expect(await screen.findByText(/plazo de 7 días/)).toBeDefined();
   });
+
+  it("muestra el error de pedido no entregado al crear la devolución", async () => {
+    params.value = new URLSearchParams("pedidoId=PED-2026-00002");
+    crearDevolucion.mockRejectedValue({
+      response: { status: 409, data: { code: "PEDIDO_NO_ENTREGADO" } },
+    });
+    renderPage();
+
+    await screen.findByText(/Solicitar devolución/);
+    fireEvent.click(screen.getByRole("button", { name: /ENVIAR SOLICITUD/ }));
+
+    expect(await screen.findByText(/Solo puedes solicitar un cambio o devolución de un pedido entregado/)).toBeDefined();
+  });
 });
