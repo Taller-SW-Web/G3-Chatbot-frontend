@@ -27,6 +27,14 @@ Home con ofertas, tarjetas de producto, detalle, variantes, disponibilidad y pro
 
 El grid de la home acepta `orden` (`relevancia`, `precio_asc`, `precio_desc`, `nombre_asc`, `nombre_desc`) mediante `SelectorOrden`; `relevancia` es el valor por defecto y no se envía al backend.
 
+## Paginación del carrusel (SPEC-06 Req. 4)
+
+`CarruselProductos` pinta hasta 10 tarjetas y muestra «Mostrando X de Y» con
+`CARRUSEL_PRODUCTOS.datos.total`; no calcula el total. «Ver más» solo aparece
+cuando `datos.siguiente` es un payload válido de `BUSCAR_PAGINA`, y lo envía tal
+cual (sin reconstruir filtros). La búsqueda vacía se queda con el bloque
+`ACCIONES_RAPIDAS` del backend, que ofrece hasta 3 chips para relajar un filtro.
+
 ## Dependencias externas
 
 Ninguna.
@@ -40,7 +48,7 @@ excepciones de frontera.
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_catalog/` (8 archivos)
+- Unitarias: `tests/unit/mod_catalog/` (9 archivos)
 
 ## Reglas
 

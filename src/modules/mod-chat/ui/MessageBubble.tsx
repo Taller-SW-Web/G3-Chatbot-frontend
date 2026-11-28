@@ -174,6 +174,7 @@ export function renderBloque(
             productos={productos}
             onAdd={(p) => onQuickAction?.(accionAgregarDeTarjeta(p))}
             onDetalle={(p) => onQuickAction?.(accionVerDetalle(p))}
+            onSiguiente={(payload) => onQuickAction?.({ id: "BUSCAR_PAGINA", etiqueta: "Ver más", payload })}
           />
         </div>
       );

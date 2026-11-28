@@ -12,25 +12,36 @@ import { ProductImage } from "@/modules/mod-catalog/ui/ProductImage";
 
 export type { CatalogCardItem };
 
-/** CARRUSEL_PRODUCTOS max 10 + Ver más, con datos de las herramientas. SPEC-06,09 */
+/** CARRUSEL_PRODUCTOS max 10 + contador y "Ver más"; datos de las herramientas. SPEC-06,09 */
 export function CarruselProductos({
   titulo,
   productos,
   variant,
   partial = false,
+  total,
+  siguiente = null,
   onAdd,
   onDetalle,
+  onSiguiente,
 }: {
   titulo?: string;
   variant?: "recomendacion" | "cross_sell" | "ofertas";
   partial?: boolean;
   productos: CatalogCardItem[];
+  /** Total reportado por el backend; el frontend no lo calcula. */
+  total?: number;
+  /** Payload exacto de BUSCAR_PAGINA; `null` si no hay más páginas. */
+  siguiente?: Record<string, unknown> | null;
   onAdd: (p: CatalogCardItem) => void;
   onDetalle: (p: CatalogCardItem) => void;
+  onSiguiente?: (payload: Record<string, unknown>) => void;
 }) {
   const crossSell = variant === "cross_sell";
   // Hasta 10 tarjetas por carrusel (SPEC-06 Req. 4); sin expansión local que oculte resultados.
   const visibles = crossSell ? productos.slice(0, 3) : variant === "recomendacion" ? productos.slice(0, 5) : productos.slice(0, 10);
+  const mostrarContador = typeof total === "number" && Number.isInteger(total) && total >= visibles.length;
+  const paginaSiguiente = siguiente?.pagina;
+  const verMas = siguiente !== null && typeof paginaSiguiente === "number" && Number.isInteger(paginaSiguiente) && paginaSiguiente >= 2 && onSiguiente !== undefined;
   return (
     <div className="self-start w-full rounded-md bg-white border border-border-default p-2 flex flex-col gap-2 wf-card">
       {titulo && <p className="px-1 text-[14px] font-semibold text-text-primary">{sanitize(titulo)}</p>}
@@ -61,6 +72,22 @@ export function CarruselProductos({
           </div>
         ))}
       </div>
+      {(mostrarContador || verMas) && (
+        <div className="flex items-center justify-between gap-2 px-1">
+          {mostrarContador
+            ? <p role="status" className="text-[12px] text-text-secondary">Mostrando {visibles.length} de {total}</p>
+            : <span />}
+          {verMas && (
+            <button
+              type="button"
+              onClick={() => onSiguiente(siguiente)}
+              className="min-h-11 shrink-0 wf-chip px-3 py-1.5 text-[12px] font-semibold text-text-primary hover:border-accent-signal"
+            >
+              Ver más
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
