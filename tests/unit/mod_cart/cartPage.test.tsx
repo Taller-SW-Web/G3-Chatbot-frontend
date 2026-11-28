@@ -379,4 +379,98 @@ describe("CartPage: ir a pagar sin celular verificado", () => {
     expect(useChatStore.getState().authOpen).toBe(true);
     expect(useChatStore.getState().accionPendiente).toBe("/checkout");
   });
+
+  it("con promociones_ok=false el CTA está deshabilitado y no navega", () => {
+    h.cartData = {
+      ...h.CARRITO,
+      promociones_ok: false,
+    };
+    renderCart();
+
+    const btn = screen.getByTestId("btn-ir-a-pagar") as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute("aria-describedby")).toBe("motivo-bloqueo-pago");
+    expect(screen.getByText("No pudimos calcular promociones en este momento.")).toBeDefined();
+
+    fireEvent.click(btn);
+    expect(h.push).not.toHaveBeenCalled();
+  });
+
+  it("con carrito vacío el CTA está deshabilitado y no navega", () => {
+    h.cartData = {
+      ...h.CARRITO,
+      lineas: [],
+      total: 0,
+    };
+    renderCart();
+
+    const btn = screen.getByTestId("btn-ir-a-pagar") as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute("aria-describedby")).toBe("motivo-bloqueo-pago");
+    expect(screen.getByText("Tu carrito está vacío.")).toBeDefined();
+
+    fireEvent.click(btn);
+    expect(h.push).not.toHaveBeenCalled();
+  });
+
+  it("con todos los productos no disponibles el CTA está deshabilitado y distingue estados", () => {
+    h.cartData = {
+      ...h.CARRITO,
+      lineas: [
+        {
+          item_id: "l1",
+          sku: "SKU-1",
+          nombre: "Zapatilla",
+          cantidad: 1,
+          precio: 100,
+          disponible: false,
+          nota: "Agotado",
+        },
+      ],
+    };
+    renderCart();
+
+    const btn = screen.getByTestId("btn-ir-a-pagar") as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute("aria-describedby")).toBe("motivo-bloqueo-pago");
+    expect(screen.getByText("Los productos de tu carrito están agotados.")).toBeDefined();
+    expect(screen.getByTestId("linea-no-disponible").textContent).toBe("Agotado");
+
+    fireEvent.click(btn);
+    expect(h.push).not.toHaveBeenCalled();
+  });
+
+  it("con caso mixto (una disponible + una no disponible) el CTA permite pagar", () => {
+    h.cartData = {
+      ...h.CARRITO,
+      lineas: [
+        {
+          item_id: "l1",
+          sku: "SKU-1",
+          nombre: "Zapatilla disponible",
+          cantidad: 1,
+          precio: 100,
+          disponible: true,
+        },
+        {
+          item_id: "l2",
+          sku: "SKU-2",
+          nombre: "Medias agotadas",
+          cantidad: 1,
+          precio: 30,
+          disponible: false,
+          nota: "Inactivo",
+        },
+      ],
+    };
+    renderCart();
+
+    const btn = screen.getByTestId("btn-ir-a-pagar") as HTMLButtonElement;
+    expect(btn.disabled).toBe(false);
+    expect(screen.getByText("Ya no disponible")).toBeDefined();
+    expect(screen.getByText("Las líneas no disponibles quedan excluidas del pago.")).toBeDefined();
+
+    fireEvent.click(btn);
+    expect(h.push).toHaveBeenCalledWith("/checkout");
+  });
 });

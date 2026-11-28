@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useDialogoModal } from "@/shared/ui/useDialogoModal";
 import { useRouter } from "next/navigation";
 import type { AxiosError } from "axios";
 import { XIcon } from "@/shared/ui/icons";
@@ -100,6 +101,7 @@ export function AuthModal() {
     setPaso("login");
     setError(null);
   }
+  const dialogoRef = useDialogoModal<HTMLDivElement>(cerrar);
 
   function continuar() {
     const pendiente = accionPendiente;
@@ -228,12 +230,12 @@ export function AuthModal() {
   }
 
   return (
-    <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5">
+    <div data-capa-modal className="absolute inset-0 z-40 flex items-center justify-center bg-surface-ink/60 fade-in p-5">
       <button type="button" tabIndex={-1} aria-hidden="true" className="absolute inset-0 cursor-default" onClick={cerrar} />
-      <div className="relative pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl max-h-[85%] overflow-y-auto no-scrollbar p-4 flex flex-col gap-3" role="dialog" aria-modal="true">
+      <div ref={dialogoRef} tabIndex={-1} className="relative pop-in w-full max-w-[320px] bg-white rounded-lg shadow-xl max-h-[85%] overflow-y-auto no-scrollbar p-4 flex flex-col gap-3 outline-none" role="dialog" aria-modal="true" aria-labelledby="auth-modal-titulo">
         {paso === "verificar-correo" ? (
           <div className="flex flex-col items-center gap-3 text-center p-2">
-            <h2 className="font-heading text-[20px]">¡REVISA TU CORREO!</h2>
+            <h2 id="auth-modal-titulo" className="font-heading text-[20px]">¡REVISA TU CORREO!</h2>
             <p className="text-[14px] text-text-secondary">
               Te enviamos un enlace a {correoRegistrado} para activar tu cuenta. Vence en 24 horas.
             </p>
@@ -258,11 +260,11 @@ export function AuthModal() {
               <BrandLogo variant="negro" className="h-16 w-auto" />
             </div>
             <div className="flex items-center justify-between">
-              <p className="font-heading text-[15px] tracking-[0.06em] uppercase text-text-primary">
+              <h2 id="auth-modal-titulo" className="font-heading text-[15px] tracking-[0.06em] uppercase text-text-primary">
                 {paso === "mfa" ? "Verifica tu identidad"
                   : paso === "reenviar" ? "Reenviar verificación"
                   : tab === "login" ? "Inicia sesión" : "Crea tu cuenta"}
-              </p>
+              </h2>
               <button aria-label="Cerrar" onClick={cerrar}
                 className="w-10 h-10 wf-btn flex items-center justify-center bg-surface-ink-soft text-text-inverse border border-border-inverse">
                 <XIcon size={20} />
