@@ -70,6 +70,44 @@ describe("check-modules.mjs", () => {
     expect(r.salida).toContain("mod-shipping: falta ui");
   });
 
+  it("falla si un manifiesto declara una ruta sin page.tsx", () => {
+    const dir = copiarRepo();
+    const manifestPath = path.join(dir, "src/modules/mod-shipping/module.manifest.ts");
+    fs.writeFileSync(
+      manifestPath,
+      fs.readFileSync(manifestPath, "utf8").replace(
+        "routes: [],",
+        'routes: [{ path: "/envio-fantasma", description: "ruta sin page" }],'
+      )
+    );
+    const r = ejecutar(dir);
+    expect(r.status).not.toBe(0);
+    expect(r.salida).toContain("mod-shipping: la ruta /envio-fantasma no tiene page.tsx en src/app");
+  });
+
+  it("falla si una página de app no está declarada en ningún manifiesto", () => {
+    const dir = copiarRepo();
+    escribir(dir, "src/app/huerfana/page.tsx", "export default function Page() { return null; }\n");
+    const r = ejecutar(dir);
+    expect(r.status).not.toBe(0);
+    expect(r.salida).toContain("src/app: la ruta /huerfana no está declarada en ningún module.manifest.ts");
+  });
+
+  it("falla si dos módulos declaran la misma ruta", () => {
+    const dir = copiarRepo();
+    const manifestPath = path.join(dir, "src/modules/mod-auth/module.manifest.ts");
+    fs.writeFileSync(
+      manifestPath,
+      fs.readFileSync(manifestPath, "utf8").replace(
+        '{ path: "/cuenta",',
+        '{ path: "/carrito", description: "ruta duplicada" },\n    { path: "/cuenta",'
+      )
+    );
+    const r = ejecutar(dir);
+    expect(r.status).not.toBe(0);
+    expect(r.salida).toContain("ruta /carrito declarada por mod-auth y mod-cart");
+  });
+
   it("falla si un módulo usa container.api", () => {
     const dir = copiarRepo();
     escribir(dir, "src/modules/mod-catalog/ui/_violacion.ts", "export const fuga = container.api;\n");

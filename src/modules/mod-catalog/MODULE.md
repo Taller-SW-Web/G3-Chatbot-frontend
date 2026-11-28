@@ -40,7 +40,7 @@ excepciones de frontera.
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_catalog/` (7 archivos)
+- Unitarias: `tests/unit/mod_catalog/` (8 archivos)
 
 ## Reglas
 

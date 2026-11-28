@@ -11,7 +11,7 @@ Un módulo puede importarla libremente; ella solo importa módulos por su `publi
 | `auth/` | Store de sesión/carrito (`chatStore`), helpers de sesión, tipos de cliente, `AuthGuard`, `SesionIndicator`, modal de celular, `usePerfil` y el tipo/normalización de la política de contraseña (las reglas evaluables viven en `mod-auth`) |
 | `config/` | `apiConfig`, `chatContract` (límite del compositor compartido con `mod-chat`, SPEC-05) y el tipo de los `module.manifest.ts` |
 | `di/` | Composition root (`container`) y `queryClient` |
-| `security/` | `sanitize` y CSP |
+| `security/` | `sanitize`, CSP y colector de reportes (`csp-report`) |
 | `testing/` | `setup.ts` de Vitest y fixtures compartidos |
 | `ui/` | Iconos, `BrandLogo`, `StatusBadge`, `BloqueError`, `BotonVolver`, `QueryProvider` y `ui/shell/AppShell` |
 

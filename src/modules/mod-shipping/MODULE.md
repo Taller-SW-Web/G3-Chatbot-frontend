@@ -2,7 +2,7 @@
 
 - **Owner:** @Taller-SW-Web/chatbot
 - **Frontend:** carpeta `mod-shipping`, sin ruta propia
-- **Depende de:** ninguno
+- **Depende de:** `mod-cart`
 - **Contrato:** `POST /envio/cotizar`
 
 ## Responsabilidad
@@ -27,11 +27,15 @@ Cotización de envío por distrito y el bloque visual que la muestra dentro de `
 
 ## Dependencias externas
 
-Ninguna. `useCotizacionEnvio` acepta el tipo estructural `DireccionCotizable`, de modo que `mod-checkout` puede pasarle su formulario sin que este módulo lo importe.
+`mod-cart` (declarada en el manifiesto): la cotización se invalida con la firma
+de las líneas del carrito (`firmaCarritoEnvio`), aunque el módulo recibe esas
+líneas por tipo estructural y hoy no importa su `public.ts`. `useCotizacionEnvio`
+acepta el tipo `DireccionCotizable`, de modo que `mod-checkout` puede pasarle su
+formulario sin que este módulo lo importe.
 
 ## Pruebas
 
-- Unitarias: `tests/unit/mod_shipping/` (1 archivo)
+- Unitarias: `tests/unit/mod_shipping/` (2 archivos)
 
 ## Reglas
 
