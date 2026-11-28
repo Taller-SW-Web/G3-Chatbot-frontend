@@ -53,6 +53,10 @@ export function SugerenciaForm({
   const [titulo, setTitulo] = useState("");
   const [detalle, setDetalle] = useState("");
   const [correoContacto, setCorreoContacto] = useState(correo);
+  // El perfil puede llegar después del montaje: rellena el correo sin pisar lo que el cliente escribió.
+  useEffect(() => {
+    setCorreoContacto((prev) => prev || correo);
+  }, [correo]);
   const [evidencia, setEvidencia] = useState<{ nombre: string; archivo: File } | null>(null);
   const [gracias, setGracias] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
